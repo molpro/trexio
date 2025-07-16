@@ -85,6 +85,10 @@ trexio_exit_code trexio_hdf5_has_pbc_k_point_num (trexio_t* const file);
 trexio_exit_code trexio_hdf5_read_pbc_k_point_num (trexio_t* const file, int64_t* const num);
 trexio_exit_code trexio_hdf5_write_pbc_k_point_num(trexio_t* const file, const int64_t num);
 
+trexio_exit_code trexio_hdf5_has_pbc_madelung (trexio_t* const file);
+trexio_exit_code trexio_hdf5_read_pbc_madelung (trexio_t* const file, double* const num);
+trexio_exit_code trexio_hdf5_write_pbc_madelung(trexio_t* const file, const double num);
+
 trexio_exit_code trexio_hdf5_has_electron_num (trexio_t* const file);
 trexio_exit_code trexio_hdf5_read_electron_num (trexio_t* const file, int64_t* const num);
 trexio_exit_code trexio_hdf5_write_electron_num(trexio_t* const file, const int64_t num);

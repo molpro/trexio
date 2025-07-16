@@ -90,6 +90,7 @@ typedef struct cell_s {
 typedef struct pbc_s {
   int64_t pbc_periodic;
   int64_t pbc_k_point_num;
+  double pbc_madelung;
   double*  pbc_k_point;
   double*  pbc_k_point_weight;
   uint64_t dims_pbc_k_point[16];
@@ -99,6 +100,7 @@ typedef struct pbc_s {
   uint32_t to_flush;
   bool pbc_periodic_isSet;
   bool pbc_k_point_num_isSet;
+  bool pbc_madelung_isSet;
   char     file_name[TREXIO_MAX_FILENAME_LENGTH];
 } pbc_t;
 
@@ -587,45 +589,87 @@ trexio_exit_code trexio_text_has_qmc(trexio_t* const file);
 
 trexio_exit_code trexio_text_free_metadata(trexio_text_t* const file);
 
+trexio_exit_code trexio_text_free_read_metadata (char* buffer, FILE* txt_file, trexio_text_t* trexio_file, metadata_t* metadata);
+
 trexio_exit_code trexio_text_free_nucleus(trexio_text_t* const file);
+
+trexio_exit_code trexio_text_free_read_nucleus (char* buffer, FILE* txt_file, trexio_text_t* trexio_file, nucleus_t* nucleus);
 
 trexio_exit_code trexio_text_free_cell(trexio_text_t* const file);
 
+trexio_exit_code trexio_text_free_read_cell (char* buffer, FILE* txt_file, trexio_text_t* trexio_file, cell_t* cell);
+
 trexio_exit_code trexio_text_free_pbc(trexio_text_t* const file);
+
+trexio_exit_code trexio_text_free_read_pbc (char* buffer, FILE* txt_file, trexio_text_t* trexio_file, pbc_t* pbc);
 
 trexio_exit_code trexio_text_free_electron(trexio_text_t* const file);
 
+trexio_exit_code trexio_text_free_read_electron (char* buffer, FILE* txt_file, trexio_text_t* trexio_file, electron_t* electron);
+
 trexio_exit_code trexio_text_free_state(trexio_text_t* const file);
+
+trexio_exit_code trexio_text_free_read_state (char* buffer, FILE* txt_file, trexio_text_t* trexio_file, state_t* state);
 
 trexio_exit_code trexio_text_free_basis(trexio_text_t* const file);
 
+trexio_exit_code trexio_text_free_read_basis (char* buffer, FILE* txt_file, trexio_text_t* trexio_file, basis_t* basis);
+
 trexio_exit_code trexio_text_free_ecp(trexio_text_t* const file);
+
+trexio_exit_code trexio_text_free_read_ecp (char* buffer, FILE* txt_file, trexio_text_t* trexio_file, ecp_t* ecp);
 
 trexio_exit_code trexio_text_free_grid(trexio_text_t* const file);
 
+trexio_exit_code trexio_text_free_read_grid (char* buffer, FILE* txt_file, trexio_text_t* trexio_file, grid_t* grid);
+
 trexio_exit_code trexio_text_free_ao(trexio_text_t* const file);
+
+trexio_exit_code trexio_text_free_read_ao (char* buffer, FILE* txt_file, trexio_text_t* trexio_file, ao_t* ao);
 
 trexio_exit_code trexio_text_free_ao_1e_int(trexio_text_t* const file);
 
+trexio_exit_code trexio_text_free_read_ao_1e_int (char* buffer, FILE* txt_file, trexio_text_t* trexio_file, ao_1e_int_t* ao_1e_int);
+
 trexio_exit_code trexio_text_free_ao_2e_int(trexio_text_t* const file);
+
+trexio_exit_code trexio_text_free_read_ao_2e_int (char* buffer, FILE* txt_file, trexio_text_t* trexio_file, ao_2e_int_t* ao_2e_int);
 
 trexio_exit_code trexio_text_free_mo(trexio_text_t* const file);
 
+trexio_exit_code trexio_text_free_read_mo (char* buffer, FILE* txt_file, trexio_text_t* trexio_file, mo_t* mo);
+
 trexio_exit_code trexio_text_free_mo_1e_int(trexio_text_t* const file);
+
+trexio_exit_code trexio_text_free_read_mo_1e_int (char* buffer, FILE* txt_file, trexio_text_t* trexio_file, mo_1e_int_t* mo_1e_int);
 
 trexio_exit_code trexio_text_free_mo_2e_int(trexio_text_t* const file);
 
+trexio_exit_code trexio_text_free_read_mo_2e_int (char* buffer, FILE* txt_file, trexio_text_t* trexio_file, mo_2e_int_t* mo_2e_int);
+
 trexio_exit_code trexio_text_free_determinant(trexio_text_t* const file);
+
+trexio_exit_code trexio_text_free_read_determinant (char* buffer, FILE* txt_file, trexio_text_t* trexio_file, determinant_t* determinant);
 
 trexio_exit_code trexio_text_free_csf(trexio_text_t* const file);
 
+trexio_exit_code trexio_text_free_read_csf (char* buffer, FILE* txt_file, trexio_text_t* trexio_file, csf_t* csf);
+
 trexio_exit_code trexio_text_free_amplitude(trexio_text_t* const file);
+
+trexio_exit_code trexio_text_free_read_amplitude (char* buffer, FILE* txt_file, trexio_text_t* trexio_file, amplitude_t* amplitude);
 
 trexio_exit_code trexio_text_free_rdm(trexio_text_t* const file);
 
+trexio_exit_code trexio_text_free_read_rdm (char* buffer, FILE* txt_file, trexio_text_t* trexio_file, rdm_t* rdm);
+
 trexio_exit_code trexio_text_free_jastrow(trexio_text_t* const file);
 
+trexio_exit_code trexio_text_free_read_jastrow (char* buffer, FILE* txt_file, trexio_text_t* trexio_file, jastrow_t* jastrow);
+
 trexio_exit_code trexio_text_free_qmc(trexio_text_t* const file);
+
+trexio_exit_code trexio_text_free_read_qmc (char* buffer, FILE* txt_file, trexio_text_t* trexio_file, qmc_t* qmc);
 
 metadata_t* trexio_text_read_metadata(trexio_text_t* const file);
 
@@ -1278,6 +1322,10 @@ trexio_exit_code trexio_text_write_pbc_periodic(trexio_t* const file, const int6
 trexio_exit_code trexio_text_has_pbc_k_point_num (trexio_t* const file);
 trexio_exit_code trexio_text_read_pbc_k_point_num (trexio_t* const file, int64_t* const num);
 trexio_exit_code trexio_text_write_pbc_k_point_num(trexio_t* const file, const int64_t num);
+
+trexio_exit_code trexio_text_has_pbc_madelung (trexio_t* const file);
+trexio_exit_code trexio_text_read_pbc_madelung (trexio_t* const file, double* const num);
+trexio_exit_code trexio_text_write_pbc_madelung(trexio_t* const file, const double num);
 
 trexio_exit_code trexio_text_has_electron_num (trexio_t* const file);
 trexio_exit_code trexio_text_read_electron_num (trexio_t* const file, int64_t* const num);

@@ -101,6 +101,7 @@ trexio_text_init (trexio_t* const file)
   char file_name[TREXIO_MAX_FILENAME_LENGTH];
 
   strncpy (file_name, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (file_name, lock_file_name, TREXIO_MAX_FILENAME_LENGTH-strlen(lock_file_name));
 
   if (file_name[TREXIO_MAX_FILENAME_LENGTH-1] != '\0') {
@@ -120,6 +121,7 @@ trexio_text_init (trexio_t* const file)
         char dirname[TREXIO_MAX_FILENAME_LENGTH] = "/tmp/trexio.XXXXXX";
         if (mkdtemp(dirname) == NULL) return TREXIO_ERRNO;
         strncpy (file_name, dirname, TREXIO_MAX_FILENAME_LENGTH);
+        file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
         strncat (file_name, lock_file_name, TREXIO_MAX_FILENAME_LENGTH-strlen(lock_file_name));
         f->lock_file = open(file_name,O_WRONLY|O_CREAT|O_TRUNC, 0644);
         remove(file_name);
@@ -239,28 +241,27 @@ trexio_text_flush (trexio_t* const file)
   trexio_exit_code rc;
   trexio_text_t* f = (trexio_text_t*) file;
 
-  /* Error handling for this call is added by the generator */
-  rc = trexio_text_flush_metadata(f);
-  rc = trexio_text_flush_nucleus(f);
-  rc = trexio_text_flush_cell(f);
-  rc = trexio_text_flush_pbc(f);
-  rc = trexio_text_flush_electron(f);
-  rc = trexio_text_flush_state(f);
-  rc = trexio_text_flush_basis(f);
-  rc = trexio_text_flush_ecp(f);
-  rc = trexio_text_flush_grid(f);
-  rc = trexio_text_flush_ao(f);
-  rc = trexio_text_flush_ao_1e_int(f);
-  rc = trexio_text_flush_ao_2e_int(f);
-  rc = trexio_text_flush_mo(f);
-  rc = trexio_text_flush_mo_1e_int(f);
-  rc = trexio_text_flush_mo_2e_int(f);
-  rc = trexio_text_flush_determinant(f);
-  rc = trexio_text_flush_csf(f);
-  rc = trexio_text_flush_amplitude(f);
-  rc = trexio_text_flush_rdm(f);
-  rc = trexio_text_flush_jastrow(f);
-  rc = trexio_text_flush_qmc(f);
+  rc = trexio_text_flush_metadata(f); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_text_flush_nucleus(f); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_text_flush_cell(f); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_text_flush_pbc(f); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_text_flush_electron(f); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_text_flush_state(f); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_text_flush_basis(f); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_text_flush_ecp(f); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_text_flush_grid(f); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_text_flush_ao(f); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_text_flush_ao_1e_int(f); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_text_flush_ao_2e_int(f); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_text_flush_mo(f); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_text_flush_mo_1e_int(f); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_text_flush_mo_2e_int(f); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_text_flush_determinant(f); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_text_flush_csf(f); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_text_flush_amplitude(f); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_text_flush_rdm(f); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_text_flush_jastrow(f); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_text_flush_qmc(f); if (rc != TREXIO_SUCCESS) return rc;
 
   return TREXIO_SUCCESS;
 
@@ -276,6 +277,7 @@ trexio_exit_code trexio_text_has_determinant_list(trexio_t* const file)
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, determinant_list_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(determinant_list_file_name));
@@ -295,6 +297,9 @@ trexio_exit_code trexio_text_read_determinant_list(trexio_t* const file,
                                                    int64_t* const list)
 {
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (rank != 2) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
   if (list == NULL) return TREXIO_INVALID_ARG_6;
 
@@ -304,6 +309,7 @@ trexio_exit_code trexio_text_read_determinant_list(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, determinant_list_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(determinant_list_file_name));
@@ -313,12 +319,13 @@ trexio_exit_code trexio_text_read_determinant_list(trexio_t* const file,
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly.
-     Each 64-bit integer takes at most 10 slots and requires one space,
+     Each 64-bit integer takes 20 slots and requires one space,
+
      we have int_num integers per up-spin determinant,
      then this number is doubled because we have the same number for down-spin electrons,
      and then one newline char.
    */
-  uint64_t line_length = dims[1]*11UL + 1UL; // 10 digits per int64_t bitfield + 1 space = 11 spots + 1 newline char
+  uint64_t line_length = dims[1]*21UL + 1UL; // 20 digits per int64_t bitfield + 1 space = 21 spots + 1 newline char
 
   /* Offset in the file according to the provided  value of offset_file and optimal line_length */
   fseek(f, (long) offset_file * line_length, SEEK_SET);
@@ -326,11 +333,11 @@ trexio_exit_code trexio_text_read_determinant_list(trexio_t* const file,
   /* Read the data from the file and check the return code of fprintf to verify that > 0 bytes have been read or reached EOF */
   int rc;
   /* Declare fixed buffer which will be used to read the determinant string <a1 a2 ... a/\ b1 b2 ... b\/> */
-  char buffer[1024];
-  uint32_t buf_size = sizeof(buffer);
+  char buffer[line_length+1];
+  size_t buf_size = sizeof(buffer);
   /* Parameters to post-process the buffer and to get bit fields integers */
   uint64_t accum = 0UL;
-  uint32_t shift_int64 = 11U;
+  uint32_t shift_int64 = 21U;
   /* Counter for number of elements beind processed */
   uint64_t count = 0UL;
   for (uint64_t i=0UL; i < dims[0]; ++i) {
@@ -338,7 +345,7 @@ trexio_exit_code trexio_text_read_determinant_list(trexio_t* const file,
     accum = 0UL;
     memset(buffer, 0, buf_size);
 
-    if (fgets(buffer, buf_size-1, f) == NULL){
+    if (fgets(buffer, ( (int) line_length)+1, f) == NULL){
 
       fclose(f);
       *eof_read_size = count;
@@ -350,7 +357,7 @@ trexio_exit_code trexio_text_read_determinant_list(trexio_t* const file,
       Thus, we parse the buffer string int_num*2 times to get the bit field determinants.
     */
       for (uint32_t j=0; j < (uint32_t) dims[1]; ++j) {
-        rc = sscanf(buffer+accum, "%10" SCNd64, list + dims[1]*i + j);
+        rc = sscanf(buffer+accum, "%20" SCNd64, list + dims[1]*i + j);
         if (rc <= 0) {
           fclose(f);
           return TREXIO_FAILURE;
@@ -374,7 +381,10 @@ trexio_exit_code trexio_text_write_determinant_list(trexio_t* const file,
                                                     const uint64_t* dims,
                                                     const int64_t* list)
 {
-  if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (rank != 2) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
   if (list == NULL) return TREXIO_INVALID_ARG_5;
 
   const char determinant_list_file_name[256] = "/determinant_list.txt";
@@ -383,6 +393,7 @@ trexio_exit_code trexio_text_write_determinant_list(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, determinant_list_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(determinant_list_file_name));
@@ -397,7 +408,7 @@ trexio_exit_code trexio_text_write_determinant_list(trexio_t* const file,
 
     /* The loop below is needed to write a line with int bit fields for alpha and beta electrons */
     for (uint32_t j=0; j < (uint32_t) dims[1]; ++j) {
-      rc = fprintf(f, "%10" PRId64 " ", *(list + i*dims[1] + j));
+      rc = fprintf(f, "%20" PRId64 " ", *(list + i*dims[1] + j));
       if (rc <= 0) {
         fclose(f);
         return TREXIO_FAILURE;
@@ -417,6 +428,7 @@ trexio_exit_code trexio_text_write_determinant_list(trexio_t* const file,
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, det_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(det_file_name));
@@ -450,6 +462,7 @@ trexio_text_has_metadata (trexio_t* const file)
   const char* metadata_file_name = "/metadata.txt";
 
   strncpy (metadata_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  metadata_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (metadata_full_path, metadata_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(metadata_file_name));
 
@@ -483,6 +496,7 @@ trexio_text_has_nucleus (trexio_t* const file)
   const char* nucleus_file_name = "/nucleus.txt";
 
   strncpy (nucleus_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  nucleus_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (nucleus_full_path, nucleus_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(nucleus_file_name));
 
@@ -516,6 +530,7 @@ trexio_text_has_cell (trexio_t* const file)
   const char* cell_file_name = "/cell.txt";
 
   strncpy (cell_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  cell_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (cell_full_path, cell_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(cell_file_name));
 
@@ -549,6 +564,7 @@ trexio_text_has_pbc (trexio_t* const file)
   const char* pbc_file_name = "/pbc.txt";
 
   strncpy (pbc_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  pbc_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (pbc_full_path, pbc_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(pbc_file_name));
 
@@ -582,6 +598,7 @@ trexio_text_has_electron (trexio_t* const file)
   const char* electron_file_name = "/electron.txt";
 
   strncpy (electron_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  electron_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (electron_full_path, electron_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(electron_file_name));
 
@@ -615,6 +632,7 @@ trexio_text_has_state (trexio_t* const file)
   const char* state_file_name = "/state.txt";
 
   strncpy (state_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  state_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (state_full_path, state_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(state_file_name));
 
@@ -648,6 +666,7 @@ trexio_text_has_basis (trexio_t* const file)
   const char* basis_file_name = "/basis.txt";
 
   strncpy (basis_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  basis_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (basis_full_path, basis_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(basis_file_name));
 
@@ -681,6 +700,7 @@ trexio_text_has_ecp (trexio_t* const file)
   const char* ecp_file_name = "/ecp.txt";
 
   strncpy (ecp_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  ecp_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (ecp_full_path, ecp_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ecp_file_name));
 
@@ -714,6 +734,7 @@ trexio_text_has_grid (trexio_t* const file)
   const char* grid_file_name = "/grid.txt";
 
   strncpy (grid_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  grid_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (grid_full_path, grid_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(grid_file_name));
 
@@ -747,6 +768,7 @@ trexio_text_has_ao (trexio_t* const file)
   const char* ao_file_name = "/ao.txt";
 
   strncpy (ao_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  ao_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (ao_full_path, ao_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_file_name));
 
@@ -780,6 +802,7 @@ trexio_text_has_ao_1e_int (trexio_t* const file)
   const char* ao_1e_int_file_name = "/ao_1e_int.txt";
 
   strncpy (ao_1e_int_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  ao_1e_int_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (ao_1e_int_full_path, ao_1e_int_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_1e_int_file_name));
 
@@ -813,6 +836,7 @@ trexio_text_has_ao_2e_int (trexio_t* const file)
   const char* ao_2e_int_file_name = "/ao_2e_int.txt";
 
   strncpy (ao_2e_int_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  ao_2e_int_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (ao_2e_int_full_path, ao_2e_int_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_2e_int_file_name));
 
@@ -846,6 +870,7 @@ trexio_text_has_mo (trexio_t* const file)
   const char* mo_file_name = "/mo.txt";
 
   strncpy (mo_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  mo_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (mo_full_path, mo_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_file_name));
 
@@ -879,6 +904,7 @@ trexio_text_has_mo_1e_int (trexio_t* const file)
   const char* mo_1e_int_file_name = "/mo_1e_int.txt";
 
   strncpy (mo_1e_int_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  mo_1e_int_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (mo_1e_int_full_path, mo_1e_int_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_1e_int_file_name));
 
@@ -912,6 +938,7 @@ trexio_text_has_mo_2e_int (trexio_t* const file)
   const char* mo_2e_int_file_name = "/mo_2e_int.txt";
 
   strncpy (mo_2e_int_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  mo_2e_int_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (mo_2e_int_full_path, mo_2e_int_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_2e_int_file_name));
 
@@ -945,6 +972,7 @@ trexio_text_has_determinant (trexio_t* const file)
   const char* determinant_file_name = "/determinant.txt";
 
   strncpy (determinant_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  determinant_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (determinant_full_path, determinant_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(determinant_file_name));
 
@@ -978,6 +1006,7 @@ trexio_text_has_csf (trexio_t* const file)
   const char* csf_file_name = "/csf.txt";
 
   strncpy (csf_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  csf_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (csf_full_path, csf_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(csf_file_name));
 
@@ -1011,6 +1040,7 @@ trexio_text_has_amplitude (trexio_t* const file)
   const char* amplitude_file_name = "/amplitude.txt";
 
   strncpy (amplitude_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  amplitude_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (amplitude_full_path, amplitude_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_file_name));
 
@@ -1044,6 +1074,7 @@ trexio_text_has_rdm (trexio_t* const file)
   const char* rdm_file_name = "/rdm.txt";
 
   strncpy (rdm_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  rdm_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (rdm_full_path, rdm_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_file_name));
 
@@ -1077,6 +1108,7 @@ trexio_text_has_jastrow (trexio_t* const file)
   const char* jastrow_file_name = "/jastrow.txt";
 
   strncpy (jastrow_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  jastrow_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (jastrow_full_path, jastrow_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(jastrow_file_name));
 
@@ -1110,6 +1142,7 @@ trexio_text_has_qmc (trexio_t* const file)
   const char* qmc_file_name = "/qmc.txt";
 
   strncpy (qmc_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  qmc_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (qmc_full_path, qmc_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(qmc_file_name));
 
@@ -2087,6 +2120,7 @@ trexio_text_read_metadata (trexio_text_t* const file)
   const char* metadata_file_name = "/metadata.txt";
 
   strncpy (metadata->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
+  metadata->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (metadata->file_name, metadata_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(metadata_file_name));
 
@@ -2113,7 +2147,9 @@ trexio_text_read_metadata (trexio_text_t* const file)
     }
 
     int rc = 0;
+    (void) rc;  // Avoid unused variable;
     trexio_exit_code rc_free = TREXIO_FAILURE;
+    (void) rc_free;  // Avoid unused variable;
 
     /* workaround for the case of missing blocks in the file */
     uint64_t size_metadata_code = 0;
@@ -2208,6 +2244,7 @@ trexio_text_read_metadata (trexio_text_t* const file)
 
             size_t tmp_metadata_code_len = strlen(buffer);
             strncpy(tmp_metadata_code, buffer, 32);
+            tmp_metadata_code[31] = '\0';
             tmp_metadata_code += tmp_metadata_code_len + 1;
           }
         }
@@ -2241,6 +2278,7 @@ trexio_text_read_metadata (trexio_text_t* const file)
 
             size_t tmp_metadata_author_len = strlen(buffer);
             strncpy(tmp_metadata_author, buffer, 32);
+            tmp_metadata_author[31] = '\0';
             tmp_metadata_author += tmp_metadata_author_len + 1;
           }
         }
@@ -2355,6 +2393,7 @@ trexio_text_read_metadata (trexio_text_t* const file)
           }
           /* Safer string conversion to avoid buffer overflow in fscanf */
           strncpy(metadata->metadata_package_version, buffer, metadata->len_metadata_package_version);
+          metadata->metadata_package_version[metadata->len_metadata_package_version-1] = '\0';
 
         }
       } else if (strcmp(buffer, "len_metadata_description") == 0) {
@@ -2386,6 +2425,7 @@ trexio_text_read_metadata (trexio_text_t* const file)
           }
           /* Safer string conversion to avoid buffer overflow in fscanf */
           strncpy(metadata->metadata_description, buffer, metadata->len_metadata_description);
+          metadata->metadata_description[metadata->len_metadata_description-1] = '\0';
 
         }
       } else {
@@ -2424,6 +2464,7 @@ trexio_text_read_nucleus (trexio_text_t* const file)
   const char* nucleus_file_name = "/nucleus.txt";
 
   strncpy (nucleus->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
+  nucleus->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (nucleus->file_name, nucleus_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(nucleus_file_name));
 
@@ -2450,7 +2491,9 @@ trexio_text_read_nucleus (trexio_text_t* const file)
     }
 
     int rc = 0;
+    (void) rc;  // Avoid unused variable;
     trexio_exit_code rc_free = TREXIO_FAILURE;
+    (void) rc_free;  // Avoid unused variable;
 
     /* workaround for the case of missing blocks in the file */
     uint64_t size_nucleus_charge = 0;
@@ -2608,6 +2651,7 @@ trexio_text_read_nucleus (trexio_text_t* const file)
 
             size_t tmp_nucleus_label_len = strlen(buffer);
             strncpy(tmp_nucleus_label, buffer, 32);
+            tmp_nucleus_label[31] = '\0';
             tmp_nucleus_label += tmp_nucleus_label_len + 1;
           }
         }
@@ -2695,6 +2739,7 @@ trexio_text_read_nucleus (trexio_text_t* const file)
           }
           /* Safer string conversion to avoid buffer overflow in fscanf */
           strncpy(nucleus->nucleus_point_group, buffer, nucleus->len_nucleus_point_group);
+          nucleus->nucleus_point_group[nucleus->len_nucleus_point_group-1] = '\0';
 
         }
       } else {
@@ -2733,6 +2778,7 @@ trexio_text_read_cell (trexio_text_t* const file)
   const char* cell_file_name = "/cell.txt";
 
   strncpy (cell->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
+  cell->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (cell->file_name, cell_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(cell_file_name));
 
@@ -2759,7 +2805,9 @@ trexio_text_read_cell (trexio_text_t* const file)
     }
 
     int rc = 0;
+    (void) rc;  // Avoid unused variable;
     trexio_exit_code rc_free = TREXIO_FAILURE;
+    (void) rc_free;  // Avoid unused variable;
 
     /* workaround for the case of missing blocks in the file */
     uint64_t size_cell_a = 0;
@@ -3106,6 +3154,7 @@ trexio_text_read_pbc (trexio_text_t* const file)
   const char* pbc_file_name = "/pbc.txt";
 
   strncpy (pbc->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
+  pbc->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (pbc->file_name, pbc_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(pbc_file_name));
 
@@ -3132,7 +3181,9 @@ trexio_text_read_pbc (trexio_text_t* const file)
     }
 
     int rc = 0;
+    (void) rc;  // Avoid unused variable;
     trexio_exit_code rc_free = TREXIO_FAILURE;
+    (void) rc_free;  // Avoid unused variable;
 
     /* workaround for the case of missing blocks in the file */
     uint64_t size_pbc_k_point = 0;
@@ -3286,6 +3337,33 @@ trexio_text_read_pbc (trexio_text_t* const file)
 
         }
 
+      } else if (strcmp(buffer, "pbc_madelung_isSet") == 0) {
+
+        unsigned int pbc_madelung_isSet;
+        /* additional parameter pbc_madelung_isSet is needed to suppress warning when fscanf into bool variable using %u or %d */
+        rc = fscanf(f, "%u", &(pbc_madelung_isSet));
+        pbc->pbc_madelung_isSet = (bool) pbc_madelung_isSet;
+        if (rc != 1) {
+          trexio_text_free_read_pbc(buffer, f, file, pbc);
+          return NULL;
+        }
+
+        if (pbc->pbc_madelung_isSet == true) {
+
+          rc = fscanf(f, "%1023s", buffer);
+          if ((rc != 1) || (strcmp(buffer, "pbc_madelung") != 0)) {
+            trexio_text_free_read_pbc(buffer, f, file, pbc);
+            return NULL;
+          }
+
+          rc = fscanf(f, "%lf", &(pbc->pbc_madelung));
+          if (rc != 1) {
+            trexio_text_free_read_pbc(buffer, f, file, pbc);
+            return NULL;
+          }
+
+        }
+
       } else {
         continue;
       }
@@ -3322,6 +3400,7 @@ trexio_text_read_electron (trexio_text_t* const file)
   const char* electron_file_name = "/electron.txt";
 
   strncpy (electron->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
+  electron->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (electron->file_name, electron_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(electron_file_name));
 
@@ -3348,7 +3427,9 @@ trexio_text_read_electron (trexio_text_t* const file)
     }
 
     int rc = 0;
+    (void) rc;  // Avoid unused variable;
     trexio_exit_code rc_free = TREXIO_FAILURE;
+    (void) rc_free;  // Avoid unused variable;
 
     /* workaround for the case of missing blocks in the file */
 
@@ -3473,6 +3554,7 @@ trexio_text_read_state (trexio_text_t* const file)
   const char* state_file_name = "/state.txt";
 
   strncpy (state->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
+  state->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (state->file_name, state_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(state_file_name));
 
@@ -3499,7 +3581,9 @@ trexio_text_read_state (trexio_text_t* const file)
     }
 
     int rc = 0;
+    (void) rc;  // Avoid unused variable;
     trexio_exit_code rc_free = TREXIO_FAILURE;
+    (void) rc_free;  // Avoid unused variable;
 
     /* workaround for the case of missing blocks in the file */
     uint64_t size_state_label = 0;
@@ -3594,6 +3678,7 @@ trexio_text_read_state (trexio_text_t* const file)
 
             size_t tmp_state_label_len = strlen(buffer);
             strncpy(tmp_state_label, buffer, 32);
+            tmp_state_label[31] = '\0';
             tmp_state_label += tmp_state_label_len + 1;
           }
         }
@@ -3627,6 +3712,7 @@ trexio_text_read_state (trexio_text_t* const file)
 
             size_t tmp_state_file_name_len = strlen(buffer);
             strncpy(tmp_state_file_name, buffer, 32);
+            tmp_state_file_name[31] = '\0';
             tmp_state_file_name += tmp_state_file_name_len + 1;
           }
         }
@@ -3741,6 +3827,7 @@ trexio_text_read_state (trexio_text_t* const file)
           }
           /* Safer string conversion to avoid buffer overflow in fscanf */
           strncpy(state->state_current_label, buffer, state->len_state_current_label);
+          state->state_current_label[state->len_state_current_label-1] = '\0';
 
         }
       } else {
@@ -3779,6 +3866,7 @@ trexio_text_read_basis (trexio_text_t* const file)
   const char* basis_file_name = "/basis.txt";
 
   strncpy (basis->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
+  basis->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (basis->file_name, basis_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(basis_file_name));
 
@@ -3805,7 +3893,9 @@ trexio_text_read_basis (trexio_text_t* const file)
     }
 
     int rc = 0;
+    (void) rc;  // Avoid unused variable;
     trexio_exit_code rc_free = TREXIO_FAILURE;
+    (void) rc_free;  // Avoid unused variable;
 
     /* workaround for the case of missing blocks in the file */
     uint64_t size_basis_nucleus_index = 0;
@@ -4897,6 +4987,7 @@ trexio_text_read_basis (trexio_text_t* const file)
           }
           /* Safer string conversion to avoid buffer overflow in fscanf */
           strncpy(basis->basis_type, buffer, basis->len_basis_type);
+          basis->basis_type[basis->len_basis_type-1] = '\0';
 
         }
       } else if (strcmp(buffer, "len_basis_oscillation_kind") == 0) {
@@ -4928,6 +5019,7 @@ trexio_text_read_basis (trexio_text_t* const file)
           }
           /* Safer string conversion to avoid buffer overflow in fscanf */
           strncpy(basis->basis_oscillation_kind, buffer, basis->len_basis_oscillation_kind);
+          basis->basis_oscillation_kind[basis->len_basis_oscillation_kind-1] = '\0';
 
         }
       } else if (strcmp(buffer, "len_basis_interpolator_kind") == 0) {
@@ -4959,6 +5051,7 @@ trexio_text_read_basis (trexio_text_t* const file)
           }
           /* Safer string conversion to avoid buffer overflow in fscanf */
           strncpy(basis->basis_interpolator_kind, buffer, basis->len_basis_interpolator_kind);
+          basis->basis_interpolator_kind[basis->len_basis_interpolator_kind-1] = '\0';
 
         }
       } else {
@@ -4997,6 +5090,7 @@ trexio_text_read_ecp (trexio_text_t* const file)
   const char* ecp_file_name = "/ecp.txt";
 
   strncpy (ecp->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
+  ecp->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (ecp->file_name, ecp_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ecp_file_name));
 
@@ -5023,7 +5117,9 @@ trexio_text_read_ecp (trexio_text_t* const file)
     }
 
     int rc = 0;
+    (void) rc;  // Avoid unused variable;
     trexio_exit_code rc_free = TREXIO_FAILURE;
+    (void) rc_free;  // Avoid unused variable;
 
     /* workaround for the case of missing blocks in the file */
     uint64_t size_ecp_max_ang_mom_plus_1 = 0;
@@ -5416,6 +5512,7 @@ trexio_text_read_grid (trexio_text_t* const file)
   const char* grid_file_name = "/grid.txt";
 
   strncpy (grid->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
+  grid->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (grid->file_name, grid_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(grid_file_name));
 
@@ -5442,7 +5539,9 @@ trexio_text_read_grid (trexio_text_t* const file)
     }
 
     int rc = 0;
+    (void) rc;  // Avoid unused variable;
     trexio_exit_code rc_free = TREXIO_FAILURE;
+    (void) rc_free;  // Avoid unused variable;
 
     /* workaround for the case of missing blocks in the file */
     uint64_t size_grid_coord = 0;
@@ -5917,6 +6016,7 @@ trexio_text_read_grid (trexio_text_t* const file)
           }
           /* Safer string conversion to avoid buffer overflow in fscanf */
           strncpy(grid->grid_description, buffer, grid->len_grid_description);
+          grid->grid_description[grid->len_grid_description-1] = '\0';
 
         }
       } else {
@@ -5955,6 +6055,7 @@ trexio_text_read_ao (trexio_text_t* const file)
   const char* ao_file_name = "/ao.txt";
 
   strncpy (ao->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
+  ao->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (ao->file_name, ao_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_file_name));
 
@@ -5981,7 +6082,9 @@ trexio_text_read_ao (trexio_text_t* const file)
     }
 
     int rc = 0;
+    (void) rc;  // Avoid unused variable;
     trexio_exit_code rc_free = TREXIO_FAILURE;
+    (void) rc_free;  // Avoid unused variable;
 
     /* workaround for the case of missing blocks in the file */
     uint64_t size_ao_shell = 0;
@@ -6171,6 +6274,7 @@ trexio_text_read_ao_1e_int (trexio_text_t* const file)
   const char* ao_1e_int_file_name = "/ao_1e_int.txt";
 
   strncpy (ao_1e_int->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
+  ao_1e_int->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (ao_1e_int->file_name, ao_1e_int_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_1e_int_file_name));
 
@@ -6197,7 +6301,9 @@ trexio_text_read_ao_1e_int (trexio_text_t* const file)
     }
 
     int rc = 0;
+    (void) rc;  // Avoid unused variable;
     trexio_exit_code rc_free = TREXIO_FAILURE;
+    (void) rc_free;  // Avoid unused variable;
 
     /* workaround for the case of missing blocks in the file */
     uint64_t size_ao_1e_int_overlap = 0;
@@ -6701,6 +6807,7 @@ trexio_text_read_ao_2e_int (trexio_text_t* const file)
   const char* ao_2e_int_file_name = "/ao_2e_int.txt";
 
   strncpy (ao_2e_int->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
+  ao_2e_int->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (ao_2e_int->file_name, ao_2e_int_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_2e_int_file_name));
 
@@ -6727,7 +6834,9 @@ trexio_text_read_ao_2e_int (trexio_text_t* const file)
     }
 
     int rc = 0;
+    (void) rc;  // Avoid unused variable;
     trexio_exit_code rc_free = TREXIO_FAILURE;
+    (void) rc_free;  // Avoid unused variable;
 
     /* workaround for the case of missing blocks in the file */
 
@@ -6825,6 +6934,7 @@ trexio_text_read_mo (trexio_text_t* const file)
   const char* mo_file_name = "/mo.txt";
 
   strncpy (mo->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
+  mo->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (mo->file_name, mo_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_file_name));
 
@@ -6851,7 +6961,9 @@ trexio_text_read_mo (trexio_text_t* const file)
     }
 
     int rc = 0;
+    (void) rc;  // Avoid unused variable;
     trexio_exit_code rc_free = TREXIO_FAILURE;
+    (void) rc_free;  // Avoid unused variable;
 
     /* workaround for the case of missing blocks in the file */
     uint64_t size_mo_coefficient = 0;
@@ -7222,6 +7334,7 @@ trexio_text_read_mo (trexio_text_t* const file)
 
             size_t tmp_mo_class_len = strlen(buffer);
             strncpy(tmp_mo_class, buffer, 32);
+            tmp_mo_class[31] = '\0';
             tmp_mo_class += tmp_mo_class_len + 1;
           }
         }
@@ -7255,6 +7368,7 @@ trexio_text_read_mo (trexio_text_t* const file)
 
             size_t tmp_mo_symmetry_len = strlen(buffer);
             strncpy(tmp_mo_symmetry, buffer, 32);
+            tmp_mo_symmetry[31] = '\0';
             tmp_mo_symmetry += tmp_mo_symmetry_len + 1;
           }
         }
@@ -7315,6 +7429,7 @@ trexio_text_read_mo (trexio_text_t* const file)
           }
           /* Safer string conversion to avoid buffer overflow in fscanf */
           strncpy(mo->mo_type, buffer, mo->len_mo_type);
+          mo->mo_type[mo->len_mo_type-1] = '\0';
 
         }
       } else {
@@ -7353,6 +7468,7 @@ trexio_text_read_mo_1e_int (trexio_text_t* const file)
   const char* mo_1e_int_file_name = "/mo_1e_int.txt";
 
   strncpy (mo_1e_int->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
+  mo_1e_int->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (mo_1e_int->file_name, mo_1e_int_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_1e_int_file_name));
 
@@ -7379,7 +7495,9 @@ trexio_text_read_mo_1e_int (trexio_text_t* const file)
     }
 
     int rc = 0;
+    (void) rc;  // Avoid unused variable;
     trexio_exit_code rc_free = TREXIO_FAILURE;
+    (void) rc_free;  // Avoid unused variable;
 
     /* workaround for the case of missing blocks in the file */
     uint64_t size_mo_1e_int_overlap = 0;
@@ -7883,6 +8001,7 @@ trexio_text_read_mo_2e_int (trexio_text_t* const file)
   const char* mo_2e_int_file_name = "/mo_2e_int.txt";
 
   strncpy (mo_2e_int->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
+  mo_2e_int->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (mo_2e_int->file_name, mo_2e_int_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_2e_int_file_name));
 
@@ -7909,7 +8028,9 @@ trexio_text_read_mo_2e_int (trexio_text_t* const file)
     }
 
     int rc = 0;
+    (void) rc;  // Avoid unused variable;
     trexio_exit_code rc_free = TREXIO_FAILURE;
+    (void) rc_free;  // Avoid unused variable;
 
     /* workaround for the case of missing blocks in the file */
 
@@ -8007,6 +8128,7 @@ trexio_text_read_determinant (trexio_text_t* const file)
   const char* determinant_file_name = "/determinant.txt";
 
   strncpy (determinant->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
+  determinant->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (determinant->file_name, determinant_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(determinant_file_name));
 
@@ -8033,7 +8155,9 @@ trexio_text_read_determinant (trexio_text_t* const file)
     }
 
     int rc = 0;
+    (void) rc;  // Avoid unused variable;
     trexio_exit_code rc_free = TREXIO_FAILURE;
+    (void) rc_free;  // Avoid unused variable;
 
     /* workaround for the case of missing blocks in the file */
 
@@ -8104,6 +8228,7 @@ trexio_text_read_csf (trexio_text_t* const file)
   const char* csf_file_name = "/csf.txt";
 
   strncpy (csf->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
+  csf->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (csf->file_name, csf_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(csf_file_name));
 
@@ -8130,7 +8255,9 @@ trexio_text_read_csf (trexio_text_t* const file)
     }
 
     int rc = 0;
+    (void) rc;  // Avoid unused variable;
     trexio_exit_code rc_free = TREXIO_FAILURE;
+    (void) rc_free;  // Avoid unused variable;
 
     /* workaround for the case of missing blocks in the file */
 
@@ -8201,6 +8328,7 @@ trexio_text_read_amplitude (trexio_text_t* const file)
   const char* amplitude_file_name = "/amplitude.txt";
 
   strncpy (amplitude->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
+  amplitude->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (amplitude->file_name, amplitude_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_file_name));
 
@@ -8227,7 +8355,9 @@ trexio_text_read_amplitude (trexio_text_t* const file)
     }
 
     int rc = 0;
+    (void) rc;  // Avoid unused variable;
     trexio_exit_code rc_free = TREXIO_FAILURE;
+    (void) rc_free;  // Avoid unused variable;
 
     /* workaround for the case of missing blocks in the file */
 
@@ -8271,6 +8401,7 @@ trexio_text_read_rdm (trexio_text_t* const file)
   const char* rdm_file_name = "/rdm.txt";
 
   strncpy (rdm->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
+  rdm->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (rdm->file_name, rdm_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_file_name));
 
@@ -8297,7 +8428,9 @@ trexio_text_read_rdm (trexio_text_t* const file)
     }
 
     int rc = 0;
+    (void) rc;  // Avoid unused variable;
     trexio_exit_code rc_free = TREXIO_FAILURE;
+    (void) rc_free;  // Avoid unused variable;
 
     /* workaround for the case of missing blocks in the file */
     uint64_t size_rdm_1e = 0;
@@ -8633,6 +8766,7 @@ trexio_text_read_jastrow (trexio_text_t* const file)
   const char* jastrow_file_name = "/jastrow.txt";
 
   strncpy (jastrow->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
+  jastrow->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (jastrow->file_name, jastrow_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(jastrow_file_name));
 
@@ -8659,7 +8793,9 @@ trexio_text_read_jastrow (trexio_text_t* const file)
     }
 
     int rc = 0;
+    (void) rc;  // Avoid unused variable;
     trexio_exit_code rc_free = TREXIO_FAILURE;
+    (void) rc_free;  // Avoid unused variable;
 
     /* workaround for the case of missing blocks in the file */
     uint64_t size_jastrow_en = 0;
@@ -9080,6 +9216,7 @@ trexio_text_read_jastrow (trexio_text_t* const file)
           }
           /* Safer string conversion to avoid buffer overflow in fscanf */
           strncpy(jastrow->jastrow_type, buffer, jastrow->len_jastrow_type);
+          jastrow->jastrow_type[jastrow->len_jastrow_type-1] = '\0';
 
         }
       } else {
@@ -9118,6 +9255,7 @@ trexio_text_read_qmc (trexio_text_t* const file)
   const char* qmc_file_name = "/qmc.txt";
 
   strncpy (qmc->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
+  qmc->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   strncat (qmc->file_name, qmc_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(qmc_file_name));
 
@@ -9144,7 +9282,9 @@ trexio_text_read_qmc (trexio_text_t* const file)
     }
 
     int rc = 0;
+    (void) rc;  // Avoid unused variable;
     trexio_exit_code rc_free = TREXIO_FAILURE;
+    (void) rc_free;  // Avoid unused variable;
 
     /* workaround for the case of missing blocks in the file */
     uint64_t size_qmc_point = 0;
@@ -9639,6 +9779,8 @@ trexio_text_flush_pbc (trexio_text_t* const file)
   if (pbc->pbc_periodic_isSet == true) fprintf(f, "pbc_periodic %" PRId64 " \n", pbc->pbc_periodic);
   fprintf(f, "pbc_k_point_num_isSet %u \n", pbc->pbc_k_point_num_isSet);
   if (pbc->pbc_k_point_num_isSet == true) fprintf(f, "pbc_k_point_num %" PRId64 " \n", pbc->pbc_k_point_num);
+  fprintf(f, "pbc_madelung_isSet %u \n", pbc->pbc_madelung_isSet);
+  if (pbc->pbc_madelung_isSet == true) fprintf(f, "pbc_madelung %24.16e \n", pbc->pbc_madelung);
 
 
   /* Write arrays */
@@ -13355,6 +13497,7 @@ trexio_exit_code trexio_text_has_ao_2e_int_eri(trexio_t* const file)
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, ao_2e_int_eri_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_2e_int_eri_file_name));
@@ -13380,6 +13523,7 @@ trexio_exit_code trexio_text_has_ao_2e_int_eri_lr(trexio_t* const file)
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, ao_2e_int_eri_lr_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_2e_int_eri_lr_file_name));
@@ -13405,6 +13549,7 @@ trexio_exit_code trexio_text_has_ao_2e_int_eri_cholesky(trexio_t* const file)
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, ao_2e_int_eri_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_2e_int_eri_cholesky_file_name));
@@ -13430,6 +13575,7 @@ trexio_exit_code trexio_text_has_ao_2e_int_eri_lr_cholesky(trexio_t* const file)
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, ao_2e_int_eri_lr_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_2e_int_eri_lr_cholesky_file_name));
@@ -13455,6 +13601,7 @@ trexio_exit_code trexio_text_has_mo_2e_int_eri(trexio_t* const file)
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, mo_2e_int_eri_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_2e_int_eri_file_name));
@@ -13480,6 +13627,7 @@ trexio_exit_code trexio_text_has_mo_2e_int_eri_lr(trexio_t* const file)
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, mo_2e_int_eri_lr_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_2e_int_eri_lr_file_name));
@@ -13505,6 +13653,7 @@ trexio_exit_code trexio_text_has_mo_2e_int_eri_cholesky(trexio_t* const file)
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, mo_2e_int_eri_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_2e_int_eri_cholesky_file_name));
@@ -13530,6 +13679,7 @@ trexio_exit_code trexio_text_has_mo_2e_int_eri_lr_cholesky(trexio_t* const file)
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, mo_2e_int_eri_lr_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_2e_int_eri_lr_cholesky_file_name));
@@ -13555,6 +13705,7 @@ trexio_exit_code trexio_text_has_csf_det_coefficient(trexio_t* const file)
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, csf_det_coefficient_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(csf_det_coefficient_file_name));
@@ -13580,6 +13731,7 @@ trexio_exit_code trexio_text_has_amplitude_single(trexio_t* const file)
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_single_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_single_file_name));
@@ -13605,6 +13757,7 @@ trexio_exit_code trexio_text_has_amplitude_single_exp(trexio_t* const file)
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_single_exp_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_single_exp_file_name));
@@ -13630,6 +13783,7 @@ trexio_exit_code trexio_text_has_amplitude_double(trexio_t* const file)
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_double_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_double_file_name));
@@ -13655,6 +13809,7 @@ trexio_exit_code trexio_text_has_amplitude_double_exp(trexio_t* const file)
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_double_exp_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_double_exp_file_name));
@@ -13680,6 +13835,7 @@ trexio_exit_code trexio_text_has_amplitude_triple(trexio_t* const file)
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_triple_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_triple_file_name));
@@ -13705,6 +13861,7 @@ trexio_exit_code trexio_text_has_amplitude_triple_exp(trexio_t* const file)
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_triple_exp_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_triple_exp_file_name));
@@ -13730,6 +13887,7 @@ trexio_exit_code trexio_text_has_amplitude_quadruple(trexio_t* const file)
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_quadruple_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_quadruple_file_name));
@@ -13755,6 +13913,7 @@ trexio_exit_code trexio_text_has_amplitude_quadruple_exp(trexio_t* const file)
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_quadruple_exp_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_quadruple_exp_file_name));
@@ -13780,6 +13939,7 @@ trexio_exit_code trexio_text_has_rdm_2e(trexio_t* const file)
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_file_name));
@@ -13805,6 +13965,7 @@ trexio_exit_code trexio_text_has_rdm_2e_upup(trexio_t* const file)
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_upup_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_upup_file_name));
@@ -13830,6 +13991,7 @@ trexio_exit_code trexio_text_has_rdm_2e_dndn(trexio_t* const file)
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_dndn_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_dndn_file_name));
@@ -13855,6 +14017,7 @@ trexio_exit_code trexio_text_has_rdm_2e_updn(trexio_t* const file)
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_updn_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_updn_file_name));
@@ -13880,6 +14043,7 @@ trexio_exit_code trexio_text_has_rdm_2e_transition(trexio_t* const file)
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_transition_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_transition_file_name));
@@ -13905,6 +14069,7 @@ trexio_exit_code trexio_text_has_rdm_2e_cholesky(trexio_t* const file)
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_cholesky_file_name));
@@ -13930,6 +14095,7 @@ trexio_exit_code trexio_text_has_rdm_2e_upup_cholesky(trexio_t* const file)
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_upup_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_upup_cholesky_file_name));
@@ -13955,6 +14121,7 @@ trexio_exit_code trexio_text_has_rdm_2e_dndn_cholesky(trexio_t* const file)
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_dndn_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_dndn_cholesky_file_name));
@@ -13980,6 +14147,7 @@ trexio_exit_code trexio_text_has_rdm_2e_updn_cholesky(trexio_t* const file)
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_updn_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_updn_cholesky_file_name));
@@ -14113,6 +14281,22 @@ trexio_text_has_pbc_k_point_num (trexio_t* const file)
   if (pbc == NULL) return TREXIO_FAILURE;
 
   if (pbc->pbc_k_point_num_isSet == true){
+    return TREXIO_SUCCESS;
+  } else {
+    return TREXIO_HAS_NOT;
+  }
+
+}
+
+trexio_exit_code
+trexio_text_has_pbc_madelung (trexio_t* const file)
+{
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+
+  pbc_t* pbc = trexio_text_read_pbc((trexio_text_t*) file);
+  if (pbc == NULL) return TREXIO_FAILURE;
+
+  if (pbc->pbc_madelung_isSet == true){
     return TREXIO_SUCCESS;
   } else {
     return TREXIO_HAS_NOT;
@@ -14876,6 +15060,7 @@ trexio_exit_code trexio_text_has_determinant_coefficient(trexio_t* const file)
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, file_name, TREXIO_MAX_FILENAME_LENGTH - sizeof(file_name));
 
@@ -14897,6 +15082,7 @@ trexio_exit_code trexio_text_has_csf_coefficient(trexio_t* const file)
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, file_name, TREXIO_MAX_FILENAME_LENGTH - sizeof(file_name));
 
@@ -14915,6 +15101,8 @@ trexio_text_read_nucleus_charge (trexio_t* const file, double* const nucleus_cha
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (nucleus_charge == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   nucleus_t* const nucleus = trexio_text_read_nucleus((trexio_text_t*) file);
   if (nucleus == NULL) return TREXIO_FAILURE;
@@ -14942,6 +15130,8 @@ trexio_text_read_nucleus_coord (trexio_t* const file, double* const nucleus_coor
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (nucleus_coord == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   nucleus_t* const nucleus = trexio_text_read_nucleus((trexio_text_t*) file);
   if (nucleus == NULL) return TREXIO_FAILURE;
@@ -14969,6 +15159,8 @@ trexio_text_read_cell_a (trexio_t* const file, double* const cell_a,
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (cell_a == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   cell_t* const cell = trexio_text_read_cell((trexio_text_t*) file);
   if (cell == NULL) return TREXIO_FAILURE;
@@ -14996,6 +15188,8 @@ trexio_text_read_cell_b (trexio_t* const file, double* const cell_b,
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (cell_b == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   cell_t* const cell = trexio_text_read_cell((trexio_text_t*) file);
   if (cell == NULL) return TREXIO_FAILURE;
@@ -15023,6 +15217,8 @@ trexio_text_read_cell_c (trexio_t* const file, double* const cell_c,
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (cell_c == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   cell_t* const cell = trexio_text_read_cell((trexio_text_t*) file);
   if (cell == NULL) return TREXIO_FAILURE;
@@ -15050,6 +15246,8 @@ trexio_text_read_cell_g_a (trexio_t* const file, double* const cell_g_a,
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (cell_g_a == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   cell_t* const cell = trexio_text_read_cell((trexio_text_t*) file);
   if (cell == NULL) return TREXIO_FAILURE;
@@ -15077,6 +15275,8 @@ trexio_text_read_cell_g_b (trexio_t* const file, double* const cell_g_b,
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (cell_g_b == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   cell_t* const cell = trexio_text_read_cell((trexio_text_t*) file);
   if (cell == NULL) return TREXIO_FAILURE;
@@ -15104,6 +15304,8 @@ trexio_text_read_cell_g_c (trexio_t* const file, double* const cell_g_c,
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (cell_g_c == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   cell_t* const cell = trexio_text_read_cell((trexio_text_t*) file);
   if (cell == NULL) return TREXIO_FAILURE;
@@ -15131,6 +15333,8 @@ trexio_text_read_pbc_k_point (trexio_t* const file, double* const pbc_k_point,
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (pbc_k_point == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   pbc_t* const pbc = trexio_text_read_pbc((trexio_text_t*) file);
   if (pbc == NULL) return TREXIO_FAILURE;
@@ -15158,6 +15362,8 @@ trexio_text_read_pbc_k_point_weight (trexio_t* const file, double* const pbc_k_p
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (pbc_k_point_weight == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   pbc_t* const pbc = trexio_text_read_pbc((trexio_text_t*) file);
   if (pbc == NULL) return TREXIO_FAILURE;
@@ -15185,6 +15391,8 @@ trexio_text_read_basis_nucleus_index (trexio_t* const file, int64_t* const basis
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_nucleus_index == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   basis_t* const basis = trexio_text_read_basis((trexio_text_t*) file);
   if (basis == NULL) return TREXIO_FAILURE;
@@ -15212,6 +15420,8 @@ trexio_text_read_basis_shell_ang_mom (trexio_t* const file, int64_t* const basis
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_shell_ang_mom == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   basis_t* const basis = trexio_text_read_basis((trexio_text_t*) file);
   if (basis == NULL) return TREXIO_FAILURE;
@@ -15239,6 +15449,8 @@ trexio_text_read_basis_shell_factor (trexio_t* const file, double* const basis_s
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_shell_factor == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   basis_t* const basis = trexio_text_read_basis((trexio_text_t*) file);
   if (basis == NULL) return TREXIO_FAILURE;
@@ -15266,6 +15478,8 @@ trexio_text_read_basis_r_power (trexio_t* const file, int64_t* const basis_r_pow
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_r_power == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   basis_t* const basis = trexio_text_read_basis((trexio_text_t*) file);
   if (basis == NULL) return TREXIO_FAILURE;
@@ -15293,6 +15507,8 @@ trexio_text_read_basis_nao_grid_start (trexio_t* const file, int64_t* const basi
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_nao_grid_start == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   basis_t* const basis = trexio_text_read_basis((trexio_text_t*) file);
   if (basis == NULL) return TREXIO_FAILURE;
@@ -15320,6 +15536,8 @@ trexio_text_read_basis_nao_grid_size (trexio_t* const file, int64_t* const basis
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_nao_grid_size == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   basis_t* const basis = trexio_text_read_basis((trexio_text_t*) file);
   if (basis == NULL) return TREXIO_FAILURE;
@@ -15347,6 +15565,8 @@ trexio_text_read_basis_shell_index (trexio_t* const file, int64_t* const basis_s
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_shell_index == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   basis_t* const basis = trexio_text_read_basis((trexio_text_t*) file);
   if (basis == NULL) return TREXIO_FAILURE;
@@ -15374,6 +15594,8 @@ trexio_text_read_basis_exponent (trexio_t* const file, double* const basis_expon
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_exponent == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   basis_t* const basis = trexio_text_read_basis((trexio_text_t*) file);
   if (basis == NULL) return TREXIO_FAILURE;
@@ -15401,6 +15623,8 @@ trexio_text_read_basis_exponent_im (trexio_t* const file, double* const basis_ex
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_exponent_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   basis_t* const basis = trexio_text_read_basis((trexio_text_t*) file);
   if (basis == NULL) return TREXIO_FAILURE;
@@ -15428,6 +15652,8 @@ trexio_text_read_basis_coefficient (trexio_t* const file, double* const basis_co
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_coefficient == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   basis_t* const basis = trexio_text_read_basis((trexio_text_t*) file);
   if (basis == NULL) return TREXIO_FAILURE;
@@ -15455,6 +15681,8 @@ trexio_text_read_basis_coefficient_im (trexio_t* const file, double* const basis
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_coefficient_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   basis_t* const basis = trexio_text_read_basis((trexio_text_t*) file);
   if (basis == NULL) return TREXIO_FAILURE;
@@ -15482,6 +15710,8 @@ trexio_text_read_basis_oscillation_arg (trexio_t* const file, double* const basi
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_oscillation_arg == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   basis_t* const basis = trexio_text_read_basis((trexio_text_t*) file);
   if (basis == NULL) return TREXIO_FAILURE;
@@ -15509,6 +15739,8 @@ trexio_text_read_basis_prim_factor (trexio_t* const file, double* const basis_pr
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_prim_factor == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   basis_t* const basis = trexio_text_read_basis((trexio_text_t*) file);
   if (basis == NULL) return TREXIO_FAILURE;
@@ -15536,6 +15768,8 @@ trexio_text_read_basis_nao_grid_radius (trexio_t* const file, double* const basi
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_nao_grid_radius == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   basis_t* const basis = trexio_text_read_basis((trexio_text_t*) file);
   if (basis == NULL) return TREXIO_FAILURE;
@@ -15563,6 +15797,8 @@ trexio_text_read_basis_nao_grid_phi (trexio_t* const file, double* const basis_n
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_nao_grid_phi == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   basis_t* const basis = trexio_text_read_basis((trexio_text_t*) file);
   if (basis == NULL) return TREXIO_FAILURE;
@@ -15590,6 +15826,8 @@ trexio_text_read_basis_nao_grid_grad (trexio_t* const file, double* const basis_
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_nao_grid_grad == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   basis_t* const basis = trexio_text_read_basis((trexio_text_t*) file);
   if (basis == NULL) return TREXIO_FAILURE;
@@ -15617,6 +15855,8 @@ trexio_text_read_basis_nao_grid_lap (trexio_t* const file, double* const basis_n
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_nao_grid_lap == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   basis_t* const basis = trexio_text_read_basis((trexio_text_t*) file);
   if (basis == NULL) return TREXIO_FAILURE;
@@ -15644,6 +15884,8 @@ trexio_text_read_basis_interpolator_phi (trexio_t* const file, double* const bas
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_interpolator_phi == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   basis_t* const basis = trexio_text_read_basis((trexio_text_t*) file);
   if (basis == NULL) return TREXIO_FAILURE;
@@ -15671,6 +15913,8 @@ trexio_text_read_basis_interpolator_grad (trexio_t* const file, double* const ba
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_interpolator_grad == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   basis_t* const basis = trexio_text_read_basis((trexio_text_t*) file);
   if (basis == NULL) return TREXIO_FAILURE;
@@ -15698,6 +15942,8 @@ trexio_text_read_basis_interpolator_lap (trexio_t* const file, double* const bas
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_interpolator_lap == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   basis_t* const basis = trexio_text_read_basis((trexio_text_t*) file);
   if (basis == NULL) return TREXIO_FAILURE;
@@ -15725,6 +15971,8 @@ trexio_text_read_ecp_max_ang_mom_plus_1 (trexio_t* const file, int64_t* const ec
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (ecp_max_ang_mom_plus_1 == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   ecp_t* const ecp = trexio_text_read_ecp((trexio_text_t*) file);
   if (ecp == NULL) return TREXIO_FAILURE;
@@ -15752,6 +16000,8 @@ trexio_text_read_ecp_z_core (trexio_t* const file, int64_t* const ecp_z_core,
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (ecp_z_core == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   ecp_t* const ecp = trexio_text_read_ecp((trexio_text_t*) file);
   if (ecp == NULL) return TREXIO_FAILURE;
@@ -15779,6 +16029,8 @@ trexio_text_read_ecp_ang_mom (trexio_t* const file, int64_t* const ecp_ang_mom,
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (ecp_ang_mom == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   ecp_t* const ecp = trexio_text_read_ecp((trexio_text_t*) file);
   if (ecp == NULL) return TREXIO_FAILURE;
@@ -15806,6 +16058,8 @@ trexio_text_read_ecp_nucleus_index (trexio_t* const file, int64_t* const ecp_nuc
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (ecp_nucleus_index == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   ecp_t* const ecp = trexio_text_read_ecp((trexio_text_t*) file);
   if (ecp == NULL) return TREXIO_FAILURE;
@@ -15833,6 +16087,8 @@ trexio_text_read_ecp_exponent (trexio_t* const file, double* const ecp_exponent,
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (ecp_exponent == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   ecp_t* const ecp = trexio_text_read_ecp((trexio_text_t*) file);
   if (ecp == NULL) return TREXIO_FAILURE;
@@ -15860,6 +16116,8 @@ trexio_text_read_ecp_coefficient (trexio_t* const file, double* const ecp_coeffi
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (ecp_coefficient == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   ecp_t* const ecp = trexio_text_read_ecp((trexio_text_t*) file);
   if (ecp == NULL) return TREXIO_FAILURE;
@@ -15887,6 +16145,8 @@ trexio_text_read_ecp_power (trexio_t* const file, int64_t* const ecp_power,
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (ecp_power == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   ecp_t* const ecp = trexio_text_read_ecp((trexio_text_t*) file);
   if (ecp == NULL) return TREXIO_FAILURE;
@@ -15914,6 +16174,8 @@ trexio_text_read_grid_coord (trexio_t* const file, double* const grid_coord,
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (grid_coord == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   grid_t* const grid = trexio_text_read_grid((trexio_text_t*) file);
   if (grid == NULL) return TREXIO_FAILURE;
@@ -15941,6 +16203,8 @@ trexio_text_read_grid_weight (trexio_t* const file, double* const grid_weight,
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (grid_weight == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   grid_t* const grid = trexio_text_read_grid((trexio_text_t*) file);
   if (grid == NULL) return TREXIO_FAILURE;
@@ -15968,6 +16232,8 @@ trexio_text_read_grid_ang_coord (trexio_t* const file, double* const grid_ang_co
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (grid_ang_coord == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   grid_t* const grid = trexio_text_read_grid((trexio_text_t*) file);
   if (grid == NULL) return TREXIO_FAILURE;
@@ -15995,6 +16261,8 @@ trexio_text_read_grid_ang_weight (trexio_t* const file, double* const grid_ang_w
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (grid_ang_weight == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   grid_t* const grid = trexio_text_read_grid((trexio_text_t*) file);
   if (grid == NULL) return TREXIO_FAILURE;
@@ -16022,6 +16290,8 @@ trexio_text_read_grid_rad_coord (trexio_t* const file, double* const grid_rad_co
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (grid_rad_coord == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   grid_t* const grid = trexio_text_read_grid((trexio_text_t*) file);
   if (grid == NULL) return TREXIO_FAILURE;
@@ -16049,6 +16319,8 @@ trexio_text_read_grid_rad_weight (trexio_t* const file, double* const grid_rad_w
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (grid_rad_weight == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   grid_t* const grid = trexio_text_read_grid((trexio_text_t*) file);
   if (grid == NULL) return TREXIO_FAILURE;
@@ -16076,6 +16348,8 @@ trexio_text_read_ao_shell (trexio_t* const file, int64_t* const ao_shell,
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_shell == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   ao_t* const ao = trexio_text_read_ao((trexio_text_t*) file);
   if (ao == NULL) return TREXIO_FAILURE;
@@ -16103,6 +16377,8 @@ trexio_text_read_ao_normalization (trexio_t* const file, double* const ao_normal
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_normalization == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   ao_t* const ao = trexio_text_read_ao((trexio_text_t*) file);
   if (ao == NULL) return TREXIO_FAILURE;
@@ -16130,6 +16406,8 @@ trexio_text_read_ao_1e_int_overlap (trexio_t* const file, double* const ao_1e_in
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_overlap == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   ao_1e_int_t* const ao_1e_int = trexio_text_read_ao_1e_int((trexio_text_t*) file);
   if (ao_1e_int == NULL) return TREXIO_FAILURE;
@@ -16157,6 +16435,8 @@ trexio_text_read_ao_1e_int_kinetic (trexio_t* const file, double* const ao_1e_in
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_kinetic == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   ao_1e_int_t* const ao_1e_int = trexio_text_read_ao_1e_int((trexio_text_t*) file);
   if (ao_1e_int == NULL) return TREXIO_FAILURE;
@@ -16184,6 +16464,8 @@ trexio_text_read_ao_1e_int_potential_n_e (trexio_t* const file, double* const ao
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_potential_n_e == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   ao_1e_int_t* const ao_1e_int = trexio_text_read_ao_1e_int((trexio_text_t*) file);
   if (ao_1e_int == NULL) return TREXIO_FAILURE;
@@ -16211,6 +16493,8 @@ trexio_text_read_ao_1e_int_ecp (trexio_t* const file, double* const ao_1e_int_ec
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_ecp == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   ao_1e_int_t* const ao_1e_int = trexio_text_read_ao_1e_int((trexio_text_t*) file);
   if (ao_1e_int == NULL) return TREXIO_FAILURE;
@@ -16238,6 +16522,8 @@ trexio_text_read_ao_1e_int_core_hamiltonian (trexio_t* const file, double* const
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_core_hamiltonian == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   ao_1e_int_t* const ao_1e_int = trexio_text_read_ao_1e_int((trexio_text_t*) file);
   if (ao_1e_int == NULL) return TREXIO_FAILURE;
@@ -16265,6 +16551,8 @@ trexio_text_read_ao_1e_int_overlap_im (trexio_t* const file, double* const ao_1e
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_overlap_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   ao_1e_int_t* const ao_1e_int = trexio_text_read_ao_1e_int((trexio_text_t*) file);
   if (ao_1e_int == NULL) return TREXIO_FAILURE;
@@ -16292,6 +16580,8 @@ trexio_text_read_ao_1e_int_kinetic_im (trexio_t* const file, double* const ao_1e
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_kinetic_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   ao_1e_int_t* const ao_1e_int = trexio_text_read_ao_1e_int((trexio_text_t*) file);
   if (ao_1e_int == NULL) return TREXIO_FAILURE;
@@ -16319,6 +16609,8 @@ trexio_text_read_ao_1e_int_potential_n_e_im (trexio_t* const file, double* const
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_potential_n_e_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   ao_1e_int_t* const ao_1e_int = trexio_text_read_ao_1e_int((trexio_text_t*) file);
   if (ao_1e_int == NULL) return TREXIO_FAILURE;
@@ -16346,6 +16638,8 @@ trexio_text_read_ao_1e_int_ecp_im (trexio_t* const file, double* const ao_1e_int
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_ecp_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   ao_1e_int_t* const ao_1e_int = trexio_text_read_ao_1e_int((trexio_text_t*) file);
   if (ao_1e_int == NULL) return TREXIO_FAILURE;
@@ -16373,6 +16667,8 @@ trexio_text_read_ao_1e_int_core_hamiltonian_im (trexio_t* const file, double* co
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_core_hamiltonian_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   ao_1e_int_t* const ao_1e_int = trexio_text_read_ao_1e_int((trexio_text_t*) file);
   if (ao_1e_int == NULL) return TREXIO_FAILURE;
@@ -16400,6 +16696,8 @@ trexio_text_read_mo_coefficient (trexio_t* const file, double* const mo_coeffici
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_coefficient == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   mo_t* const mo = trexio_text_read_mo((trexio_text_t*) file);
   if (mo == NULL) return TREXIO_FAILURE;
@@ -16427,6 +16725,8 @@ trexio_text_read_mo_coefficient_im (trexio_t* const file, double* const mo_coeff
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_coefficient_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   mo_t* const mo = trexio_text_read_mo((trexio_text_t*) file);
   if (mo == NULL) return TREXIO_FAILURE;
@@ -16454,6 +16754,8 @@ trexio_text_read_mo_occupation (trexio_t* const file, double* const mo_occupatio
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_occupation == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   mo_t* const mo = trexio_text_read_mo((trexio_text_t*) file);
   if (mo == NULL) return TREXIO_FAILURE;
@@ -16481,6 +16783,8 @@ trexio_text_read_mo_energy (trexio_t* const file, double* const mo_energy,
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_energy == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   mo_t* const mo = trexio_text_read_mo((trexio_text_t*) file);
   if (mo == NULL) return TREXIO_FAILURE;
@@ -16508,6 +16812,8 @@ trexio_text_read_mo_spin (trexio_t* const file, int64_t* const mo_spin,
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_spin == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   mo_t* const mo = trexio_text_read_mo((trexio_text_t*) file);
   if (mo == NULL) return TREXIO_FAILURE;
@@ -16535,6 +16841,8 @@ trexio_text_read_mo_k_point (trexio_t* const file, int64_t* const mo_k_point,
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_k_point == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   mo_t* const mo = trexio_text_read_mo((trexio_text_t*) file);
   if (mo == NULL) return TREXIO_FAILURE;
@@ -16562,6 +16870,8 @@ trexio_text_read_mo_1e_int_overlap (trexio_t* const file, double* const mo_1e_in
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_overlap == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   mo_1e_int_t* const mo_1e_int = trexio_text_read_mo_1e_int((trexio_text_t*) file);
   if (mo_1e_int == NULL) return TREXIO_FAILURE;
@@ -16589,6 +16899,8 @@ trexio_text_read_mo_1e_int_kinetic (trexio_t* const file, double* const mo_1e_in
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_kinetic == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   mo_1e_int_t* const mo_1e_int = trexio_text_read_mo_1e_int((trexio_text_t*) file);
   if (mo_1e_int == NULL) return TREXIO_FAILURE;
@@ -16616,6 +16928,8 @@ trexio_text_read_mo_1e_int_potential_n_e (trexio_t* const file, double* const mo
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_potential_n_e == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   mo_1e_int_t* const mo_1e_int = trexio_text_read_mo_1e_int((trexio_text_t*) file);
   if (mo_1e_int == NULL) return TREXIO_FAILURE;
@@ -16643,6 +16957,8 @@ trexio_text_read_mo_1e_int_ecp (trexio_t* const file, double* const mo_1e_int_ec
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_ecp == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   mo_1e_int_t* const mo_1e_int = trexio_text_read_mo_1e_int((trexio_text_t*) file);
   if (mo_1e_int == NULL) return TREXIO_FAILURE;
@@ -16670,6 +16986,8 @@ trexio_text_read_mo_1e_int_core_hamiltonian (trexio_t* const file, double* const
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_core_hamiltonian == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   mo_1e_int_t* const mo_1e_int = trexio_text_read_mo_1e_int((trexio_text_t*) file);
   if (mo_1e_int == NULL) return TREXIO_FAILURE;
@@ -16697,6 +17015,8 @@ trexio_text_read_mo_1e_int_overlap_im (trexio_t* const file, double* const mo_1e
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_overlap_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   mo_1e_int_t* const mo_1e_int = trexio_text_read_mo_1e_int((trexio_text_t*) file);
   if (mo_1e_int == NULL) return TREXIO_FAILURE;
@@ -16724,6 +17044,8 @@ trexio_text_read_mo_1e_int_kinetic_im (trexio_t* const file, double* const mo_1e
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_kinetic_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   mo_1e_int_t* const mo_1e_int = trexio_text_read_mo_1e_int((trexio_text_t*) file);
   if (mo_1e_int == NULL) return TREXIO_FAILURE;
@@ -16751,6 +17073,8 @@ trexio_text_read_mo_1e_int_potential_n_e_im (trexio_t* const file, double* const
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_potential_n_e_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   mo_1e_int_t* const mo_1e_int = trexio_text_read_mo_1e_int((trexio_text_t*) file);
   if (mo_1e_int == NULL) return TREXIO_FAILURE;
@@ -16778,6 +17102,8 @@ trexio_text_read_mo_1e_int_ecp_im (trexio_t* const file, double* const mo_1e_int
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_ecp_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   mo_1e_int_t* const mo_1e_int = trexio_text_read_mo_1e_int((trexio_text_t*) file);
   if (mo_1e_int == NULL) return TREXIO_FAILURE;
@@ -16805,6 +17131,8 @@ trexio_text_read_mo_1e_int_core_hamiltonian_im (trexio_t* const file, double* co
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_core_hamiltonian_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   mo_1e_int_t* const mo_1e_int = trexio_text_read_mo_1e_int((trexio_text_t*) file);
   if (mo_1e_int == NULL) return TREXIO_FAILURE;
@@ -16832,6 +17160,8 @@ trexio_text_read_rdm_1e (trexio_t* const file, double* const rdm_1e,
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (rdm_1e == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   rdm_t* const rdm = trexio_text_read_rdm((trexio_text_t*) file);
   if (rdm == NULL) return TREXIO_FAILURE;
@@ -16859,6 +17189,8 @@ trexio_text_read_rdm_1e_up (trexio_t* const file, double* const rdm_1e_up,
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (rdm_1e_up == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   rdm_t* const rdm = trexio_text_read_rdm((trexio_text_t*) file);
   if (rdm == NULL) return TREXIO_FAILURE;
@@ -16886,6 +17218,8 @@ trexio_text_read_rdm_1e_dn (trexio_t* const file, double* const rdm_1e_dn,
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (rdm_1e_dn == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   rdm_t* const rdm = trexio_text_read_rdm((trexio_text_t*) file);
   if (rdm == NULL) return TREXIO_FAILURE;
@@ -16913,6 +17247,8 @@ trexio_text_read_rdm_1e_transition (trexio_t* const file, double* const rdm_1e_t
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (rdm_1e_transition == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   rdm_t* const rdm = trexio_text_read_rdm((trexio_text_t*) file);
   if (rdm == NULL) return TREXIO_FAILURE;
@@ -16940,6 +17276,8 @@ trexio_text_read_jastrow_en (trexio_t* const file, double* const jastrow_en,
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (jastrow_en == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   jastrow_t* const jastrow = trexio_text_read_jastrow((trexio_text_t*) file);
   if (jastrow == NULL) return TREXIO_FAILURE;
@@ -16967,6 +17305,8 @@ trexio_text_read_jastrow_ee (trexio_t* const file, double* const jastrow_ee,
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (jastrow_ee == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   jastrow_t* const jastrow = trexio_text_read_jastrow((trexio_text_t*) file);
   if (jastrow == NULL) return TREXIO_FAILURE;
@@ -16994,6 +17334,8 @@ trexio_text_read_jastrow_een (trexio_t* const file, double* const jastrow_een,
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (jastrow_een == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   jastrow_t* const jastrow = trexio_text_read_jastrow((trexio_text_t*) file);
   if (jastrow == NULL) return TREXIO_FAILURE;
@@ -17021,6 +17363,8 @@ trexio_text_read_jastrow_en_nucleus (trexio_t* const file, int64_t* const jastro
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (jastrow_en_nucleus == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   jastrow_t* const jastrow = trexio_text_read_jastrow((trexio_text_t*) file);
   if (jastrow == NULL) return TREXIO_FAILURE;
@@ -17048,6 +17392,8 @@ trexio_text_read_jastrow_een_nucleus (trexio_t* const file, int64_t* const jastr
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (jastrow_een_nucleus == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   jastrow_t* const jastrow = trexio_text_read_jastrow((trexio_text_t*) file);
   if (jastrow == NULL) return TREXIO_FAILURE;
@@ -17075,6 +17421,8 @@ trexio_text_read_jastrow_en_scaling (trexio_t* const file, double* const jastrow
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (jastrow_en_scaling == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   jastrow_t* const jastrow = trexio_text_read_jastrow((trexio_text_t*) file);
   if (jastrow == NULL) return TREXIO_FAILURE;
@@ -17102,6 +17450,8 @@ trexio_text_read_qmc_point (trexio_t* const file, double* const qmc_point,
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (qmc_point == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   qmc_t* const qmc = trexio_text_read_qmc((trexio_text_t*) file);
   if (qmc == NULL) return TREXIO_FAILURE;
@@ -17129,6 +17479,8 @@ trexio_text_read_qmc_psi (trexio_t* const file, double* const qmc_psi,
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (qmc_psi == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   qmc_t* const qmc = trexio_text_read_qmc((trexio_text_t*) file);
   if (qmc == NULL) return TREXIO_FAILURE;
@@ -17156,6 +17508,8 @@ trexio_text_read_qmc_e_loc (trexio_t* const file, double* const qmc_e_loc,
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
   if (qmc_e_loc == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   qmc_t* const qmc = trexio_text_read_qmc((trexio_text_t*) file);
   if (qmc == NULL) return TREXIO_FAILURE;
@@ -17378,6 +17732,7 @@ trexio_exit_code trexio_text_read_ao_2e_int_eri(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, ao_2e_int_eri_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_2e_int_eri_file_name));
@@ -17450,6 +17805,7 @@ trexio_exit_code trexio_text_read_ao_2e_int_eri_size(trexio_t* const file, int64
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, ao_2e_int_eri_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_2e_int_eri_file_name));
@@ -17505,6 +17861,7 @@ trexio_exit_code trexio_text_read_ao_2e_int_eri_lr(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, ao_2e_int_eri_lr_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_2e_int_eri_lr_file_name));
@@ -17577,6 +17934,7 @@ trexio_exit_code trexio_text_read_ao_2e_int_eri_lr_size(trexio_t* const file, in
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, ao_2e_int_eri_lr_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_2e_int_eri_lr_file_name));
@@ -17632,6 +17990,7 @@ trexio_exit_code trexio_text_read_ao_2e_int_eri_cholesky(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, ao_2e_int_eri_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_2e_int_eri_cholesky_file_name));
@@ -17704,6 +18063,7 @@ trexio_exit_code trexio_text_read_ao_2e_int_eri_cholesky_size(trexio_t* const fi
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, ao_2e_int_eri_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_2e_int_eri_cholesky_file_name));
@@ -17759,6 +18119,7 @@ trexio_exit_code trexio_text_read_ao_2e_int_eri_lr_cholesky(trexio_t* const file
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, ao_2e_int_eri_lr_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_2e_int_eri_lr_cholesky_file_name));
@@ -17831,6 +18192,7 @@ trexio_exit_code trexio_text_read_ao_2e_int_eri_lr_cholesky_size(trexio_t* const
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, ao_2e_int_eri_lr_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_2e_int_eri_lr_cholesky_file_name));
@@ -17886,6 +18248,7 @@ trexio_exit_code trexio_text_read_mo_2e_int_eri(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, mo_2e_int_eri_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_2e_int_eri_file_name));
@@ -17958,6 +18321,7 @@ trexio_exit_code trexio_text_read_mo_2e_int_eri_size(trexio_t* const file, int64
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, mo_2e_int_eri_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_2e_int_eri_file_name));
@@ -18013,6 +18377,7 @@ trexio_exit_code trexio_text_read_mo_2e_int_eri_lr(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, mo_2e_int_eri_lr_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_2e_int_eri_lr_file_name));
@@ -18085,6 +18450,7 @@ trexio_exit_code trexio_text_read_mo_2e_int_eri_lr_size(trexio_t* const file, in
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, mo_2e_int_eri_lr_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_2e_int_eri_lr_file_name));
@@ -18140,6 +18506,7 @@ trexio_exit_code trexio_text_read_mo_2e_int_eri_cholesky(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, mo_2e_int_eri_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_2e_int_eri_cholesky_file_name));
@@ -18212,6 +18579,7 @@ trexio_exit_code trexio_text_read_mo_2e_int_eri_cholesky_size(trexio_t* const fi
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, mo_2e_int_eri_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_2e_int_eri_cholesky_file_name));
@@ -18267,6 +18635,7 @@ trexio_exit_code trexio_text_read_mo_2e_int_eri_lr_cholesky(trexio_t* const file
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, mo_2e_int_eri_lr_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_2e_int_eri_lr_cholesky_file_name));
@@ -18339,6 +18708,7 @@ trexio_exit_code trexio_text_read_mo_2e_int_eri_lr_cholesky_size(trexio_t* const
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, mo_2e_int_eri_lr_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_2e_int_eri_lr_cholesky_file_name));
@@ -18394,6 +18764,7 @@ trexio_exit_code trexio_text_read_csf_det_coefficient(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, csf_det_coefficient_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(csf_det_coefficient_file_name));
@@ -18466,6 +18837,7 @@ trexio_exit_code trexio_text_read_csf_det_coefficient_size(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, csf_det_coefficient_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(csf_det_coefficient_file_name));
@@ -18521,6 +18893,7 @@ trexio_exit_code trexio_text_read_amplitude_single(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_single_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_single_file_name));
@@ -18593,6 +18966,7 @@ trexio_exit_code trexio_text_read_amplitude_single_size(trexio_t* const file, in
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_single_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_single_file_name));
@@ -18648,6 +19022,7 @@ trexio_exit_code trexio_text_read_amplitude_single_exp(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_single_exp_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_single_exp_file_name));
@@ -18720,6 +19095,7 @@ trexio_exit_code trexio_text_read_amplitude_single_exp_size(trexio_t* const file
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_single_exp_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_single_exp_file_name));
@@ -18775,6 +19151,7 @@ trexio_exit_code trexio_text_read_amplitude_double(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_double_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_double_file_name));
@@ -18847,6 +19224,7 @@ trexio_exit_code trexio_text_read_amplitude_double_size(trexio_t* const file, in
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_double_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_double_file_name));
@@ -18902,6 +19280,7 @@ trexio_exit_code trexio_text_read_amplitude_double_exp(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_double_exp_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_double_exp_file_name));
@@ -18974,6 +19353,7 @@ trexio_exit_code trexio_text_read_amplitude_double_exp_size(trexio_t* const file
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_double_exp_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_double_exp_file_name));
@@ -19029,6 +19409,7 @@ trexio_exit_code trexio_text_read_amplitude_triple(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_triple_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_triple_file_name));
@@ -19101,6 +19482,7 @@ trexio_exit_code trexio_text_read_amplitude_triple_size(trexio_t* const file, in
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_triple_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_triple_file_name));
@@ -19156,6 +19538,7 @@ trexio_exit_code trexio_text_read_amplitude_triple_exp(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_triple_exp_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_triple_exp_file_name));
@@ -19228,6 +19611,7 @@ trexio_exit_code trexio_text_read_amplitude_triple_exp_size(trexio_t* const file
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_triple_exp_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_triple_exp_file_name));
@@ -19283,6 +19667,7 @@ trexio_exit_code trexio_text_read_amplitude_quadruple(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_quadruple_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_quadruple_file_name));
@@ -19355,6 +19740,7 @@ trexio_exit_code trexio_text_read_amplitude_quadruple_size(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_quadruple_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_quadruple_file_name));
@@ -19410,6 +19796,7 @@ trexio_exit_code trexio_text_read_amplitude_quadruple_exp(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_quadruple_exp_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_quadruple_exp_file_name));
@@ -19482,6 +19869,7 @@ trexio_exit_code trexio_text_read_amplitude_quadruple_exp_size(trexio_t* const f
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_quadruple_exp_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_quadruple_exp_file_name));
@@ -19537,6 +19925,7 @@ trexio_exit_code trexio_text_read_rdm_2e(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_file_name));
@@ -19609,6 +19998,7 @@ trexio_exit_code trexio_text_read_rdm_2e_size(trexio_t* const file, int64_t* con
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_file_name));
@@ -19664,6 +20054,7 @@ trexio_exit_code trexio_text_read_rdm_2e_upup(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_upup_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_upup_file_name));
@@ -19736,6 +20127,7 @@ trexio_exit_code trexio_text_read_rdm_2e_upup_size(trexio_t* const file, int64_t
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_upup_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_upup_file_name));
@@ -19791,6 +20183,7 @@ trexio_exit_code trexio_text_read_rdm_2e_dndn(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_dndn_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_dndn_file_name));
@@ -19863,6 +20256,7 @@ trexio_exit_code trexio_text_read_rdm_2e_dndn_size(trexio_t* const file, int64_t
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_dndn_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_dndn_file_name));
@@ -19918,6 +20312,7 @@ trexio_exit_code trexio_text_read_rdm_2e_updn(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_updn_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_updn_file_name));
@@ -19990,6 +20385,7 @@ trexio_exit_code trexio_text_read_rdm_2e_updn_size(trexio_t* const file, int64_t
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_updn_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_updn_file_name));
@@ -20045,6 +20441,7 @@ trexio_exit_code trexio_text_read_rdm_2e_transition(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_transition_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_transition_file_name));
@@ -20117,6 +20514,7 @@ trexio_exit_code trexio_text_read_rdm_2e_transition_size(trexio_t* const file, i
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_transition_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_transition_file_name));
@@ -20172,6 +20570,7 @@ trexio_exit_code trexio_text_read_rdm_2e_cholesky(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_cholesky_file_name));
@@ -20244,6 +20643,7 @@ trexio_exit_code trexio_text_read_rdm_2e_cholesky_size(trexio_t* const file, int
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_cholesky_file_name));
@@ -20299,6 +20699,7 @@ trexio_exit_code trexio_text_read_rdm_2e_upup_cholesky(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_upup_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_upup_cholesky_file_name));
@@ -20371,6 +20772,7 @@ trexio_exit_code trexio_text_read_rdm_2e_upup_cholesky_size(trexio_t* const file
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_upup_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_upup_cholesky_file_name));
@@ -20426,6 +20828,7 @@ trexio_exit_code trexio_text_read_rdm_2e_dndn_cholesky(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_dndn_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_dndn_cholesky_file_name));
@@ -20498,6 +20901,7 @@ trexio_exit_code trexio_text_read_rdm_2e_dndn_cholesky_size(trexio_t* const file
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_dndn_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_dndn_cholesky_file_name));
@@ -20553,6 +20957,7 @@ trexio_exit_code trexio_text_read_rdm_2e_updn_cholesky(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_updn_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_updn_cholesky_file_name));
@@ -20625,6 +21030,7 @@ trexio_exit_code trexio_text_read_rdm_2e_updn_cholesky_size(trexio_t* const file
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_updn_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_updn_cholesky_file_name));
@@ -20671,6 +21077,7 @@ trexio_text_read_metadata_package_version (trexio_t* const file, char* const str
   if (metadata == NULL) return TREXIO_FAILURE;
 
   strncpy(str, metadata->metadata_package_version, max_str_len);
+  str[max_str_len-1] = '\0';
 
   return TREXIO_SUCCESS;
 
@@ -20687,6 +21094,7 @@ trexio_text_read_metadata_description (trexio_t* const file, char* const str, co
   if (metadata == NULL) return TREXIO_FAILURE;
 
   strncpy(str, metadata->metadata_description, max_str_len);
+  str[max_str_len-1] = '\0';
 
   return TREXIO_SUCCESS;
 
@@ -20703,6 +21111,7 @@ trexio_text_read_nucleus_point_group (trexio_t* const file, char* const str, con
   if (nucleus == NULL) return TREXIO_FAILURE;
 
   strncpy(str, nucleus->nucleus_point_group, max_str_len);
+  str[max_str_len-1] = '\0';
 
   return TREXIO_SUCCESS;
 
@@ -20719,6 +21128,7 @@ trexio_text_read_state_current_label (trexio_t* const file, char* const str, con
   if (state == NULL) return TREXIO_FAILURE;
 
   strncpy(str, state->state_current_label, max_str_len);
+  str[max_str_len-1] = '\0';
 
   return TREXIO_SUCCESS;
 
@@ -20735,6 +21145,7 @@ trexio_text_read_basis_type (trexio_t* const file, char* const str, const uint32
   if (basis == NULL) return TREXIO_FAILURE;
 
   strncpy(str, basis->basis_type, max_str_len);
+  str[max_str_len-1] = '\0';
 
   return TREXIO_SUCCESS;
 
@@ -20751,6 +21162,7 @@ trexio_text_read_basis_oscillation_kind (trexio_t* const file, char* const str, 
   if (basis == NULL) return TREXIO_FAILURE;
 
   strncpy(str, basis->basis_oscillation_kind, max_str_len);
+  str[max_str_len-1] = '\0';
 
   return TREXIO_SUCCESS;
 
@@ -20767,6 +21179,7 @@ trexio_text_read_basis_interpolator_kind (trexio_t* const file, char* const str,
   if (basis == NULL) return TREXIO_FAILURE;
 
   strncpy(str, basis->basis_interpolator_kind, max_str_len);
+  str[max_str_len-1] = '\0';
 
   return TREXIO_SUCCESS;
 
@@ -20783,6 +21196,7 @@ trexio_text_read_grid_description (trexio_t* const file, char* const str, const 
   if (grid == NULL) return TREXIO_FAILURE;
 
   strncpy(str, grid->grid_description, max_str_len);
+  str[max_str_len-1] = '\0';
 
   return TREXIO_SUCCESS;
 
@@ -20799,6 +21213,7 @@ trexio_text_read_mo_type (trexio_t* const file, char* const str, const uint32_t 
   if (mo == NULL) return TREXIO_FAILURE;
 
   strncpy(str, mo->mo_type, max_str_len);
+  str[max_str_len-1] = '\0';
 
   return TREXIO_SUCCESS;
 
@@ -20815,6 +21230,7 @@ trexio_text_read_jastrow_type (trexio_t* const file, char* const str, const uint
   if (jastrow == NULL) return TREXIO_FAILURE;
 
   strncpy(str, jastrow->jastrow_type, max_str_len);
+  str[max_str_len-1] = '\0';
 
   return TREXIO_SUCCESS;
 
@@ -20943,6 +21359,22 @@ trexio_text_read_pbc_k_point_num (trexio_t* const file, int64_t* const num)
   if (pbc == NULL) return TREXIO_FAILURE;
 
   *num = pbc->pbc_k_point_num;
+
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
+trexio_text_read_pbc_madelung (trexio_t* const file, double* const num)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (num   == NULL) return TREXIO_INVALID_ARG_2;
+
+  pbc_t* pbc = trexio_text_read_pbc((trexio_text_t*) file);
+  if (pbc == NULL) return TREXIO_FAILURE;
+
+  *num = pbc->pbc_madelung;
 
   return TREXIO_SUCCESS;
 
@@ -21532,6 +21964,9 @@ trexio_exit_code trexio_text_read_determinant_coefficient(trexio_t* const file,
                                                double* const dset)
 {
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
   if (dset == NULL) return TREXIO_INVALID_ARG_6;
 
@@ -21541,6 +21976,7 @@ trexio_exit_code trexio_text_read_determinant_coefficient(trexio_t* const file,
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, file_name, TREXIO_MAX_FILENAME_LENGTH - sizeof(file_name));
 
@@ -21603,6 +22039,7 @@ trexio_text_read_determinant_coefficient_size(trexio_t* const file, int64_t* con
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, file_name, TREXIO_MAX_FILENAME_LENGTH - sizeof(file_name));
 
@@ -21643,6 +22080,9 @@ trexio_exit_code trexio_text_read_csf_coefficient(trexio_t* const file,
                                                double* const dset)
 {
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
   if (dset == NULL) return TREXIO_INVALID_ARG_6;
 
@@ -21652,6 +22092,7 @@ trexio_exit_code trexio_text_read_csf_coefficient(trexio_t* const file,
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, file_name, TREXIO_MAX_FILENAME_LENGTH - sizeof(file_name));
 
@@ -21714,6 +22155,7 @@ trexio_text_read_csf_coefficient_size(trexio_t* const file, int64_t* const size_
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, file_name, TREXIO_MAX_FILENAME_LENGTH - sizeof(file_name));
 
@@ -21753,6 +22195,8 @@ trexio_text_write_nucleus_charge (trexio_t* const file, const double* nucleus_ch
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (nucleus_charge == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -21789,6 +22233,8 @@ trexio_text_write_nucleus_coord (trexio_t* const file, const double* nucleus_coo
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (nucleus_coord == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -21825,6 +22271,8 @@ trexio_text_write_cell_a (trexio_t* const file, const double* cell_a,
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (cell_a == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -21861,6 +22309,8 @@ trexio_text_write_cell_b (trexio_t* const file, const double* cell_b,
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (cell_b == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -21897,6 +22347,8 @@ trexio_text_write_cell_c (trexio_t* const file, const double* cell_c,
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (cell_c == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -21933,6 +22385,8 @@ trexio_text_write_cell_g_a (trexio_t* const file, const double* cell_g_a,
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (cell_g_a == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -21969,6 +22423,8 @@ trexio_text_write_cell_g_b (trexio_t* const file, const double* cell_g_b,
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (cell_g_b == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -22005,6 +22461,8 @@ trexio_text_write_cell_g_c (trexio_t* const file, const double* cell_g_c,
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (cell_g_c == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -22041,6 +22499,8 @@ trexio_text_write_pbc_k_point (trexio_t* const file, const double* pbc_k_point,
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (pbc_k_point == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -22077,6 +22537,8 @@ trexio_text_write_pbc_k_point_weight (trexio_t* const file, const double* pbc_k_
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (pbc_k_point_weight == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -22113,6 +22575,8 @@ trexio_text_write_basis_nucleus_index (trexio_t* const file, const int64_t* basi
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (basis_nucleus_index == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -22149,6 +22613,8 @@ trexio_text_write_basis_shell_ang_mom (trexio_t* const file, const int64_t* basi
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (basis_shell_ang_mom == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -22185,6 +22651,8 @@ trexio_text_write_basis_shell_factor (trexio_t* const file, const double* basis_
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (basis_shell_factor == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -22221,6 +22689,8 @@ trexio_text_write_basis_r_power (trexio_t* const file, const int64_t* basis_r_po
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (basis_r_power == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -22257,6 +22727,8 @@ trexio_text_write_basis_nao_grid_start (trexio_t* const file, const int64_t* bas
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (basis_nao_grid_start == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -22293,6 +22765,8 @@ trexio_text_write_basis_nao_grid_size (trexio_t* const file, const int64_t* basi
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (basis_nao_grid_size == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -22329,6 +22803,8 @@ trexio_text_write_basis_shell_index (trexio_t* const file, const int64_t* basis_
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (basis_shell_index == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -22365,6 +22841,8 @@ trexio_text_write_basis_exponent (trexio_t* const file, const double* basis_expo
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (basis_exponent == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -22401,6 +22879,8 @@ trexio_text_write_basis_exponent_im (trexio_t* const file, const double* basis_e
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (basis_exponent_im == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -22437,6 +22917,8 @@ trexio_text_write_basis_coefficient (trexio_t* const file, const double* basis_c
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (basis_coefficient == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -22473,6 +22955,8 @@ trexio_text_write_basis_coefficient_im (trexio_t* const file, const double* basi
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (basis_coefficient_im == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -22509,6 +22993,8 @@ trexio_text_write_basis_oscillation_arg (trexio_t* const file, const double* bas
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (basis_oscillation_arg == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -22545,6 +23031,8 @@ trexio_text_write_basis_prim_factor (trexio_t* const file, const double* basis_p
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (basis_prim_factor == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -22581,6 +23069,8 @@ trexio_text_write_basis_nao_grid_radius (trexio_t* const file, const double* bas
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (basis_nao_grid_radius == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -22617,6 +23107,8 @@ trexio_text_write_basis_nao_grid_phi (trexio_t* const file, const double* basis_
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (basis_nao_grid_phi == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -22653,6 +23145,8 @@ trexio_text_write_basis_nao_grid_grad (trexio_t* const file, const double* basis
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (basis_nao_grid_grad == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -22689,6 +23183,8 @@ trexio_text_write_basis_nao_grid_lap (trexio_t* const file, const double* basis_
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (basis_nao_grid_lap == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -22725,6 +23221,8 @@ trexio_text_write_basis_interpolator_phi (trexio_t* const file, const double* ba
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (basis_interpolator_phi == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -22761,6 +23259,8 @@ trexio_text_write_basis_interpolator_grad (trexio_t* const file, const double* b
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (basis_interpolator_grad == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -22797,6 +23297,8 @@ trexio_text_write_basis_interpolator_lap (trexio_t* const file, const double* ba
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (basis_interpolator_lap == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -22833,6 +23335,8 @@ trexio_text_write_ecp_max_ang_mom_plus_1 (trexio_t* const file, const int64_t* e
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (ecp_max_ang_mom_plus_1 == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -22869,6 +23373,8 @@ trexio_text_write_ecp_z_core (trexio_t* const file, const int64_t* ecp_z_core,
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (ecp_z_core == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -22905,6 +23411,8 @@ trexio_text_write_ecp_ang_mom (trexio_t* const file, const int64_t* ecp_ang_mom,
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (ecp_ang_mom == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -22941,6 +23449,8 @@ trexio_text_write_ecp_nucleus_index (trexio_t* const file, const int64_t* ecp_nu
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (ecp_nucleus_index == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -22977,6 +23487,8 @@ trexio_text_write_ecp_exponent (trexio_t* const file, const double* ecp_exponent
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (ecp_exponent == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -23013,6 +23525,8 @@ trexio_text_write_ecp_coefficient (trexio_t* const file, const double* ecp_coeff
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (ecp_coefficient == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -23049,6 +23563,8 @@ trexio_text_write_ecp_power (trexio_t* const file, const int64_t* ecp_power,
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (ecp_power == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -23085,6 +23601,8 @@ trexio_text_write_grid_coord (trexio_t* const file, const double* grid_coord,
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (grid_coord == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -23121,6 +23639,8 @@ trexio_text_write_grid_weight (trexio_t* const file, const double* grid_weight,
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (grid_weight == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -23157,6 +23677,8 @@ trexio_text_write_grid_ang_coord (trexio_t* const file, const double* grid_ang_c
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (grid_ang_coord == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -23193,6 +23715,8 @@ trexio_text_write_grid_ang_weight (trexio_t* const file, const double* grid_ang_
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (grid_ang_weight == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -23229,6 +23753,8 @@ trexio_text_write_grid_rad_coord (trexio_t* const file, const double* grid_rad_c
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (grid_rad_coord == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -23265,6 +23791,8 @@ trexio_text_write_grid_rad_weight (trexio_t* const file, const double* grid_rad_
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (grid_rad_weight == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -23301,6 +23829,8 @@ trexio_text_write_ao_shell (trexio_t* const file, const int64_t* ao_shell,
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (ao_shell == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -23337,6 +23867,8 @@ trexio_text_write_ao_normalization (trexio_t* const file, const double* ao_norma
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (ao_normalization == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -23373,6 +23905,8 @@ trexio_text_write_ao_1e_int_overlap (trexio_t* const file, const double* ao_1e_i
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_overlap == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -23409,6 +23943,8 @@ trexio_text_write_ao_1e_int_kinetic (trexio_t* const file, const double* ao_1e_i
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_kinetic == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -23445,6 +23981,8 @@ trexio_text_write_ao_1e_int_potential_n_e (trexio_t* const file, const double* a
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_potential_n_e == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -23481,6 +24019,8 @@ trexio_text_write_ao_1e_int_ecp (trexio_t* const file, const double* ao_1e_int_e
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_ecp == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -23517,6 +24057,8 @@ trexio_text_write_ao_1e_int_core_hamiltonian (trexio_t* const file, const double
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_core_hamiltonian == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -23553,6 +24095,8 @@ trexio_text_write_ao_1e_int_overlap_im (trexio_t* const file, const double* ao_1
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_overlap_im == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -23589,6 +24133,8 @@ trexio_text_write_ao_1e_int_kinetic_im (trexio_t* const file, const double* ao_1
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_kinetic_im == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -23625,6 +24171,8 @@ trexio_text_write_ao_1e_int_potential_n_e_im (trexio_t* const file, const double
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_potential_n_e_im == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -23661,6 +24209,8 @@ trexio_text_write_ao_1e_int_ecp_im (trexio_t* const file, const double* ao_1e_in
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_ecp_im == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -23697,6 +24247,8 @@ trexio_text_write_ao_1e_int_core_hamiltonian_im (trexio_t* const file, const dou
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_core_hamiltonian_im == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -23733,6 +24285,8 @@ trexio_text_write_mo_coefficient (trexio_t* const file, const double* mo_coeffic
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (mo_coefficient == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -23769,6 +24323,8 @@ trexio_text_write_mo_coefficient_im (trexio_t* const file, const double* mo_coef
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (mo_coefficient_im == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -23805,6 +24361,8 @@ trexio_text_write_mo_occupation (trexio_t* const file, const double* mo_occupati
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (mo_occupation == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -23841,6 +24399,8 @@ trexio_text_write_mo_energy (trexio_t* const file, const double* mo_energy,
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (mo_energy == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -23877,6 +24437,8 @@ trexio_text_write_mo_spin (trexio_t* const file, const int64_t* mo_spin,
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (mo_spin == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -23913,6 +24475,8 @@ trexio_text_write_mo_k_point (trexio_t* const file, const int64_t* mo_k_point,
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (mo_k_point == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -23949,6 +24513,8 @@ trexio_text_write_mo_1e_int_overlap (trexio_t* const file, const double* mo_1e_i
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_overlap == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -23985,6 +24551,8 @@ trexio_text_write_mo_1e_int_kinetic (trexio_t* const file, const double* mo_1e_i
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_kinetic == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -24021,6 +24589,8 @@ trexio_text_write_mo_1e_int_potential_n_e (trexio_t* const file, const double* m
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_potential_n_e == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -24057,6 +24627,8 @@ trexio_text_write_mo_1e_int_ecp (trexio_t* const file, const double* mo_1e_int_e
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_ecp == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -24093,6 +24665,8 @@ trexio_text_write_mo_1e_int_core_hamiltonian (trexio_t* const file, const double
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_core_hamiltonian == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -24129,6 +24703,8 @@ trexio_text_write_mo_1e_int_overlap_im (trexio_t* const file, const double* mo_1
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_overlap_im == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -24165,6 +24741,8 @@ trexio_text_write_mo_1e_int_kinetic_im (trexio_t* const file, const double* mo_1
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_kinetic_im == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -24201,6 +24779,8 @@ trexio_text_write_mo_1e_int_potential_n_e_im (trexio_t* const file, const double
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_potential_n_e_im == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -24237,6 +24817,8 @@ trexio_text_write_mo_1e_int_ecp_im (trexio_t* const file, const double* mo_1e_in
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_ecp_im == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -24273,6 +24855,8 @@ trexio_text_write_mo_1e_int_core_hamiltonian_im (trexio_t* const file, const dou
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_core_hamiltonian_im == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -24309,6 +24893,8 @@ trexio_text_write_rdm_1e (trexio_t* const file, const double* rdm_1e,
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (rdm_1e == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -24345,6 +24931,8 @@ trexio_text_write_rdm_1e_up (trexio_t* const file, const double* rdm_1e_up,
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (rdm_1e_up == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -24381,6 +24969,8 @@ trexio_text_write_rdm_1e_dn (trexio_t* const file, const double* rdm_1e_dn,
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (rdm_1e_dn == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -24417,6 +25007,8 @@ trexio_text_write_rdm_1e_transition (trexio_t* const file, const double* rdm_1e_
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (rdm_1e_transition == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -24453,6 +25045,8 @@ trexio_text_write_jastrow_en (trexio_t* const file, const double* jastrow_en,
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (jastrow_en == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -24489,6 +25083,8 @@ trexio_text_write_jastrow_ee (trexio_t* const file, const double* jastrow_ee,
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (jastrow_ee == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -24525,6 +25121,8 @@ trexio_text_write_jastrow_een (trexio_t* const file, const double* jastrow_een,
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (jastrow_een == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -24561,6 +25159,8 @@ trexio_text_write_jastrow_en_nucleus (trexio_t* const file, const int64_t* jastr
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (jastrow_en_nucleus == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -24597,6 +25197,8 @@ trexio_text_write_jastrow_een_nucleus (trexio_t* const file, const int64_t* jast
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (jastrow_een_nucleus == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -24633,6 +25235,8 @@ trexio_text_write_jastrow_en_scaling (trexio_t* const file, const double* jastro
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (jastrow_en_scaling == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -24669,6 +25273,8 @@ trexio_text_write_qmc_point (trexio_t* const file, const double* qmc_point,
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (qmc_point == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -24705,6 +25311,8 @@ trexio_text_write_qmc_psi (trexio_t* const file, const double* qmc_psi,
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (qmc_psi == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -24741,6 +25349,8 @@ trexio_text_write_qmc_e_loc (trexio_t* const file, const double* qmc_e_loc,
 
   if (file  == NULL)  return TREXIO_INVALID_ARG_1;
   if (qmc_e_loc == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   if (file->mode == 'r') return TREXIO_READONLY;
 
@@ -24800,9 +25410,10 @@ trexio_text_write_metadata_code (trexio_t* const file, const char** dset, const 
   if (tmp_str == NULL) return TREXIO_ALLOCATION_FAILED;
 
   for (uint64_t i=0 ; i<dims[0] ; ++i) {
-    size_t tmp_len = strlen(dset[i]);
+    size_t tmp_len = strlen(dset[i])+1;
     metadata->metadata_code[i] = tmp_str;
     strncpy(tmp_str, dset[i], tmp_len);
+    tmp_str[tmp_len-1] = '\0';
     tmp_str += tmp_len + 1;
   }
 
@@ -24842,9 +25453,10 @@ trexio_text_write_metadata_author (trexio_t* const file, const char** dset, cons
   if (tmp_str == NULL) return TREXIO_ALLOCATION_FAILED;
 
   for (uint64_t i=0 ; i<dims[0] ; ++i) {
-    size_t tmp_len = strlen(dset[i]);
+    size_t tmp_len = strlen(dset[i])+1;
     metadata->metadata_author[i] = tmp_str;
     strncpy(tmp_str, dset[i], tmp_len);
+    tmp_str[tmp_len-1] = '\0';
     tmp_str += tmp_len + 1;
   }
 
@@ -24884,9 +25496,10 @@ trexio_text_write_nucleus_label (trexio_t* const file, const char** dset, const 
   if (tmp_str == NULL) return TREXIO_ALLOCATION_FAILED;
 
   for (uint64_t i=0 ; i<dims[0] ; ++i) {
-    size_t tmp_len = strlen(dset[i]);
+    size_t tmp_len = strlen(dset[i])+1;
     nucleus->nucleus_label[i] = tmp_str;
     strncpy(tmp_str, dset[i], tmp_len);
+    tmp_str[tmp_len-1] = '\0';
     tmp_str += tmp_len + 1;
   }
 
@@ -24926,9 +25539,10 @@ trexio_text_write_state_label (trexio_t* const file, const char** dset, const ui
   if (tmp_str == NULL) return TREXIO_ALLOCATION_FAILED;
 
   for (uint64_t i=0 ; i<dims[0] ; ++i) {
-    size_t tmp_len = strlen(dset[i]);
+    size_t tmp_len = strlen(dset[i])+1;
     state->state_label[i] = tmp_str;
     strncpy(tmp_str, dset[i], tmp_len);
+    tmp_str[tmp_len-1] = '\0';
     tmp_str += tmp_len + 1;
   }
 
@@ -24968,9 +25582,10 @@ trexio_text_write_state_file_name (trexio_t* const file, const char** dset, cons
   if (tmp_str == NULL) return TREXIO_ALLOCATION_FAILED;
 
   for (uint64_t i=0 ; i<dims[0] ; ++i) {
-    size_t tmp_len = strlen(dset[i]);
+    size_t tmp_len = strlen(dset[i])+1;
     state->state_file_name[i] = tmp_str;
     strncpy(tmp_str, dset[i], tmp_len);
+    tmp_str[tmp_len-1] = '\0';
     tmp_str += tmp_len + 1;
   }
 
@@ -25010,9 +25625,10 @@ trexio_text_write_mo_class (trexio_t* const file, const char** dset, const uint3
   if (tmp_str == NULL) return TREXIO_ALLOCATION_FAILED;
 
   for (uint64_t i=0 ; i<dims[0] ; ++i) {
-    size_t tmp_len = strlen(dset[i]);
+    size_t tmp_len = strlen(dset[i])+1;
     mo->mo_class[i] = tmp_str;
     strncpy(tmp_str, dset[i], tmp_len);
+    tmp_str[tmp_len-1] = '\0';
     tmp_str += tmp_len + 1;
   }
 
@@ -25052,9 +25668,10 @@ trexio_text_write_mo_symmetry (trexio_t* const file, const char** dset, const ui
   if (tmp_str == NULL) return TREXIO_ALLOCATION_FAILED;
 
   for (uint64_t i=0 ; i<dims[0] ; ++i) {
-    size_t tmp_len = strlen(dset[i]);
+    size_t tmp_len = strlen(dset[i])+1;
     mo->mo_symmetry[i] = tmp_str;
     strncpy(tmp_str, dset[i], tmp_len);
+    tmp_str[tmp_len-1] = '\0';
     tmp_str += tmp_len + 1;
   }
 
@@ -25082,6 +25699,7 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, ao_2e_int_eri_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_2e_int_eri_file_name));
@@ -25094,6 +25712,8 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri(trexio_t* const file,
      the line_length is 69 because 10 per index + 4 spaces + 24 for floating point value + 1 for the new line char.
      CURRENTLY NO OFFSET IS USED WHEN WRITING !
     */
+  (void) offset_file; // Avoid unused variable error
+  
   int64_t line_length = 0L;
   char format_str[256];
 
@@ -25101,12 +25721,15 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri(trexio_t* const file,
   if (size_max < UINT8_MAX) {
     line_length = 41; // 41 for 4 indices
     strncpy(format_str, "%3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else if (size_max < UINT16_MAX) {
     line_length = 49; // 49 for 4 indices
     strncpy(format_str, "%5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else {
     line_length = 69; //69 for 4 indices
     strncpy(format_str, "%10" PRId32 " %10" PRId32 " %10" PRId32 " %10" PRId32 " %24.16e" , 256);
+    format_str[255] = '\0';
   }
   strncat(format_str, "\n", 2);
 
@@ -25156,6 +25779,7 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri(trexio_t* const file,
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, ao_2e_int_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_2e_int_file_name));
@@ -25190,6 +25814,7 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri_lr(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, ao_2e_int_eri_lr_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_2e_int_eri_lr_file_name));
@@ -25202,6 +25827,8 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri_lr(trexio_t* const file,
      the line_length is 69 because 10 per index + 4 spaces + 24 for floating point value + 1 for the new line char.
      CURRENTLY NO OFFSET IS USED WHEN WRITING !
     */
+  (void) offset_file; // Avoid unused variable error
+  
   int64_t line_length = 0L;
   char format_str[256];
 
@@ -25209,12 +25836,15 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri_lr(trexio_t* const file,
   if (size_max < UINT8_MAX) {
     line_length = 41; // 41 for 4 indices
     strncpy(format_str, "%3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else if (size_max < UINT16_MAX) {
     line_length = 49; // 49 for 4 indices
     strncpy(format_str, "%5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else {
     line_length = 69; //69 for 4 indices
     strncpy(format_str, "%10" PRId32 " %10" PRId32 " %10" PRId32 " %10" PRId32 " %24.16e" , 256);
+    format_str[255] = '\0';
   }
   strncat(format_str, "\n", 2);
 
@@ -25264,6 +25894,7 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri_lr(trexio_t* const file,
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, ao_2e_int_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_2e_int_file_name));
@@ -25298,6 +25929,7 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri_cholesky(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, ao_2e_int_eri_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_2e_int_eri_cholesky_file_name));
@@ -25310,6 +25942,8 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri_cholesky(trexio_t* const file,
      the line_length is 69 because 10 per index + 4 spaces + 24 for floating point value + 1 for the new line char.
      CURRENTLY NO OFFSET IS USED WHEN WRITING !
     */
+  (void) offset_file; // Avoid unused variable error
+  
   int64_t line_length = 0L;
   char format_str[256];
 
@@ -25317,12 +25951,15 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri_cholesky(trexio_t* const file,
   if (size_max < UINT8_MAX) {
     line_length = 37; // 41 for 4 indices
     strncpy(format_str, "%3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else if (size_max < UINT16_MAX) {
     line_length = 43; // 49 for 4 indices
     strncpy(format_str, "%5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else {
     line_length = 58; //69 for 4 indices
     strncpy(format_str, "%10" PRId32 " %10" PRId32 " %10" PRId32 " %24.16e" , 256);
+    format_str[255] = '\0';
   }
   strncat(format_str, "\n", 2);
 
@@ -25372,6 +26009,7 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri_cholesky(trexio_t* const file,
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, ao_2e_int_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_2e_int_file_name));
@@ -25406,6 +26044,7 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri_lr_cholesky(trexio_t* const fil
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, ao_2e_int_eri_lr_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_2e_int_eri_lr_cholesky_file_name));
@@ -25418,6 +26057,8 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri_lr_cholesky(trexio_t* const fil
      the line_length is 69 because 10 per index + 4 spaces + 24 for floating point value + 1 for the new line char.
      CURRENTLY NO OFFSET IS USED WHEN WRITING !
     */
+  (void) offset_file; // Avoid unused variable error
+  
   int64_t line_length = 0L;
   char format_str[256];
 
@@ -25425,12 +26066,15 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri_lr_cholesky(trexio_t* const fil
   if (size_max < UINT8_MAX) {
     line_length = 37; // 41 for 4 indices
     strncpy(format_str, "%3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else if (size_max < UINT16_MAX) {
     line_length = 43; // 49 for 4 indices
     strncpy(format_str, "%5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else {
     line_length = 58; //69 for 4 indices
     strncpy(format_str, "%10" PRId32 " %10" PRId32 " %10" PRId32 " %24.16e" , 256);
+    format_str[255] = '\0';
   }
   strncat(format_str, "\n", 2);
 
@@ -25480,6 +26124,7 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri_lr_cholesky(trexio_t* const fil
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, ao_2e_int_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_2e_int_file_name));
@@ -25514,6 +26159,7 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, mo_2e_int_eri_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_2e_int_eri_file_name));
@@ -25526,6 +26172,8 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri(trexio_t* const file,
      the line_length is 69 because 10 per index + 4 spaces + 24 for floating point value + 1 for the new line char.
      CURRENTLY NO OFFSET IS USED WHEN WRITING !
     */
+  (void) offset_file; // Avoid unused variable error
+  
   int64_t line_length = 0L;
   char format_str[256];
 
@@ -25533,12 +26181,15 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri(trexio_t* const file,
   if (size_max < UINT8_MAX) {
     line_length = 41; // 41 for 4 indices
     strncpy(format_str, "%3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else if (size_max < UINT16_MAX) {
     line_length = 49; // 49 for 4 indices
     strncpy(format_str, "%5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else {
     line_length = 69; //69 for 4 indices
     strncpy(format_str, "%10" PRId32 " %10" PRId32 " %10" PRId32 " %10" PRId32 " %24.16e" , 256);
+    format_str[255] = '\0';
   }
   strncat(format_str, "\n", 2);
 
@@ -25588,6 +26239,7 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri(trexio_t* const file,
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, mo_2e_int_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_2e_int_file_name));
@@ -25622,6 +26274,7 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri_lr(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, mo_2e_int_eri_lr_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_2e_int_eri_lr_file_name));
@@ -25634,6 +26287,8 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri_lr(trexio_t* const file,
      the line_length is 69 because 10 per index + 4 spaces + 24 for floating point value + 1 for the new line char.
      CURRENTLY NO OFFSET IS USED WHEN WRITING !
     */
+  (void) offset_file; // Avoid unused variable error
+  
   int64_t line_length = 0L;
   char format_str[256];
 
@@ -25641,12 +26296,15 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri_lr(trexio_t* const file,
   if (size_max < UINT8_MAX) {
     line_length = 41; // 41 for 4 indices
     strncpy(format_str, "%3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else if (size_max < UINT16_MAX) {
     line_length = 49; // 49 for 4 indices
     strncpy(format_str, "%5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else {
     line_length = 69; //69 for 4 indices
     strncpy(format_str, "%10" PRId32 " %10" PRId32 " %10" PRId32 " %10" PRId32 " %24.16e" , 256);
+    format_str[255] = '\0';
   }
   strncat(format_str, "\n", 2);
 
@@ -25696,6 +26354,7 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri_lr(trexio_t* const file,
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, mo_2e_int_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_2e_int_file_name));
@@ -25730,6 +26389,7 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri_cholesky(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, mo_2e_int_eri_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_2e_int_eri_cholesky_file_name));
@@ -25742,6 +26402,8 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri_cholesky(trexio_t* const file,
      the line_length is 69 because 10 per index + 4 spaces + 24 for floating point value + 1 for the new line char.
      CURRENTLY NO OFFSET IS USED WHEN WRITING !
     */
+  (void) offset_file; // Avoid unused variable error
+  
   int64_t line_length = 0L;
   char format_str[256];
 
@@ -25749,12 +26411,15 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri_cholesky(trexio_t* const file,
   if (size_max < UINT8_MAX) {
     line_length = 37; // 41 for 4 indices
     strncpy(format_str, "%3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else if (size_max < UINT16_MAX) {
     line_length = 43; // 49 for 4 indices
     strncpy(format_str, "%5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else {
     line_length = 58; //69 for 4 indices
     strncpy(format_str, "%10" PRId32 " %10" PRId32 " %10" PRId32 " %24.16e" , 256);
+    format_str[255] = '\0';
   }
   strncat(format_str, "\n", 2);
 
@@ -25804,6 +26469,7 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri_cholesky(trexio_t* const file,
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, mo_2e_int_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_2e_int_file_name));
@@ -25838,6 +26504,7 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri_lr_cholesky(trexio_t* const fil
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, mo_2e_int_eri_lr_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_2e_int_eri_lr_cholesky_file_name));
@@ -25850,6 +26517,8 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri_lr_cholesky(trexio_t* const fil
      the line_length is 69 because 10 per index + 4 spaces + 24 for floating point value + 1 for the new line char.
      CURRENTLY NO OFFSET IS USED WHEN WRITING !
     */
+  (void) offset_file; // Avoid unused variable error
+  
   int64_t line_length = 0L;
   char format_str[256];
 
@@ -25857,12 +26526,15 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri_lr_cholesky(trexio_t* const fil
   if (size_max < UINT8_MAX) {
     line_length = 37; // 41 for 4 indices
     strncpy(format_str, "%3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else if (size_max < UINT16_MAX) {
     line_length = 43; // 49 for 4 indices
     strncpy(format_str, "%5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else {
     line_length = 58; //69 for 4 indices
     strncpy(format_str, "%10" PRId32 " %10" PRId32 " %10" PRId32 " %24.16e" , 256);
+    format_str[255] = '\0';
   }
   strncat(format_str, "\n", 2);
 
@@ -25912,6 +26584,7 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri_lr_cholesky(trexio_t* const fil
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, mo_2e_int_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_2e_int_file_name));
@@ -25946,6 +26619,7 @@ trexio_exit_code trexio_text_write_csf_det_coefficient(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, csf_det_coefficient_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(csf_det_coefficient_file_name));
@@ -25958,6 +26632,8 @@ trexio_exit_code trexio_text_write_csf_det_coefficient(trexio_t* const file,
      the line_length is 69 because 10 per index + 4 spaces + 24 for floating point value + 1 for the new line char.
      CURRENTLY NO OFFSET IS USED WHEN WRITING !
     */
+  (void) offset_file; // Avoid unused variable error
+  
   int64_t line_length = 0L;
   char format_str[256];
 
@@ -25965,12 +26641,15 @@ trexio_exit_code trexio_text_write_csf_det_coefficient(trexio_t* const file,
   if (size_max < UINT8_MAX) {
     line_length = 33; // 41 for 4 indices
     strncpy(format_str, "%3" PRIu8 " %3" PRIu8 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else if (size_max < UINT16_MAX) {
     line_length = 37; // 49 for 4 indices
     strncpy(format_str, "%5" PRIu16 " %5" PRIu16 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else {
     line_length = 47; //69 for 4 indices
     strncpy(format_str, "%10" PRId32 " %10" PRId32 " %24.16e" , 256);
+    format_str[255] = '\0';
   }
   strncat(format_str, "\n", 2);
 
@@ -26020,6 +26699,7 @@ trexio_exit_code trexio_text_write_csf_det_coefficient(trexio_t* const file,
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, csf_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(csf_file_name));
@@ -26054,6 +26734,7 @@ trexio_exit_code trexio_text_write_amplitude_single(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_single_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_single_file_name));
@@ -26066,6 +26747,8 @@ trexio_exit_code trexio_text_write_amplitude_single(trexio_t* const file,
      the line_length is 69 because 10 per index + 4 spaces + 24 for floating point value + 1 for the new line char.
      CURRENTLY NO OFFSET IS USED WHEN WRITING !
     */
+  (void) offset_file; // Avoid unused variable error
+  
   int64_t line_length = 0L;
   char format_str[256];
 
@@ -26073,12 +26756,15 @@ trexio_exit_code trexio_text_write_amplitude_single(trexio_t* const file,
   if (size_max < UINT8_MAX) {
     line_length = 33; // 41 for 4 indices
     strncpy(format_str, "%3" PRIu8 " %3" PRIu8 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else if (size_max < UINT16_MAX) {
     line_length = 37; // 49 for 4 indices
     strncpy(format_str, "%5" PRIu16 " %5" PRIu16 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else {
     line_length = 47; //69 for 4 indices
     strncpy(format_str, "%10" PRId32 " %10" PRId32 " %24.16e" , 256);
+    format_str[255] = '\0';
   }
   strncat(format_str, "\n", 2);
 
@@ -26128,6 +26814,7 @@ trexio_exit_code trexio_text_write_amplitude_single(trexio_t* const file,
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_file_name));
@@ -26162,6 +26849,7 @@ trexio_exit_code trexio_text_write_amplitude_single_exp(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_single_exp_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_single_exp_file_name));
@@ -26174,6 +26862,8 @@ trexio_exit_code trexio_text_write_amplitude_single_exp(trexio_t* const file,
      the line_length is 69 because 10 per index + 4 spaces + 24 for floating point value + 1 for the new line char.
      CURRENTLY NO OFFSET IS USED WHEN WRITING !
     */
+  (void) offset_file; // Avoid unused variable error
+  
   int64_t line_length = 0L;
   char format_str[256];
 
@@ -26181,12 +26871,15 @@ trexio_exit_code trexio_text_write_amplitude_single_exp(trexio_t* const file,
   if (size_max < UINT8_MAX) {
     line_length = 33; // 41 for 4 indices
     strncpy(format_str, "%3" PRIu8 " %3" PRIu8 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else if (size_max < UINT16_MAX) {
     line_length = 37; // 49 for 4 indices
     strncpy(format_str, "%5" PRIu16 " %5" PRIu16 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else {
     line_length = 47; //69 for 4 indices
     strncpy(format_str, "%10" PRId32 " %10" PRId32 " %24.16e" , 256);
+    format_str[255] = '\0';
   }
   strncat(format_str, "\n", 2);
 
@@ -26236,6 +26929,7 @@ trexio_exit_code trexio_text_write_amplitude_single_exp(trexio_t* const file,
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_file_name));
@@ -26270,6 +26964,7 @@ trexio_exit_code trexio_text_write_amplitude_double(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_double_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_double_file_name));
@@ -26282,6 +26977,8 @@ trexio_exit_code trexio_text_write_amplitude_double(trexio_t* const file,
      the line_length is 69 because 10 per index + 4 spaces + 24 for floating point value + 1 for the new line char.
      CURRENTLY NO OFFSET IS USED WHEN WRITING !
     */
+  (void) offset_file; // Avoid unused variable error
+  
   int64_t line_length = 0L;
   char format_str[256];
 
@@ -26289,12 +26986,15 @@ trexio_exit_code trexio_text_write_amplitude_double(trexio_t* const file,
   if (size_max < UINT8_MAX) {
     line_length = 41; // 41 for 4 indices
     strncpy(format_str, "%3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else if (size_max < UINT16_MAX) {
     line_length = 49; // 49 for 4 indices
     strncpy(format_str, "%5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else {
     line_length = 69; //69 for 4 indices
     strncpy(format_str, "%10" PRId32 " %10" PRId32 " %10" PRId32 " %10" PRId32 " %24.16e" , 256);
+    format_str[255] = '\0';
   }
   strncat(format_str, "\n", 2);
 
@@ -26344,6 +27044,7 @@ trexio_exit_code trexio_text_write_amplitude_double(trexio_t* const file,
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_file_name));
@@ -26378,6 +27079,7 @@ trexio_exit_code trexio_text_write_amplitude_double_exp(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_double_exp_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_double_exp_file_name));
@@ -26390,6 +27092,8 @@ trexio_exit_code trexio_text_write_amplitude_double_exp(trexio_t* const file,
      the line_length is 69 because 10 per index + 4 spaces + 24 for floating point value + 1 for the new line char.
      CURRENTLY NO OFFSET IS USED WHEN WRITING !
     */
+  (void) offset_file; // Avoid unused variable error
+  
   int64_t line_length = 0L;
   char format_str[256];
 
@@ -26397,12 +27101,15 @@ trexio_exit_code trexio_text_write_amplitude_double_exp(trexio_t* const file,
   if (size_max < UINT8_MAX) {
     line_length = 41; // 41 for 4 indices
     strncpy(format_str, "%3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else if (size_max < UINT16_MAX) {
     line_length = 49; // 49 for 4 indices
     strncpy(format_str, "%5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else {
     line_length = 69; //69 for 4 indices
     strncpy(format_str, "%10" PRId32 " %10" PRId32 " %10" PRId32 " %10" PRId32 " %24.16e" , 256);
+    format_str[255] = '\0';
   }
   strncat(format_str, "\n", 2);
 
@@ -26452,6 +27159,7 @@ trexio_exit_code trexio_text_write_amplitude_double_exp(trexio_t* const file,
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_file_name));
@@ -26486,6 +27194,7 @@ trexio_exit_code trexio_text_write_amplitude_triple(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_triple_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_triple_file_name));
@@ -26498,6 +27207,8 @@ trexio_exit_code trexio_text_write_amplitude_triple(trexio_t* const file,
      the line_length is 69 because 10 per index + 4 spaces + 24 for floating point value + 1 for the new line char.
      CURRENTLY NO OFFSET IS USED WHEN WRITING !
     */
+  (void) offset_file; // Avoid unused variable error
+  
   int64_t line_length = 0L;
   char format_str[256];
 
@@ -26505,12 +27216,15 @@ trexio_exit_code trexio_text_write_amplitude_triple(trexio_t* const file,
   if (size_max < UINT8_MAX) {
     line_length = 49; // 41 for 4 indices
     strncpy(format_str, "%3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else if (size_max < UINT16_MAX) {
     line_length = 61; // 49 for 4 indices
     strncpy(format_str, "%5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else {
     line_length = 91; //69 for 4 indices
     strncpy(format_str, "%10" PRId32 " %10" PRId32 " %10" PRId32 " %10" PRId32 " %10" PRId32 " %10" PRId32 " %24.16e" , 256);
+    format_str[255] = '\0';
   }
   strncat(format_str, "\n", 2);
 
@@ -26560,6 +27274,7 @@ trexio_exit_code trexio_text_write_amplitude_triple(trexio_t* const file,
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_file_name));
@@ -26594,6 +27309,7 @@ trexio_exit_code trexio_text_write_amplitude_triple_exp(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_triple_exp_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_triple_exp_file_name));
@@ -26606,6 +27322,8 @@ trexio_exit_code trexio_text_write_amplitude_triple_exp(trexio_t* const file,
      the line_length is 69 because 10 per index + 4 spaces + 24 for floating point value + 1 for the new line char.
      CURRENTLY NO OFFSET IS USED WHEN WRITING !
     */
+  (void) offset_file; // Avoid unused variable error
+  
   int64_t line_length = 0L;
   char format_str[256];
 
@@ -26613,12 +27331,15 @@ trexio_exit_code trexio_text_write_amplitude_triple_exp(trexio_t* const file,
   if (size_max < UINT8_MAX) {
     line_length = 49; // 41 for 4 indices
     strncpy(format_str, "%3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else if (size_max < UINT16_MAX) {
     line_length = 61; // 49 for 4 indices
     strncpy(format_str, "%5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else {
     line_length = 91; //69 for 4 indices
     strncpy(format_str, "%10" PRId32 " %10" PRId32 " %10" PRId32 " %10" PRId32 " %10" PRId32 " %10" PRId32 " %24.16e" , 256);
+    format_str[255] = '\0';
   }
   strncat(format_str, "\n", 2);
 
@@ -26668,6 +27389,7 @@ trexio_exit_code trexio_text_write_amplitude_triple_exp(trexio_t* const file,
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_file_name));
@@ -26702,6 +27424,7 @@ trexio_exit_code trexio_text_write_amplitude_quadruple(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_quadruple_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_quadruple_file_name));
@@ -26714,6 +27437,8 @@ trexio_exit_code trexio_text_write_amplitude_quadruple(trexio_t* const file,
      the line_length is 69 because 10 per index + 4 spaces + 24 for floating point value + 1 for the new line char.
      CURRENTLY NO OFFSET IS USED WHEN WRITING !
     */
+  (void) offset_file; // Avoid unused variable error
+  
   int64_t line_length = 0L;
   char format_str[256];
 
@@ -26721,12 +27446,15 @@ trexio_exit_code trexio_text_write_amplitude_quadruple(trexio_t* const file,
   if (size_max < UINT8_MAX) {
     line_length = 57; // 41 for 4 indices
     strncpy(format_str, "%3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else if (size_max < UINT16_MAX) {
     line_length = 73; // 49 for 4 indices
     strncpy(format_str, "%5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else {
     line_length = 113; //69 for 4 indices
     strncpy(format_str, "%10" PRId32 " %10" PRId32 " %10" PRId32 " %10" PRId32 " %10" PRId32 " %10" PRId32 " %10" PRId32 " %10" PRId32 " %24.16e" , 256);
+    format_str[255] = '\0';
   }
   strncat(format_str, "\n", 2);
 
@@ -26776,6 +27504,7 @@ trexio_exit_code trexio_text_write_amplitude_quadruple(trexio_t* const file,
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_file_name));
@@ -26810,6 +27539,7 @@ trexio_exit_code trexio_text_write_amplitude_quadruple_exp(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_quadruple_exp_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_quadruple_exp_file_name));
@@ -26822,6 +27552,8 @@ trexio_exit_code trexio_text_write_amplitude_quadruple_exp(trexio_t* const file,
      the line_length is 69 because 10 per index + 4 spaces + 24 for floating point value + 1 for the new line char.
      CURRENTLY NO OFFSET IS USED WHEN WRITING !
     */
+  (void) offset_file; // Avoid unused variable error
+  
   int64_t line_length = 0L;
   char format_str[256];
 
@@ -26829,12 +27561,15 @@ trexio_exit_code trexio_text_write_amplitude_quadruple_exp(trexio_t* const file,
   if (size_max < UINT8_MAX) {
     line_length = 57; // 41 for 4 indices
     strncpy(format_str, "%3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else if (size_max < UINT16_MAX) {
     line_length = 73; // 49 for 4 indices
     strncpy(format_str, "%5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else {
     line_length = 113; //69 for 4 indices
     strncpy(format_str, "%10" PRId32 " %10" PRId32 " %10" PRId32 " %10" PRId32 " %10" PRId32 " %10" PRId32 " %10" PRId32 " %10" PRId32 " %24.16e" , 256);
+    format_str[255] = '\0';
   }
   strncat(format_str, "\n", 2);
 
@@ -26884,6 +27619,7 @@ trexio_exit_code trexio_text_write_amplitude_quadruple_exp(trexio_t* const file,
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, amplitude_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_file_name));
@@ -26918,6 +27654,7 @@ trexio_exit_code trexio_text_write_rdm_2e(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_file_name));
@@ -26930,6 +27667,8 @@ trexio_exit_code trexio_text_write_rdm_2e(trexio_t* const file,
      the line_length is 69 because 10 per index + 4 spaces + 24 for floating point value + 1 for the new line char.
      CURRENTLY NO OFFSET IS USED WHEN WRITING !
     */
+  (void) offset_file; // Avoid unused variable error
+  
   int64_t line_length = 0L;
   char format_str[256];
 
@@ -26937,12 +27676,15 @@ trexio_exit_code trexio_text_write_rdm_2e(trexio_t* const file,
   if (size_max < UINT8_MAX) {
     line_length = 41; // 41 for 4 indices
     strncpy(format_str, "%3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else if (size_max < UINT16_MAX) {
     line_length = 49; // 49 for 4 indices
     strncpy(format_str, "%5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else {
     line_length = 69; //69 for 4 indices
     strncpy(format_str, "%10" PRId32 " %10" PRId32 " %10" PRId32 " %10" PRId32 " %24.16e" , 256);
+    format_str[255] = '\0';
   }
   strncat(format_str, "\n", 2);
 
@@ -26992,6 +27734,7 @@ trexio_exit_code trexio_text_write_rdm_2e(trexio_t* const file,
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_file_name));
@@ -27026,6 +27769,7 @@ trexio_exit_code trexio_text_write_rdm_2e_upup(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_upup_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_upup_file_name));
@@ -27038,6 +27782,8 @@ trexio_exit_code trexio_text_write_rdm_2e_upup(trexio_t* const file,
      the line_length is 69 because 10 per index + 4 spaces + 24 for floating point value + 1 for the new line char.
      CURRENTLY NO OFFSET IS USED WHEN WRITING !
     */
+  (void) offset_file; // Avoid unused variable error
+  
   int64_t line_length = 0L;
   char format_str[256];
 
@@ -27045,12 +27791,15 @@ trexio_exit_code trexio_text_write_rdm_2e_upup(trexio_t* const file,
   if (size_max < UINT8_MAX) {
     line_length = 41; // 41 for 4 indices
     strncpy(format_str, "%3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else if (size_max < UINT16_MAX) {
     line_length = 49; // 49 for 4 indices
     strncpy(format_str, "%5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else {
     line_length = 69; //69 for 4 indices
     strncpy(format_str, "%10" PRId32 " %10" PRId32 " %10" PRId32 " %10" PRId32 " %24.16e" , 256);
+    format_str[255] = '\0';
   }
   strncat(format_str, "\n", 2);
 
@@ -27100,6 +27849,7 @@ trexio_exit_code trexio_text_write_rdm_2e_upup(trexio_t* const file,
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_file_name));
@@ -27134,6 +27884,7 @@ trexio_exit_code trexio_text_write_rdm_2e_dndn(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_dndn_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_dndn_file_name));
@@ -27146,6 +27897,8 @@ trexio_exit_code trexio_text_write_rdm_2e_dndn(trexio_t* const file,
      the line_length is 69 because 10 per index + 4 spaces + 24 for floating point value + 1 for the new line char.
      CURRENTLY NO OFFSET IS USED WHEN WRITING !
     */
+  (void) offset_file; // Avoid unused variable error
+  
   int64_t line_length = 0L;
   char format_str[256];
 
@@ -27153,12 +27906,15 @@ trexio_exit_code trexio_text_write_rdm_2e_dndn(trexio_t* const file,
   if (size_max < UINT8_MAX) {
     line_length = 41; // 41 for 4 indices
     strncpy(format_str, "%3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else if (size_max < UINT16_MAX) {
     line_length = 49; // 49 for 4 indices
     strncpy(format_str, "%5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else {
     line_length = 69; //69 for 4 indices
     strncpy(format_str, "%10" PRId32 " %10" PRId32 " %10" PRId32 " %10" PRId32 " %24.16e" , 256);
+    format_str[255] = '\0';
   }
   strncat(format_str, "\n", 2);
 
@@ -27208,6 +27964,7 @@ trexio_exit_code trexio_text_write_rdm_2e_dndn(trexio_t* const file,
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_file_name));
@@ -27242,6 +27999,7 @@ trexio_exit_code trexio_text_write_rdm_2e_updn(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_updn_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_updn_file_name));
@@ -27254,6 +28012,8 @@ trexio_exit_code trexio_text_write_rdm_2e_updn(trexio_t* const file,
      the line_length is 69 because 10 per index + 4 spaces + 24 for floating point value + 1 for the new line char.
      CURRENTLY NO OFFSET IS USED WHEN WRITING !
     */
+  (void) offset_file; // Avoid unused variable error
+  
   int64_t line_length = 0L;
   char format_str[256];
 
@@ -27261,12 +28021,15 @@ trexio_exit_code trexio_text_write_rdm_2e_updn(trexio_t* const file,
   if (size_max < UINT8_MAX) {
     line_length = 41; // 41 for 4 indices
     strncpy(format_str, "%3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else if (size_max < UINT16_MAX) {
     line_length = 49; // 49 for 4 indices
     strncpy(format_str, "%5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else {
     line_length = 69; //69 for 4 indices
     strncpy(format_str, "%10" PRId32 " %10" PRId32 " %10" PRId32 " %10" PRId32 " %24.16e" , 256);
+    format_str[255] = '\0';
   }
   strncat(format_str, "\n", 2);
 
@@ -27316,6 +28079,7 @@ trexio_exit_code trexio_text_write_rdm_2e_updn(trexio_t* const file,
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_file_name));
@@ -27350,6 +28114,7 @@ trexio_exit_code trexio_text_write_rdm_2e_transition(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_transition_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_transition_file_name));
@@ -27362,6 +28127,8 @@ trexio_exit_code trexio_text_write_rdm_2e_transition(trexio_t* const file,
      the line_length is 69 because 10 per index + 4 spaces + 24 for floating point value + 1 for the new line char.
      CURRENTLY NO OFFSET IS USED WHEN WRITING !
     */
+  (void) offset_file; // Avoid unused variable error
+  
   int64_t line_length = 0L;
   char format_str[256];
 
@@ -27369,12 +28136,15 @@ trexio_exit_code trexio_text_write_rdm_2e_transition(trexio_t* const file,
   if (size_max < UINT8_MAX) {
     line_length = 49; // 41 for 4 indices
     strncpy(format_str, "%3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else if (size_max < UINT16_MAX) {
     line_length = 61; // 49 for 4 indices
     strncpy(format_str, "%5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else {
     line_length = 91; //69 for 4 indices
     strncpy(format_str, "%10" PRId32 " %10" PRId32 " %10" PRId32 " %10" PRId32 " %10" PRId32 " %10" PRId32 " %24.16e" , 256);
+    format_str[255] = '\0';
   }
   strncat(format_str, "\n", 2);
 
@@ -27424,6 +28194,7 @@ trexio_exit_code trexio_text_write_rdm_2e_transition(trexio_t* const file,
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_file_name));
@@ -27458,6 +28229,7 @@ trexio_exit_code trexio_text_write_rdm_2e_cholesky(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_cholesky_file_name));
@@ -27470,6 +28242,8 @@ trexio_exit_code trexio_text_write_rdm_2e_cholesky(trexio_t* const file,
      the line_length is 69 because 10 per index + 4 spaces + 24 for floating point value + 1 for the new line char.
      CURRENTLY NO OFFSET IS USED WHEN WRITING !
     */
+  (void) offset_file; // Avoid unused variable error
+  
   int64_t line_length = 0L;
   char format_str[256];
 
@@ -27477,12 +28251,15 @@ trexio_exit_code trexio_text_write_rdm_2e_cholesky(trexio_t* const file,
   if (size_max < UINT8_MAX) {
     line_length = 37; // 41 for 4 indices
     strncpy(format_str, "%3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else if (size_max < UINT16_MAX) {
     line_length = 43; // 49 for 4 indices
     strncpy(format_str, "%5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else {
     line_length = 58; //69 for 4 indices
     strncpy(format_str, "%10" PRId32 " %10" PRId32 " %10" PRId32 " %24.16e" , 256);
+    format_str[255] = '\0';
   }
   strncat(format_str, "\n", 2);
 
@@ -27532,6 +28309,7 @@ trexio_exit_code trexio_text_write_rdm_2e_cholesky(trexio_t* const file,
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_file_name));
@@ -27566,6 +28344,7 @@ trexio_exit_code trexio_text_write_rdm_2e_upup_cholesky(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_upup_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_upup_cholesky_file_name));
@@ -27578,6 +28357,8 @@ trexio_exit_code trexio_text_write_rdm_2e_upup_cholesky(trexio_t* const file,
      the line_length is 69 because 10 per index + 4 spaces + 24 for floating point value + 1 for the new line char.
      CURRENTLY NO OFFSET IS USED WHEN WRITING !
     */
+  (void) offset_file; // Avoid unused variable error
+  
   int64_t line_length = 0L;
   char format_str[256];
 
@@ -27585,12 +28366,15 @@ trexio_exit_code trexio_text_write_rdm_2e_upup_cholesky(trexio_t* const file,
   if (size_max < UINT8_MAX) {
     line_length = 37; // 41 for 4 indices
     strncpy(format_str, "%3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else if (size_max < UINT16_MAX) {
     line_length = 43; // 49 for 4 indices
     strncpy(format_str, "%5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else {
     line_length = 58; //69 for 4 indices
     strncpy(format_str, "%10" PRId32 " %10" PRId32 " %10" PRId32 " %24.16e" , 256);
+    format_str[255] = '\0';
   }
   strncat(format_str, "\n", 2);
 
@@ -27640,6 +28424,7 @@ trexio_exit_code trexio_text_write_rdm_2e_upup_cholesky(trexio_t* const file,
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_file_name));
@@ -27674,6 +28459,7 @@ trexio_exit_code trexio_text_write_rdm_2e_dndn_cholesky(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_dndn_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_dndn_cholesky_file_name));
@@ -27686,6 +28472,8 @@ trexio_exit_code trexio_text_write_rdm_2e_dndn_cholesky(trexio_t* const file,
      the line_length is 69 because 10 per index + 4 spaces + 24 for floating point value + 1 for the new line char.
      CURRENTLY NO OFFSET IS USED WHEN WRITING !
     */
+  (void) offset_file; // Avoid unused variable error
+  
   int64_t line_length = 0L;
   char format_str[256];
 
@@ -27693,12 +28481,15 @@ trexio_exit_code trexio_text_write_rdm_2e_dndn_cholesky(trexio_t* const file,
   if (size_max < UINT8_MAX) {
     line_length = 37; // 41 for 4 indices
     strncpy(format_str, "%3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else if (size_max < UINT16_MAX) {
     line_length = 43; // 49 for 4 indices
     strncpy(format_str, "%5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else {
     line_length = 58; //69 for 4 indices
     strncpy(format_str, "%10" PRId32 " %10" PRId32 " %10" PRId32 " %24.16e" , 256);
+    format_str[255] = '\0';
   }
   strncat(format_str, "\n", 2);
 
@@ -27748,6 +28539,7 @@ trexio_exit_code trexio_text_write_rdm_2e_dndn_cholesky(trexio_t* const file,
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_file_name));
@@ -27782,6 +28574,7 @@ trexio_exit_code trexio_text_write_rdm_2e_updn_cholesky(trexio_t* const file,
 
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_2e_updn_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_updn_cholesky_file_name));
@@ -27794,6 +28587,8 @@ trexio_exit_code trexio_text_write_rdm_2e_updn_cholesky(trexio_t* const file,
      the line_length is 69 because 10 per index + 4 spaces + 24 for floating point value + 1 for the new line char.
      CURRENTLY NO OFFSET IS USED WHEN WRITING !
     */
+  (void) offset_file; // Avoid unused variable error
+  
   int64_t line_length = 0L;
   char format_str[256];
 
@@ -27801,12 +28596,15 @@ trexio_exit_code trexio_text_write_rdm_2e_updn_cholesky(trexio_t* const file,
   if (size_max < UINT8_MAX) {
     line_length = 37; // 41 for 4 indices
     strncpy(format_str, "%3" PRIu8 " %3" PRIu8 " %3" PRIu8 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else if (size_max < UINT16_MAX) {
     line_length = 43; // 49 for 4 indices
     strncpy(format_str, "%5" PRIu16 " %5" PRIu16 " %5" PRIu16 " %24.16e" , 256);
+    format_str[255] = '\0';
   } else {
     line_length = 58; //69 for 4 indices
     strncpy(format_str, "%10" PRId32 " %10" PRId32 " %10" PRId32 " %24.16e" , 256);
+    format_str[255] = '\0';
   }
   strncat(format_str, "\n", 2);
 
@@ -27856,6 +28654,7 @@ trexio_exit_code trexio_text_write_rdm_2e_updn_cholesky(trexio_t* const file,
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, rdm_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_file_name));
@@ -27894,6 +28693,7 @@ trexio_text_write_metadata_package_version (trexio_t* const file, const char *st
   metadata->len_metadata_package_version = tmp_len + 1;
 
   strncpy(metadata->metadata_package_version, str, tmp_len + 1);
+  metadata->metadata_package_version[tmp_len] = '\0';
 
   metadata->to_flush = 1;
 
@@ -27923,6 +28723,7 @@ trexio_text_write_metadata_description (trexio_t* const file, const char *str)
   metadata->len_metadata_description = tmp_len + 1;
 
   strncpy(metadata->metadata_description, str, tmp_len + 1);
+  metadata->metadata_description[tmp_len] = '\0';
 
   metadata->to_flush = 1;
 
@@ -27952,6 +28753,7 @@ trexio_text_write_nucleus_point_group (trexio_t* const file, const char *str)
   nucleus->len_nucleus_point_group = tmp_len + 1;
 
   strncpy(nucleus->nucleus_point_group, str, tmp_len + 1);
+  nucleus->nucleus_point_group[tmp_len] = '\0';
 
   nucleus->to_flush = 1;
 
@@ -27981,6 +28783,7 @@ trexio_text_write_state_current_label (trexio_t* const file, const char *str)
   state->len_state_current_label = tmp_len + 1;
 
   strncpy(state->state_current_label, str, tmp_len + 1);
+  state->state_current_label[tmp_len] = '\0';
 
   state->to_flush = 1;
 
@@ -28010,6 +28813,7 @@ trexio_text_write_basis_type (trexio_t* const file, const char *str)
   basis->len_basis_type = tmp_len + 1;
 
   strncpy(basis->basis_type, str, tmp_len + 1);
+  basis->basis_type[tmp_len] = '\0';
 
   basis->to_flush = 1;
 
@@ -28039,6 +28843,7 @@ trexio_text_write_basis_oscillation_kind (trexio_t* const file, const char *str)
   basis->len_basis_oscillation_kind = tmp_len + 1;
 
   strncpy(basis->basis_oscillation_kind, str, tmp_len + 1);
+  basis->basis_oscillation_kind[tmp_len] = '\0';
 
   basis->to_flush = 1;
 
@@ -28068,6 +28873,7 @@ trexio_text_write_basis_interpolator_kind (trexio_t* const file, const char *str
   basis->len_basis_interpolator_kind = tmp_len + 1;
 
   strncpy(basis->basis_interpolator_kind, str, tmp_len + 1);
+  basis->basis_interpolator_kind[tmp_len] = '\0';
 
   basis->to_flush = 1;
 
@@ -28097,6 +28903,7 @@ trexio_text_write_grid_description (trexio_t* const file, const char *str)
   grid->len_grid_description = tmp_len + 1;
 
   strncpy(grid->grid_description, str, tmp_len + 1);
+  grid->grid_description[tmp_len] = '\0';
 
   grid->to_flush = 1;
 
@@ -28126,6 +28933,7 @@ trexio_text_write_mo_type (trexio_t* const file, const char *str)
   mo->len_mo_type = tmp_len + 1;
 
   strncpy(mo->mo_type, str, tmp_len + 1);
+  mo->mo_type[tmp_len] = '\0';
 
   mo->to_flush = 1;
 
@@ -28155,6 +28963,7 @@ trexio_text_write_jastrow_type (trexio_t* const file, const char *str)
   jastrow->len_jastrow_type = tmp_len + 1;
 
   strncpy(jastrow->jastrow_type, str, tmp_len + 1);
+  jastrow->jastrow_type[tmp_len] = '\0';
 
   jastrow->to_flush = 1;
 
@@ -28300,6 +29109,24 @@ trexio_text_write_pbc_k_point_num (trexio_t* const file, const int64_t num)
 
   pbc->pbc_k_point_num = num;
   pbc->pbc_k_point_num_isSet = true;
+  pbc->to_flush = 1;
+
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
+trexio_text_write_pbc_madelung (trexio_t* const file, const double num)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (file->mode == 'r') return TREXIO_READONLY;
+
+  pbc_t* pbc = trexio_text_read_pbc((trexio_text_t*) file);
+  if (pbc == NULL) return TREXIO_FAILURE;
+
+  pbc->pbc_madelung = num;
+  pbc->pbc_madelung_isSet = true;
   pbc->to_flush = 1;
 
   return TREXIO_SUCCESS;
@@ -28961,6 +29788,9 @@ trexio_exit_code trexio_text_write_determinant_coefficient(trexio_t* const file,
                                                 const double* dset)
 {
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
   if (dset == NULL) return TREXIO_INVALID_ARG_5;
 
   const char file_name[256] = "/determinant_coefficient.txt";
@@ -28970,6 +29800,7 @@ trexio_exit_code trexio_text_write_determinant_coefficient(trexio_t* const file,
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, file_name, TREXIO_MAX_FILENAME_LENGTH - sizeof(file_name));
 
@@ -29017,6 +29848,7 @@ trexio_exit_code trexio_text_write_determinant_coefficient(trexio_t* const file,
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, group_file_name, TREXIO_MAX_FILENAME_LENGTH - sizeof(group_file_name));
 
@@ -29039,6 +29871,9 @@ trexio_exit_code trexio_text_write_csf_coefficient(trexio_t* const file,
                                                 const double* dset)
 {
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
   if (dset == NULL) return TREXIO_INVALID_ARG_5;
 
   const char file_name[256] = "/csf_coefficient.txt";
@@ -29048,6 +29883,7 @@ trexio_exit_code trexio_text_write_csf_coefficient(trexio_t* const file,
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, file_name, TREXIO_MAX_FILENAME_LENGTH - sizeof(file_name));
 
@@ -29095,6 +29931,7 @@ trexio_exit_code trexio_text_write_csf_coefficient(trexio_t* const file,
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
   strncpy (file_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
+  file_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
   /* Append name of the file with sparse data */
   strncat (file_full_path, group_file_name, TREXIO_MAX_FILENAME_LENGTH - sizeof(group_file_name));
 
