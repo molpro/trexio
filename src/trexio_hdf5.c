@@ -38,6 +38,7 @@
 #define CELL_TWO_PI_NAME            "cell_two_pi"
 #define PBC_PERIODIC_NAME            "pbc_periodic"
 #define PBC_K_POINT_NUM_NAME            "pbc_k_point_num"
+#define PBC_MADELUNG_NAME            "pbc_madelung"
 #define ELECTRON_NUM_NAME            "electron_num"
 #define ELECTRON_UP_NUM_NAME            "electron_up_num"
 #define ELECTRON_DN_NUM_NAME            "electron_dn_num"
@@ -625,6 +626,27 @@ trexio_hdf5_has_pbc_k_point_num (trexio_t* const file)
   if (f->pbc_group == (hsize_t) 0) return TREXIO_HAS_NOT;
 
   htri_t status = H5Aexists(f->pbc_group, PBC_K_POINT_NUM_NAME);
+  /* H5Aexists returns positive value if attribute exists, 0 if does not, negative if error */
+  if (status > 0){
+    return TREXIO_SUCCESS;
+  } else if (status == 0) {
+    return TREXIO_HAS_NOT;
+  } else {
+    return TREXIO_FAILURE;
+  }
+
+}
+
+trexio_exit_code
+trexio_hdf5_has_pbc_madelung (trexio_t* const file)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+
+  const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
+  if (f->pbc_group == (hsize_t) 0) return TREXIO_HAS_NOT;
+
+  htri_t status = H5Aexists(f->pbc_group, PBC_MADELUNG_NAME);
   /* H5Aexists returns positive value if attribute exists, 0 if does not, negative if error */
   if (status > 0){
     return TREXIO_SUCCESS;
@@ -4664,6 +4686,31 @@ trexio_hdf5_read_pbc_k_point_num (trexio_t* const file, int64_t* const num)
 }
 
 trexio_exit_code
+trexio_hdf5_read_pbc_madelung (trexio_t* const file, double* const num)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num  == NULL) return TREXIO_INVALID_ARG_2;
+
+  const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
+  /* Quit if the dimensioning attribute is missing in the file */
+  if (H5Aexists(f->pbc_group, PBC_MADELUNG_NAME) == 0) return TREXIO_FAILURE;
+
+  /* Read the pbc_madelung attribute of pbc group */
+  const hid_t num_id = H5Aopen(f->pbc_group, PBC_MADELUNG_NAME, H5P_DEFAULT);
+  if (num_id <= 0) return TREXIO_INVALID_ID;
+
+  const herr_t status = H5Aread(num_id, H5T_NATIVE_DOUBLE, num);
+
+  H5Aclose(num_id);
+
+  if (status < 0) return TREXIO_FAILURE;
+
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
 trexio_hdf5_read_electron_num (trexio_t* const file, int64_t* const num)
 {
 
@@ -5569,6 +5616,7 @@ trexio_hdf5_read_metadata_package_version (trexio_t* const file, char* const str
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (str  == NULL) return TREXIO_INVALID_ARG_2;
+  if (max_str_len < 1) return TREXIO_INVALID_ARG_3;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
   /* Quit if the string attribute is missing in the file */
@@ -5607,6 +5655,7 @@ trexio_hdf5_read_metadata_description (trexio_t* const file, char* const str, co
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (str  == NULL) return TREXIO_INVALID_ARG_2;
+  if (max_str_len < 1) return TREXIO_INVALID_ARG_3;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
   /* Quit if the string attribute is missing in the file */
@@ -5645,6 +5694,7 @@ trexio_hdf5_read_nucleus_point_group (trexio_t* const file, char* const str, con
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (str  == NULL) return TREXIO_INVALID_ARG_2;
+  if (max_str_len < 1) return TREXIO_INVALID_ARG_3;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
   /* Quit if the string attribute is missing in the file */
@@ -5683,6 +5733,7 @@ trexio_hdf5_read_state_current_label (trexio_t* const file, char* const str, con
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (str  == NULL) return TREXIO_INVALID_ARG_2;
+  if (max_str_len < 1) return TREXIO_INVALID_ARG_3;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
   /* Quit if the string attribute is missing in the file */
@@ -5721,6 +5772,7 @@ trexio_hdf5_read_basis_type (trexio_t* const file, char* const str, const uint32
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (str  == NULL) return TREXIO_INVALID_ARG_2;
+  if (max_str_len < 1) return TREXIO_INVALID_ARG_3;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
   /* Quit if the string attribute is missing in the file */
@@ -5759,6 +5811,7 @@ trexio_hdf5_read_basis_oscillation_kind (trexio_t* const file, char* const str, 
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (str  == NULL) return TREXIO_INVALID_ARG_2;
+  if (max_str_len < 1) return TREXIO_INVALID_ARG_3;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
   /* Quit if the string attribute is missing in the file */
@@ -5797,6 +5850,7 @@ trexio_hdf5_read_basis_interpolator_kind (trexio_t* const file, char* const str,
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (str  == NULL) return TREXIO_INVALID_ARG_2;
+  if (max_str_len < 1) return TREXIO_INVALID_ARG_3;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
   /* Quit if the string attribute is missing in the file */
@@ -5835,6 +5889,7 @@ trexio_hdf5_read_grid_description (trexio_t* const file, char* const str, const 
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (str  == NULL) return TREXIO_INVALID_ARG_2;
+  if (max_str_len < 1) return TREXIO_INVALID_ARG_3;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
   /* Quit if the string attribute is missing in the file */
@@ -5873,6 +5928,7 @@ trexio_hdf5_read_mo_type (trexio_t* const file, char* const str, const uint32_t 
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (str  == NULL) return TREXIO_INVALID_ARG_2;
+  if (max_str_len < 1) return TREXIO_INVALID_ARG_3;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
   /* Quit if the string attribute is missing in the file */
@@ -5911,6 +5967,7 @@ trexio_hdf5_read_jastrow_type (trexio_t* const file, char* const str, const uint
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (str  == NULL) return TREXIO_INVALID_ARG_2;
+  if (max_str_len < 1) return TREXIO_INVALID_ARG_3;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
   /* Quit if the string attribute is missing in the file */
@@ -5951,6 +6008,9 @@ trexio_exit_code trexio_hdf5_read_determinant_coefficient(trexio_t* const file,
                                                double* const dset)
 {
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (rank != 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
   if (dset == NULL) return TREXIO_INVALID_ARG_6;
 
@@ -5974,6 +6034,9 @@ trexio_exit_code trexio_hdf5_read_csf_coefficient(trexio_t* const file,
                                                double* const dset)
 {
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (rank != 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
   if (dset == NULL) return TREXIO_INVALID_ARG_6;
 
@@ -5995,6 +6058,8 @@ trexio_hdf5_read_nucleus_charge (trexio_t* const file, double* const nucleus_cha
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (nucleus_charge == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -6049,6 +6114,8 @@ trexio_hdf5_read_nucleus_coord (trexio_t* const file, double* const nucleus_coor
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (nucleus_coord == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -6103,6 +6170,8 @@ trexio_hdf5_read_cell_a (trexio_t* const file, double* const cell_a, const uint3
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (cell_a == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -6157,6 +6226,8 @@ trexio_hdf5_read_cell_b (trexio_t* const file, double* const cell_b, const uint3
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (cell_b == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -6211,6 +6282,8 @@ trexio_hdf5_read_cell_c (trexio_t* const file, double* const cell_c, const uint3
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (cell_c == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -6265,6 +6338,8 @@ trexio_hdf5_read_cell_g_a (trexio_t* const file, double* const cell_g_a, const u
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (cell_g_a == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -6319,6 +6394,8 @@ trexio_hdf5_read_cell_g_b (trexio_t* const file, double* const cell_g_b, const u
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (cell_g_b == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -6373,6 +6450,8 @@ trexio_hdf5_read_cell_g_c (trexio_t* const file, double* const cell_g_c, const u
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (cell_g_c == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -6427,6 +6506,8 @@ trexio_hdf5_read_pbc_k_point (trexio_t* const file, double* const pbc_k_point, c
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (pbc_k_point == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -6481,6 +6562,8 @@ trexio_hdf5_read_pbc_k_point_weight (trexio_t* const file, double* const pbc_k_p
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (pbc_k_point_weight == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -6535,6 +6618,8 @@ trexio_hdf5_read_basis_nucleus_index (trexio_t* const file, int64_t* const basis
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_nucleus_index == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -6589,6 +6674,8 @@ trexio_hdf5_read_basis_shell_ang_mom (trexio_t* const file, int64_t* const basis
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_shell_ang_mom == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -6643,6 +6730,8 @@ trexio_hdf5_read_basis_shell_factor (trexio_t* const file, double* const basis_s
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_shell_factor == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -6697,6 +6786,8 @@ trexio_hdf5_read_basis_r_power (trexio_t* const file, int64_t* const basis_r_pow
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_r_power == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -6751,6 +6842,8 @@ trexio_hdf5_read_basis_nao_grid_start (trexio_t* const file, int64_t* const basi
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_nao_grid_start == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -6805,6 +6898,8 @@ trexio_hdf5_read_basis_nao_grid_size (trexio_t* const file, int64_t* const basis
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_nao_grid_size == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -6859,6 +6954,8 @@ trexio_hdf5_read_basis_shell_index (trexio_t* const file, int64_t* const basis_s
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_shell_index == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -6913,6 +7010,8 @@ trexio_hdf5_read_basis_exponent (trexio_t* const file, double* const basis_expon
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_exponent == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -6967,6 +7066,8 @@ trexio_hdf5_read_basis_exponent_im (trexio_t* const file, double* const basis_ex
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_exponent_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -7021,6 +7122,8 @@ trexio_hdf5_read_basis_coefficient (trexio_t* const file, double* const basis_co
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_coefficient == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -7075,6 +7178,8 @@ trexio_hdf5_read_basis_coefficient_im (trexio_t* const file, double* const basis
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_coefficient_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -7129,6 +7234,8 @@ trexio_hdf5_read_basis_oscillation_arg (trexio_t* const file, double* const basi
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_oscillation_arg == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -7183,6 +7290,8 @@ trexio_hdf5_read_basis_prim_factor (trexio_t* const file, double* const basis_pr
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_prim_factor == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -7237,6 +7346,8 @@ trexio_hdf5_read_basis_nao_grid_radius (trexio_t* const file, double* const basi
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_nao_grid_radius == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -7291,6 +7402,8 @@ trexio_hdf5_read_basis_nao_grid_phi (trexio_t* const file, double* const basis_n
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_nao_grid_phi == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -7345,6 +7458,8 @@ trexio_hdf5_read_basis_nao_grid_grad (trexio_t* const file, double* const basis_
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_nao_grid_grad == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -7399,6 +7514,8 @@ trexio_hdf5_read_basis_nao_grid_lap (trexio_t* const file, double* const basis_n
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_nao_grid_lap == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -7453,6 +7570,8 @@ trexio_hdf5_read_basis_interpolator_phi (trexio_t* const file, double* const bas
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_interpolator_phi == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -7507,6 +7626,8 @@ trexio_hdf5_read_basis_interpolator_grad (trexio_t* const file, double* const ba
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_interpolator_grad == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -7561,6 +7682,8 @@ trexio_hdf5_read_basis_interpolator_lap (trexio_t* const file, double* const bas
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_interpolator_lap == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -7615,6 +7738,8 @@ trexio_hdf5_read_ecp_max_ang_mom_plus_1 (trexio_t* const file, int64_t* const ec
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ecp_max_ang_mom_plus_1 == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -7669,6 +7794,8 @@ trexio_hdf5_read_ecp_z_core (trexio_t* const file, int64_t* const ecp_z_core, co
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ecp_z_core == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -7723,6 +7850,8 @@ trexio_hdf5_read_ecp_ang_mom (trexio_t* const file, int64_t* const ecp_ang_mom, 
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ecp_ang_mom == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -7777,6 +7906,8 @@ trexio_hdf5_read_ecp_nucleus_index (trexio_t* const file, int64_t* const ecp_nuc
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ecp_nucleus_index == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -7831,6 +7962,8 @@ trexio_hdf5_read_ecp_exponent (trexio_t* const file, double* const ecp_exponent,
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ecp_exponent == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -7885,6 +8018,8 @@ trexio_hdf5_read_ecp_coefficient (trexio_t* const file, double* const ecp_coeffi
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ecp_coefficient == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -7939,6 +8074,8 @@ trexio_hdf5_read_ecp_power (trexio_t* const file, int64_t* const ecp_power, cons
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ecp_power == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -7993,6 +8130,8 @@ trexio_hdf5_read_grid_coord (trexio_t* const file, double* const grid_coord, con
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (grid_coord == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -8047,6 +8186,8 @@ trexio_hdf5_read_grid_weight (trexio_t* const file, double* const grid_weight, c
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (grid_weight == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -8101,6 +8242,8 @@ trexio_hdf5_read_grid_ang_coord (trexio_t* const file, double* const grid_ang_co
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (grid_ang_coord == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -8155,6 +8298,8 @@ trexio_hdf5_read_grid_ang_weight (trexio_t* const file, double* const grid_ang_w
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (grid_ang_weight == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -8209,6 +8354,8 @@ trexio_hdf5_read_grid_rad_coord (trexio_t* const file, double* const grid_rad_co
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (grid_rad_coord == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -8263,6 +8410,8 @@ trexio_hdf5_read_grid_rad_weight (trexio_t* const file, double* const grid_rad_w
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (grid_rad_weight == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -8317,6 +8466,8 @@ trexio_hdf5_read_ao_shell (trexio_t* const file, int64_t* const ao_shell, const 
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_shell == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -8371,6 +8522,8 @@ trexio_hdf5_read_ao_normalization (trexio_t* const file, double* const ao_normal
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_normalization == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -8425,6 +8578,8 @@ trexio_hdf5_read_ao_1e_int_overlap (trexio_t* const file, double* const ao_1e_in
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_overlap == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -8479,6 +8634,8 @@ trexio_hdf5_read_ao_1e_int_kinetic (trexio_t* const file, double* const ao_1e_in
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_kinetic == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -8533,6 +8690,8 @@ trexio_hdf5_read_ao_1e_int_potential_n_e (trexio_t* const file, double* const ao
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_potential_n_e == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -8587,6 +8746,8 @@ trexio_hdf5_read_ao_1e_int_ecp (trexio_t* const file, double* const ao_1e_int_ec
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_ecp == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -8641,6 +8802,8 @@ trexio_hdf5_read_ao_1e_int_core_hamiltonian (trexio_t* const file, double* const
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_core_hamiltonian == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -8695,6 +8858,8 @@ trexio_hdf5_read_ao_1e_int_overlap_im (trexio_t* const file, double* const ao_1e
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_overlap_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -8749,6 +8914,8 @@ trexio_hdf5_read_ao_1e_int_kinetic_im (trexio_t* const file, double* const ao_1e
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_kinetic_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -8803,6 +8970,8 @@ trexio_hdf5_read_ao_1e_int_potential_n_e_im (trexio_t* const file, double* const
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_potential_n_e_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -8857,6 +9026,8 @@ trexio_hdf5_read_ao_1e_int_ecp_im (trexio_t* const file, double* const ao_1e_int
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_ecp_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -8911,6 +9082,8 @@ trexio_hdf5_read_ao_1e_int_core_hamiltonian_im (trexio_t* const file, double* co
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_core_hamiltonian_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -8965,6 +9138,8 @@ trexio_hdf5_read_mo_coefficient (trexio_t* const file, double* const mo_coeffici
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_coefficient == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -9019,6 +9194,8 @@ trexio_hdf5_read_mo_coefficient_im (trexio_t* const file, double* const mo_coeff
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_coefficient_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -9073,6 +9250,8 @@ trexio_hdf5_read_mo_occupation (trexio_t* const file, double* const mo_occupatio
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_occupation == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -9127,6 +9306,8 @@ trexio_hdf5_read_mo_energy (trexio_t* const file, double* const mo_energy, const
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_energy == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -9181,6 +9362,8 @@ trexio_hdf5_read_mo_spin (trexio_t* const file, int64_t* const mo_spin, const ui
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_spin == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -9235,6 +9418,8 @@ trexio_hdf5_read_mo_k_point (trexio_t* const file, int64_t* const mo_k_point, co
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_k_point == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -9289,6 +9474,8 @@ trexio_hdf5_read_mo_1e_int_overlap (trexio_t* const file, double* const mo_1e_in
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_overlap == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -9343,6 +9530,8 @@ trexio_hdf5_read_mo_1e_int_kinetic (trexio_t* const file, double* const mo_1e_in
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_kinetic == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -9397,6 +9586,8 @@ trexio_hdf5_read_mo_1e_int_potential_n_e (trexio_t* const file, double* const mo
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_potential_n_e == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -9451,6 +9642,8 @@ trexio_hdf5_read_mo_1e_int_ecp (trexio_t* const file, double* const mo_1e_int_ec
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_ecp == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -9505,6 +9698,8 @@ trexio_hdf5_read_mo_1e_int_core_hamiltonian (trexio_t* const file, double* const
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_core_hamiltonian == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -9559,6 +9754,8 @@ trexio_hdf5_read_mo_1e_int_overlap_im (trexio_t* const file, double* const mo_1e
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_overlap_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -9613,6 +9810,8 @@ trexio_hdf5_read_mo_1e_int_kinetic_im (trexio_t* const file, double* const mo_1e
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_kinetic_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -9667,6 +9866,8 @@ trexio_hdf5_read_mo_1e_int_potential_n_e_im (trexio_t* const file, double* const
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_potential_n_e_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -9721,6 +9922,8 @@ trexio_hdf5_read_mo_1e_int_ecp_im (trexio_t* const file, double* const mo_1e_int
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_ecp_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -9775,6 +9978,8 @@ trexio_hdf5_read_mo_1e_int_core_hamiltonian_im (trexio_t* const file, double* co
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_core_hamiltonian_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -9829,6 +10034,8 @@ trexio_hdf5_read_rdm_1e (trexio_t* const file, double* const rdm_1e, const uint3
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (rdm_1e == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -9883,6 +10090,8 @@ trexio_hdf5_read_rdm_1e_up (trexio_t* const file, double* const rdm_1e_up, const
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (rdm_1e_up == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -9937,6 +10146,8 @@ trexio_hdf5_read_rdm_1e_dn (trexio_t* const file, double* const rdm_1e_dn, const
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (rdm_1e_dn == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -9991,6 +10202,8 @@ trexio_hdf5_read_rdm_1e_transition (trexio_t* const file, double* const rdm_1e_t
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (rdm_1e_transition == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -10045,6 +10258,8 @@ trexio_hdf5_read_jastrow_en (trexio_t* const file, double* const jastrow_en, con
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (jastrow_en == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -10099,6 +10314,8 @@ trexio_hdf5_read_jastrow_ee (trexio_t* const file, double* const jastrow_ee, con
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (jastrow_ee == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -10153,6 +10370,8 @@ trexio_hdf5_read_jastrow_een (trexio_t* const file, double* const jastrow_een, c
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (jastrow_een == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -10207,6 +10426,8 @@ trexio_hdf5_read_jastrow_en_nucleus (trexio_t* const file, int64_t* const jastro
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (jastrow_en_nucleus == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -10261,6 +10482,8 @@ trexio_hdf5_read_jastrow_een_nucleus (trexio_t* const file, int64_t* const jastr
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (jastrow_een_nucleus == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -10315,6 +10538,8 @@ trexio_hdf5_read_jastrow_en_scaling (trexio_t* const file, double* const jastrow
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (jastrow_en_scaling == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -10369,6 +10594,8 @@ trexio_hdf5_read_qmc_point (trexio_t* const file, double* const qmc_point, const
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (qmc_point == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -10423,6 +10650,8 @@ trexio_hdf5_read_qmc_psi (trexio_t* const file, double* const qmc_psi, const uin
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (qmc_psi == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -10477,6 +10706,8 @@ trexio_hdf5_read_qmc_e_loc (trexio_t* const file, double* const qmc_e_loc, const
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (qmc_e_loc == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -10536,7 +10767,12 @@ trexio_hdf5_read_ao_2e_int_eri (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
+  if (index_read == NULL) return TREXIO_INVALID_ARG_6;
+  if (value_read == NULL) return TREXIO_INVALID_ARG_7;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -10610,7 +10846,12 @@ trexio_hdf5_read_ao_2e_int_eri_lr (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
+  if (index_read == NULL) return TREXIO_INVALID_ARG_6;
+  if (value_read == NULL) return TREXIO_INVALID_ARG_7;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -10684,7 +10925,12 @@ trexio_hdf5_read_ao_2e_int_eri_cholesky (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
+  if (index_read == NULL) return TREXIO_INVALID_ARG_6;
+  if (value_read == NULL) return TREXIO_INVALID_ARG_7;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -10758,7 +11004,12 @@ trexio_hdf5_read_ao_2e_int_eri_lr_cholesky (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
+  if (index_read == NULL) return TREXIO_INVALID_ARG_6;
+  if (value_read == NULL) return TREXIO_INVALID_ARG_7;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -10832,7 +11083,12 @@ trexio_hdf5_read_mo_2e_int_eri (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
+  if (index_read == NULL) return TREXIO_INVALID_ARG_6;
+  if (value_read == NULL) return TREXIO_INVALID_ARG_7;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -10906,7 +11162,12 @@ trexio_hdf5_read_mo_2e_int_eri_lr (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
+  if (index_read == NULL) return TREXIO_INVALID_ARG_6;
+  if (value_read == NULL) return TREXIO_INVALID_ARG_7;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -10980,7 +11241,12 @@ trexio_hdf5_read_mo_2e_int_eri_cholesky (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
+  if (index_read == NULL) return TREXIO_INVALID_ARG_6;
+  if (value_read == NULL) return TREXIO_INVALID_ARG_7;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -11054,7 +11320,12 @@ trexio_hdf5_read_mo_2e_int_eri_lr_cholesky (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
+  if (index_read == NULL) return TREXIO_INVALID_ARG_6;
+  if (value_read == NULL) return TREXIO_INVALID_ARG_7;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -11128,7 +11399,12 @@ trexio_hdf5_read_csf_det_coefficient (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
+  if (index_read == NULL) return TREXIO_INVALID_ARG_6;
+  if (value_read == NULL) return TREXIO_INVALID_ARG_7;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -11202,7 +11478,12 @@ trexio_hdf5_read_amplitude_single (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
+  if (index_read == NULL) return TREXIO_INVALID_ARG_6;
+  if (value_read == NULL) return TREXIO_INVALID_ARG_7;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -11276,7 +11557,12 @@ trexio_hdf5_read_amplitude_single_exp (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
+  if (index_read == NULL) return TREXIO_INVALID_ARG_6;
+  if (value_read == NULL) return TREXIO_INVALID_ARG_7;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -11350,7 +11636,12 @@ trexio_hdf5_read_amplitude_double (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
+  if (index_read == NULL) return TREXIO_INVALID_ARG_6;
+  if (value_read == NULL) return TREXIO_INVALID_ARG_7;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -11424,7 +11715,12 @@ trexio_hdf5_read_amplitude_double_exp (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
+  if (index_read == NULL) return TREXIO_INVALID_ARG_6;
+  if (value_read == NULL) return TREXIO_INVALID_ARG_7;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -11498,7 +11794,12 @@ trexio_hdf5_read_amplitude_triple (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
+  if (index_read == NULL) return TREXIO_INVALID_ARG_6;
+  if (value_read == NULL) return TREXIO_INVALID_ARG_7;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -11572,7 +11873,12 @@ trexio_hdf5_read_amplitude_triple_exp (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
+  if (index_read == NULL) return TREXIO_INVALID_ARG_6;
+  if (value_read == NULL) return TREXIO_INVALID_ARG_7;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -11646,7 +11952,12 @@ trexio_hdf5_read_amplitude_quadruple (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
+  if (index_read == NULL) return TREXIO_INVALID_ARG_6;
+  if (value_read == NULL) return TREXIO_INVALID_ARG_7;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -11720,7 +12031,12 @@ trexio_hdf5_read_amplitude_quadruple_exp (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
+  if (index_read == NULL) return TREXIO_INVALID_ARG_6;
+  if (value_read == NULL) return TREXIO_INVALID_ARG_7;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -11794,7 +12110,12 @@ trexio_hdf5_read_rdm_2e (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
+  if (index_read == NULL) return TREXIO_INVALID_ARG_6;
+  if (value_read == NULL) return TREXIO_INVALID_ARG_7;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -11868,7 +12189,12 @@ trexio_hdf5_read_rdm_2e_upup (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
+  if (index_read == NULL) return TREXIO_INVALID_ARG_6;
+  if (value_read == NULL) return TREXIO_INVALID_ARG_7;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -11942,7 +12268,12 @@ trexio_hdf5_read_rdm_2e_dndn (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
+  if (index_read == NULL) return TREXIO_INVALID_ARG_6;
+  if (value_read == NULL) return TREXIO_INVALID_ARG_7;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -12016,7 +12347,12 @@ trexio_hdf5_read_rdm_2e_updn (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
+  if (index_read == NULL) return TREXIO_INVALID_ARG_6;
+  if (value_read == NULL) return TREXIO_INVALID_ARG_7;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -12090,7 +12426,12 @@ trexio_hdf5_read_rdm_2e_transition (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
+  if (index_read == NULL) return TREXIO_INVALID_ARG_6;
+  if (value_read == NULL) return TREXIO_INVALID_ARG_7;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -12164,7 +12505,12 @@ trexio_hdf5_read_rdm_2e_cholesky (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
+  if (index_read == NULL) return TREXIO_INVALID_ARG_6;
+  if (value_read == NULL) return TREXIO_INVALID_ARG_7;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -12238,7 +12584,12 @@ trexio_hdf5_read_rdm_2e_upup_cholesky (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
+  if (index_read == NULL) return TREXIO_INVALID_ARG_6;
+  if (value_read == NULL) return TREXIO_INVALID_ARG_7;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -12312,7 +12663,12 @@ trexio_hdf5_read_rdm_2e_dndn_cholesky (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
+  if (index_read == NULL) return TREXIO_INVALID_ARG_6;
+  if (value_read == NULL) return TREXIO_INVALID_ARG_7;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -12386,7 +12742,12 @@ trexio_hdf5_read_rdm_2e_updn_cholesky (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
+  if (index_read == NULL) return TREXIO_INVALID_ARG_6;
+  if (value_read == NULL) return TREXIO_INVALID_ARG_7;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -12455,6 +12816,9 @@ trexio_hdf5_read_metadata_code (trexio_t* const file, char* const metadata_code,
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (metadata_code  == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+  if (max_str_len < 1) return TREXIO_INVALID_ARG_5;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -12559,6 +12923,9 @@ trexio_hdf5_read_metadata_author (trexio_t* const file, char* const metadata_aut
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (metadata_author  == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+  if (max_str_len < 1) return TREXIO_INVALID_ARG_5;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -12663,6 +13030,9 @@ trexio_hdf5_read_nucleus_label (trexio_t* const file, char* const nucleus_label,
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (nucleus_label  == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+  if (max_str_len < 1) return TREXIO_INVALID_ARG_5;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -12767,6 +13137,9 @@ trexio_hdf5_read_state_label (trexio_t* const file, char* const state_label, con
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (state_label  == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+  if (max_str_len < 1) return TREXIO_INVALID_ARG_5;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -12871,6 +13244,9 @@ trexio_hdf5_read_state_file_name (trexio_t* const file, char* const state_file_n
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (state_file_name  == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+  if (max_str_len < 1) return TREXIO_INVALID_ARG_5;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -12975,6 +13351,9 @@ trexio_hdf5_read_mo_class (trexio_t* const file, char* const mo_class, const uin
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_class  == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+  if (max_str_len < 1) return TREXIO_INVALID_ARG_5;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -13079,6 +13458,9 @@ trexio_hdf5_read_mo_symmetry (trexio_t* const file, char* const mo_symmetry, con
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_symmetry  == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+  if (max_str_len < 1) return TREXIO_INVALID_ARG_5;
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -13182,6 +13564,7 @@ trexio_hdf5_write_metadata_code_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -13226,6 +13609,7 @@ trexio_hdf5_write_metadata_author_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -13270,6 +13654,7 @@ trexio_hdf5_write_metadata_unsafe (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -13314,6 +13699,7 @@ trexio_hdf5_write_nucleus_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -13358,6 +13744,7 @@ trexio_hdf5_write_nucleus_repulsion (trexio_t* const file, const double num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -13402,6 +13789,7 @@ trexio_hdf5_write_cell_two_pi (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -13446,6 +13834,7 @@ trexio_hdf5_write_pbc_periodic (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -13490,6 +13879,7 @@ trexio_hdf5_write_pbc_k_point_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -13530,10 +13920,56 @@ trexio_hdf5_write_pbc_k_point_num (trexio_t* const file, const int64_t num)
 }
 
 trexio_exit_code
+trexio_hdf5_write_pbc_madelung (trexio_t* const file, const double num)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
+
+  trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
+
+  /* Delete the attribute if it exists and if the file is open in UNSAFE mode */
+  if (trexio_hdf5_has_pbc_madelung(file) == TREXIO_SUCCESS && file->mode == 'u') {
+    herr_t status_del = H5Adelete(f->pbc_group, PBC_MADELUNG_NAME);
+    if (status_del < 0) return TREXIO_FAILURE;
+  }
+
+  /* Setup the dataspace */
+  const hid_t dtype_id = H5Tcopy(H5T_NATIVE_DOUBLE);
+  if (dtype_id <= 0) return TREXIO_INVALID_ID;
+
+  const hid_t dspace_id = H5Screate(H5S_SCALAR);
+  if (dspace_id <= 0) {
+    H5Tclose(dtype_id);
+    return TREXIO_INVALID_ID;
+  }
+
+  const hid_t num_id = H5Acreate(f->pbc_group,
+                                 PBC_MADELUNG_NAME,
+                                 dtype_id, dspace_id,
+                                 H5P_DEFAULT, H5P_DEFAULT);
+  if (num_id <= 0) {
+    H5Sclose(dspace_id);
+    H5Tclose(dtype_id);
+    return TREXIO_INVALID_ID;
+  }
+
+  const herr_t status = H5Awrite(num_id, dtype_id, &num);
+
+  H5Sclose(dspace_id);
+  H5Aclose(num_id);
+  H5Tclose(dtype_id);
+  if (status < 0) return TREXIO_FAILURE;
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
 trexio_hdf5_write_electron_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -13578,6 +14014,7 @@ trexio_hdf5_write_electron_up_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -13622,6 +14059,7 @@ trexio_hdf5_write_electron_dn_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -13666,6 +14104,7 @@ trexio_hdf5_write_state_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -13710,6 +14149,7 @@ trexio_hdf5_write_state_id (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -13754,6 +14194,7 @@ trexio_hdf5_write_state_energy (trexio_t* const file, const double num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -13798,6 +14239,7 @@ trexio_hdf5_write_basis_prim_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -13842,6 +14284,7 @@ trexio_hdf5_write_basis_shell_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -13886,6 +14329,7 @@ trexio_hdf5_write_basis_nao_grid_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -13930,6 +14374,7 @@ trexio_hdf5_write_basis_interp_coeff_cnt (trexio_t* const file, const int64_t nu
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -13974,6 +14419,7 @@ trexio_hdf5_write_basis_e_cut (trexio_t* const file, const double num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -14018,6 +14464,7 @@ trexio_hdf5_write_ecp_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -14062,6 +14509,7 @@ trexio_hdf5_write_grid_rad_precision (trexio_t* const file, const double num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -14106,6 +14554,7 @@ trexio_hdf5_write_grid_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -14150,6 +14599,7 @@ trexio_hdf5_write_grid_max_ang_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -14194,6 +14644,7 @@ trexio_hdf5_write_grid_min_ang_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -14238,6 +14689,7 @@ trexio_hdf5_write_grid_ang_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -14282,6 +14734,7 @@ trexio_hdf5_write_grid_rad_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -14326,6 +14779,7 @@ trexio_hdf5_write_ao_cartesian (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -14370,6 +14824,7 @@ trexio_hdf5_write_ao_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -14414,6 +14869,7 @@ trexio_hdf5_write_ao_2e_int_eri_cholesky_num (trexio_t* const file, const int64_
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -14458,6 +14914,7 @@ trexio_hdf5_write_ao_2e_int_eri_lr_cholesky_num (trexio_t* const file, const int
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -14502,6 +14959,7 @@ trexio_hdf5_write_mo_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -14546,6 +15004,7 @@ trexio_hdf5_write_mo_2e_int_eri_cholesky_num (trexio_t* const file, const int64_
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -14590,6 +15049,7 @@ trexio_hdf5_write_mo_2e_int_eri_lr_cholesky_num (trexio_t* const file, const int
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -14634,6 +15094,7 @@ trexio_hdf5_write_determinant_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -14678,6 +15139,7 @@ trexio_hdf5_write_csf_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -14722,6 +15184,7 @@ trexio_hdf5_write_rdm_2e_cholesky_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -14766,6 +15229,7 @@ trexio_hdf5_write_rdm_2e_upup_cholesky_num (trexio_t* const file, const int64_t 
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -14810,6 +15274,7 @@ trexio_hdf5_write_rdm_2e_dndn_cholesky_num (trexio_t* const file, const int64_t 
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -14854,6 +15319,7 @@ trexio_hdf5_write_rdm_2e_updn_cholesky_num (trexio_t* const file, const int64_t 
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -14898,6 +15364,7 @@ trexio_hdf5_write_jastrow_en_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -14942,6 +15409,7 @@ trexio_hdf5_write_jastrow_ee_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -14986,6 +15454,7 @@ trexio_hdf5_write_jastrow_een_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -15030,6 +15499,7 @@ trexio_hdf5_write_jastrow_ee_scaling (trexio_t* const file, const double num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -15074,6 +15544,7 @@ trexio_hdf5_write_qmc_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -15671,6 +16142,9 @@ trexio_exit_code trexio_hdf5_write_determinant_coefficient(trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (rank != 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
   if (dset == NULL) return TREXIO_INVALID_ARG_5;
 
   const char* dset_name = "determinant_coefficient";
@@ -15746,6 +16220,9 @@ trexio_exit_code trexio_hdf5_write_csf_coefficient(trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (rank != 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
   if (dset == NULL) return TREXIO_INVALID_ARG_5;
 
   const char* dset_name = "csf_coefficient";
@@ -15819,6 +16296,8 @@ trexio_hdf5_write_nucleus_charge (trexio_t* const file, const double* nucleus_ch
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (nucleus_charge == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -15868,6 +16347,8 @@ trexio_hdf5_write_nucleus_coord (trexio_t* const file, const double* nucleus_coo
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (nucleus_coord == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -15917,6 +16398,8 @@ trexio_hdf5_write_cell_a (trexio_t* const file, const double* cell_a, const uint
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (cell_a == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -15966,6 +16449,8 @@ trexio_hdf5_write_cell_b (trexio_t* const file, const double* cell_b, const uint
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (cell_b == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -16015,6 +16500,8 @@ trexio_hdf5_write_cell_c (trexio_t* const file, const double* cell_c, const uint
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (cell_c == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -16064,6 +16551,8 @@ trexio_hdf5_write_cell_g_a (trexio_t* const file, const double* cell_g_a, const 
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (cell_g_a == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -16113,6 +16602,8 @@ trexio_hdf5_write_cell_g_b (trexio_t* const file, const double* cell_g_b, const 
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (cell_g_b == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -16162,6 +16653,8 @@ trexio_hdf5_write_cell_g_c (trexio_t* const file, const double* cell_g_c, const 
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (cell_g_c == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -16211,6 +16704,8 @@ trexio_hdf5_write_pbc_k_point (trexio_t* const file, const double* pbc_k_point, 
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (pbc_k_point == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -16260,6 +16755,8 @@ trexio_hdf5_write_pbc_k_point_weight (trexio_t* const file, const double* pbc_k_
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (pbc_k_point_weight == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -16309,6 +16806,8 @@ trexio_hdf5_write_basis_nucleus_index (trexio_t* const file, const int64_t* basi
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_nucleus_index == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -16358,6 +16857,8 @@ trexio_hdf5_write_basis_shell_ang_mom (trexio_t* const file, const int64_t* basi
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_shell_ang_mom == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -16407,6 +16908,8 @@ trexio_hdf5_write_basis_shell_factor (trexio_t* const file, const double* basis_
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_shell_factor == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -16456,6 +16959,8 @@ trexio_hdf5_write_basis_r_power (trexio_t* const file, const int64_t* basis_r_po
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_r_power == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -16505,6 +17010,8 @@ trexio_hdf5_write_basis_nao_grid_start (trexio_t* const file, const int64_t* bas
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_nao_grid_start == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -16554,6 +17061,8 @@ trexio_hdf5_write_basis_nao_grid_size (trexio_t* const file, const int64_t* basi
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_nao_grid_size == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -16603,6 +17112,8 @@ trexio_hdf5_write_basis_shell_index (trexio_t* const file, const int64_t* basis_
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_shell_index == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -16652,6 +17163,8 @@ trexio_hdf5_write_basis_exponent (trexio_t* const file, const double* basis_expo
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_exponent == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -16701,6 +17214,8 @@ trexio_hdf5_write_basis_exponent_im (trexio_t* const file, const double* basis_e
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_exponent_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -16750,6 +17265,8 @@ trexio_hdf5_write_basis_coefficient (trexio_t* const file, const double* basis_c
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_coefficient == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -16799,6 +17316,8 @@ trexio_hdf5_write_basis_coefficient_im (trexio_t* const file, const double* basi
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_coefficient_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -16848,6 +17367,8 @@ trexio_hdf5_write_basis_oscillation_arg (trexio_t* const file, const double* bas
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_oscillation_arg == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -16897,6 +17418,8 @@ trexio_hdf5_write_basis_prim_factor (trexio_t* const file, const double* basis_p
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_prim_factor == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -16946,6 +17469,8 @@ trexio_hdf5_write_basis_nao_grid_radius (trexio_t* const file, const double* bas
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_nao_grid_radius == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -16995,6 +17520,8 @@ trexio_hdf5_write_basis_nao_grid_phi (trexio_t* const file, const double* basis_
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_nao_grid_phi == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -17044,6 +17571,8 @@ trexio_hdf5_write_basis_nao_grid_grad (trexio_t* const file, const double* basis
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_nao_grid_grad == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -17093,6 +17622,8 @@ trexio_hdf5_write_basis_nao_grid_lap (trexio_t* const file, const double* basis_
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_nao_grid_lap == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -17142,6 +17673,8 @@ trexio_hdf5_write_basis_interpolator_phi (trexio_t* const file, const double* ba
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_interpolator_phi == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -17191,6 +17724,8 @@ trexio_hdf5_write_basis_interpolator_grad (trexio_t* const file, const double* b
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_interpolator_grad == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -17240,6 +17775,8 @@ trexio_hdf5_write_basis_interpolator_lap (trexio_t* const file, const double* ba
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (basis_interpolator_lap == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -17289,6 +17826,8 @@ trexio_hdf5_write_ecp_max_ang_mom_plus_1 (trexio_t* const file, const int64_t* e
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ecp_max_ang_mom_plus_1 == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -17338,6 +17877,8 @@ trexio_hdf5_write_ecp_z_core (trexio_t* const file, const int64_t* ecp_z_core, c
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ecp_z_core == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -17387,6 +17928,8 @@ trexio_hdf5_write_ecp_ang_mom (trexio_t* const file, const int64_t* ecp_ang_mom,
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ecp_ang_mom == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -17436,6 +17979,8 @@ trexio_hdf5_write_ecp_nucleus_index (trexio_t* const file, const int64_t* ecp_nu
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ecp_nucleus_index == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -17485,6 +18030,8 @@ trexio_hdf5_write_ecp_exponent (trexio_t* const file, const double* ecp_exponent
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ecp_exponent == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -17534,6 +18081,8 @@ trexio_hdf5_write_ecp_coefficient (trexio_t* const file, const double* ecp_coeff
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ecp_coefficient == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -17583,6 +18132,8 @@ trexio_hdf5_write_ecp_power (trexio_t* const file, const int64_t* ecp_power, con
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ecp_power == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -17632,6 +18183,8 @@ trexio_hdf5_write_grid_coord (trexio_t* const file, const double* grid_coord, co
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (grid_coord == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -17681,6 +18234,8 @@ trexio_hdf5_write_grid_weight (trexio_t* const file, const double* grid_weight, 
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (grid_weight == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -17730,6 +18285,8 @@ trexio_hdf5_write_grid_ang_coord (trexio_t* const file, const double* grid_ang_c
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (grid_ang_coord == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -17779,6 +18336,8 @@ trexio_hdf5_write_grid_ang_weight (trexio_t* const file, const double* grid_ang_
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (grid_ang_weight == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -17828,6 +18387,8 @@ trexio_hdf5_write_grid_rad_coord (trexio_t* const file, const double* grid_rad_c
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (grid_rad_coord == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -17877,6 +18438,8 @@ trexio_hdf5_write_grid_rad_weight (trexio_t* const file, const double* grid_rad_
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (grid_rad_weight == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -17926,6 +18489,8 @@ trexio_hdf5_write_ao_shell (trexio_t* const file, const int64_t* ao_shell, const
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_shell == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -17975,6 +18540,8 @@ trexio_hdf5_write_ao_normalization (trexio_t* const file, const double* ao_norma
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_normalization == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -18024,6 +18591,8 @@ trexio_hdf5_write_ao_1e_int_overlap (trexio_t* const file, const double* ao_1e_i
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_overlap == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -18073,6 +18642,8 @@ trexio_hdf5_write_ao_1e_int_kinetic (trexio_t* const file, const double* ao_1e_i
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_kinetic == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -18122,6 +18693,8 @@ trexio_hdf5_write_ao_1e_int_potential_n_e (trexio_t* const file, const double* a
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_potential_n_e == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -18171,6 +18744,8 @@ trexio_hdf5_write_ao_1e_int_ecp (trexio_t* const file, const double* ao_1e_int_e
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_ecp == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -18220,6 +18795,8 @@ trexio_hdf5_write_ao_1e_int_core_hamiltonian (trexio_t* const file, const double
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_core_hamiltonian == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -18269,6 +18846,8 @@ trexio_hdf5_write_ao_1e_int_overlap_im (trexio_t* const file, const double* ao_1
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_overlap_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -18318,6 +18897,8 @@ trexio_hdf5_write_ao_1e_int_kinetic_im (trexio_t* const file, const double* ao_1
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_kinetic_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -18367,6 +18948,8 @@ trexio_hdf5_write_ao_1e_int_potential_n_e_im (trexio_t* const file, const double
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_potential_n_e_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -18416,6 +18999,8 @@ trexio_hdf5_write_ao_1e_int_ecp_im (trexio_t* const file, const double* ao_1e_in
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_ecp_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -18465,6 +19050,8 @@ trexio_hdf5_write_ao_1e_int_core_hamiltonian_im (trexio_t* const file, const dou
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (ao_1e_int_core_hamiltonian_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -18514,6 +19101,8 @@ trexio_hdf5_write_mo_coefficient (trexio_t* const file, const double* mo_coeffic
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_coefficient == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -18563,6 +19152,8 @@ trexio_hdf5_write_mo_coefficient_im (trexio_t* const file, const double* mo_coef
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_coefficient_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -18612,6 +19203,8 @@ trexio_hdf5_write_mo_occupation (trexio_t* const file, const double* mo_occupati
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_occupation == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -18661,6 +19254,8 @@ trexio_hdf5_write_mo_energy (trexio_t* const file, const double* mo_energy, cons
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_energy == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -18710,6 +19305,8 @@ trexio_hdf5_write_mo_spin (trexio_t* const file, const int64_t* mo_spin, const u
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_spin == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -18759,6 +19356,8 @@ trexio_hdf5_write_mo_k_point (trexio_t* const file, const int64_t* mo_k_point, c
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_k_point == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -18808,6 +19407,8 @@ trexio_hdf5_write_mo_1e_int_overlap (trexio_t* const file, const double* mo_1e_i
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_overlap == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -18857,6 +19458,8 @@ trexio_hdf5_write_mo_1e_int_kinetic (trexio_t* const file, const double* mo_1e_i
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_kinetic == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -18906,6 +19509,8 @@ trexio_hdf5_write_mo_1e_int_potential_n_e (trexio_t* const file, const double* m
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_potential_n_e == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -18955,6 +19560,8 @@ trexio_hdf5_write_mo_1e_int_ecp (trexio_t* const file, const double* mo_1e_int_e
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_ecp == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -19004,6 +19611,8 @@ trexio_hdf5_write_mo_1e_int_core_hamiltonian (trexio_t* const file, const double
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_core_hamiltonian == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -19053,6 +19662,8 @@ trexio_hdf5_write_mo_1e_int_overlap_im (trexio_t* const file, const double* mo_1
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_overlap_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -19102,6 +19713,8 @@ trexio_hdf5_write_mo_1e_int_kinetic_im (trexio_t* const file, const double* mo_1
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_kinetic_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -19151,6 +19764,8 @@ trexio_hdf5_write_mo_1e_int_potential_n_e_im (trexio_t* const file, const double
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_potential_n_e_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -19200,6 +19815,8 @@ trexio_hdf5_write_mo_1e_int_ecp_im (trexio_t* const file, const double* mo_1e_in
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_ecp_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -19249,6 +19866,8 @@ trexio_hdf5_write_mo_1e_int_core_hamiltonian_im (trexio_t* const file, const dou
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_1e_int_core_hamiltonian_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -19298,6 +19917,8 @@ trexio_hdf5_write_rdm_1e (trexio_t* const file, const double* rdm_1e, const uint
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (rdm_1e == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -19347,6 +19968,8 @@ trexio_hdf5_write_rdm_1e_up (trexio_t* const file, const double* rdm_1e_up, cons
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (rdm_1e_up == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -19396,6 +20019,8 @@ trexio_hdf5_write_rdm_1e_dn (trexio_t* const file, const double* rdm_1e_dn, cons
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (rdm_1e_dn == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -19445,6 +20070,8 @@ trexio_hdf5_write_rdm_1e_transition (trexio_t* const file, const double* rdm_1e_
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (rdm_1e_transition == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -19494,6 +20121,8 @@ trexio_hdf5_write_jastrow_en (trexio_t* const file, const double* jastrow_en, co
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (jastrow_en == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -19543,6 +20172,8 @@ trexio_hdf5_write_jastrow_ee (trexio_t* const file, const double* jastrow_ee, co
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (jastrow_ee == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -19592,6 +20223,8 @@ trexio_hdf5_write_jastrow_een (trexio_t* const file, const double* jastrow_een, 
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (jastrow_een == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -19641,6 +20274,8 @@ trexio_hdf5_write_jastrow_en_nucleus (trexio_t* const file, const int64_t* jastr
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (jastrow_en_nucleus == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -19690,6 +20325,8 @@ trexio_hdf5_write_jastrow_een_nucleus (trexio_t* const file, const int64_t* jast
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (jastrow_een_nucleus == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -19739,6 +20376,8 @@ trexio_hdf5_write_jastrow_en_scaling (trexio_t* const file, const double* jastro
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (jastrow_en_scaling == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -19788,6 +20427,8 @@ trexio_hdf5_write_qmc_point (trexio_t* const file, const double* qmc_point, cons
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (qmc_point == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -19837,6 +20478,8 @@ trexio_hdf5_write_qmc_psi (trexio_t* const file, const double* qmc_psi, const ui
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (qmc_psi == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -19886,6 +20529,8 @@ trexio_hdf5_write_qmc_e_loc (trexio_t* const file, const double* qmc_e_loc, cons
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (qmc_e_loc == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -19939,6 +20584,11 @@ trexio_hdf5_write_ao_2e_int_eri (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
+  if (index_sparse == NULL) return TREXIO_INVALID_ARG_5;
+  if (value_sparse == NULL) return TREXIO_INVALID_ARG_6;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -20026,6 +20676,11 @@ trexio_hdf5_write_ao_2e_int_eri_lr (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
+  if (index_sparse == NULL) return TREXIO_INVALID_ARG_5;
+  if (value_sparse == NULL) return TREXIO_INVALID_ARG_6;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -20113,6 +20768,11 @@ trexio_hdf5_write_ao_2e_int_eri_cholesky (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
+  if (index_sparse == NULL) return TREXIO_INVALID_ARG_5;
+  if (value_sparse == NULL) return TREXIO_INVALID_ARG_6;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -20200,6 +20860,11 @@ trexio_hdf5_write_ao_2e_int_eri_lr_cholesky (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
+  if (index_sparse == NULL) return TREXIO_INVALID_ARG_5;
+  if (value_sparse == NULL) return TREXIO_INVALID_ARG_6;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -20287,6 +20952,11 @@ trexio_hdf5_write_mo_2e_int_eri (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
+  if (index_sparse == NULL) return TREXIO_INVALID_ARG_5;
+  if (value_sparse == NULL) return TREXIO_INVALID_ARG_6;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -20374,6 +21044,11 @@ trexio_hdf5_write_mo_2e_int_eri_lr (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
+  if (index_sparse == NULL) return TREXIO_INVALID_ARG_5;
+  if (value_sparse == NULL) return TREXIO_INVALID_ARG_6;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -20461,6 +21136,11 @@ trexio_hdf5_write_mo_2e_int_eri_cholesky (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
+  if (index_sparse == NULL) return TREXIO_INVALID_ARG_5;
+  if (value_sparse == NULL) return TREXIO_INVALID_ARG_6;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -20548,6 +21228,11 @@ trexio_hdf5_write_mo_2e_int_eri_lr_cholesky (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
+  if (index_sparse == NULL) return TREXIO_INVALID_ARG_5;
+  if (value_sparse == NULL) return TREXIO_INVALID_ARG_6;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -20635,6 +21320,11 @@ trexio_hdf5_write_csf_det_coefficient (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
+  if (index_sparse == NULL) return TREXIO_INVALID_ARG_5;
+  if (value_sparse == NULL) return TREXIO_INVALID_ARG_6;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -20722,6 +21412,11 @@ trexio_hdf5_write_amplitude_single (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
+  if (index_sparse == NULL) return TREXIO_INVALID_ARG_5;
+  if (value_sparse == NULL) return TREXIO_INVALID_ARG_6;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -20809,6 +21504,11 @@ trexio_hdf5_write_amplitude_single_exp (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
+  if (index_sparse == NULL) return TREXIO_INVALID_ARG_5;
+  if (value_sparse == NULL) return TREXIO_INVALID_ARG_6;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -20896,6 +21596,11 @@ trexio_hdf5_write_amplitude_double (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
+  if (index_sparse == NULL) return TREXIO_INVALID_ARG_5;
+  if (value_sparse == NULL) return TREXIO_INVALID_ARG_6;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -20983,6 +21688,11 @@ trexio_hdf5_write_amplitude_double_exp (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
+  if (index_sparse == NULL) return TREXIO_INVALID_ARG_5;
+  if (value_sparse == NULL) return TREXIO_INVALID_ARG_6;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -21070,6 +21780,11 @@ trexio_hdf5_write_amplitude_triple (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
+  if (index_sparse == NULL) return TREXIO_INVALID_ARG_5;
+  if (value_sparse == NULL) return TREXIO_INVALID_ARG_6;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -21157,6 +21872,11 @@ trexio_hdf5_write_amplitude_triple_exp (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
+  if (index_sparse == NULL) return TREXIO_INVALID_ARG_5;
+  if (value_sparse == NULL) return TREXIO_INVALID_ARG_6;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -21244,6 +21964,11 @@ trexio_hdf5_write_amplitude_quadruple (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
+  if (index_sparse == NULL) return TREXIO_INVALID_ARG_5;
+  if (value_sparse == NULL) return TREXIO_INVALID_ARG_6;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -21331,6 +22056,11 @@ trexio_hdf5_write_amplitude_quadruple_exp (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
+  if (index_sparse == NULL) return TREXIO_INVALID_ARG_5;
+  if (value_sparse == NULL) return TREXIO_INVALID_ARG_6;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -21418,6 +22148,11 @@ trexio_hdf5_write_rdm_2e (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
+  if (index_sparse == NULL) return TREXIO_INVALID_ARG_5;
+  if (value_sparse == NULL) return TREXIO_INVALID_ARG_6;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -21505,6 +22240,11 @@ trexio_hdf5_write_rdm_2e_upup (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
+  if (index_sparse == NULL) return TREXIO_INVALID_ARG_5;
+  if (value_sparse == NULL) return TREXIO_INVALID_ARG_6;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -21592,6 +22332,11 @@ trexio_hdf5_write_rdm_2e_dndn (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
+  if (index_sparse == NULL) return TREXIO_INVALID_ARG_5;
+  if (value_sparse == NULL) return TREXIO_INVALID_ARG_6;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -21679,6 +22424,11 @@ trexio_hdf5_write_rdm_2e_updn (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
+  if (index_sparse == NULL) return TREXIO_INVALID_ARG_5;
+  if (value_sparse == NULL) return TREXIO_INVALID_ARG_6;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -21766,6 +22516,11 @@ trexio_hdf5_write_rdm_2e_transition (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
+  if (index_sparse == NULL) return TREXIO_INVALID_ARG_5;
+  if (value_sparse == NULL) return TREXIO_INVALID_ARG_6;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -21853,6 +22608,11 @@ trexio_hdf5_write_rdm_2e_cholesky (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
+  if (index_sparse == NULL) return TREXIO_INVALID_ARG_5;
+  if (value_sparse == NULL) return TREXIO_INVALID_ARG_6;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -21940,6 +22700,11 @@ trexio_hdf5_write_rdm_2e_upup_cholesky (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
+  if (index_sparse == NULL) return TREXIO_INVALID_ARG_5;
+  if (value_sparse == NULL) return TREXIO_INVALID_ARG_6;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -22027,6 +22792,11 @@ trexio_hdf5_write_rdm_2e_dndn_cholesky (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
+  if (index_sparse == NULL) return TREXIO_INVALID_ARG_5;
+  if (value_sparse == NULL) return TREXIO_INVALID_ARG_6;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -22114,6 +22884,11 @@ trexio_hdf5_write_rdm_2e_updn_cholesky (trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (size < 0) return TREXIO_INVALID_ARG_3;
+  if (size_max < 0) return TREXIO_INVALID_ARG_4;
+  if (index_sparse == NULL) return TREXIO_INVALID_ARG_5;
+  if (value_sparse == NULL) return TREXIO_INVALID_ARG_6;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -22197,6 +22972,8 @@ trexio_hdf5_write_metadata_code (trexio_t* const file, const char** metadata_cod
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (metadata_code  == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -22257,6 +23034,8 @@ trexio_hdf5_write_metadata_author (trexio_t* const file, const char** metadata_a
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (metadata_author  == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -22317,6 +23096,8 @@ trexio_hdf5_write_nucleus_label (trexio_t* const file, const char** nucleus_labe
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (nucleus_label  == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -22377,6 +23158,8 @@ trexio_hdf5_write_state_label (trexio_t* const file, const char** state_label, c
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (state_label  == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -22437,6 +23220,8 @@ trexio_hdf5_write_state_file_name (trexio_t* const file, const char** state_file
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (state_file_name  == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -22497,6 +23282,8 @@ trexio_hdf5_write_mo_class (trexio_t* const file, const char** mo_class, const u
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_class  == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -22557,6 +23344,8 @@ trexio_hdf5_write_mo_symmetry (trexio_t* const file, const char** mo_symmetry, c
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (mo_symmetry  == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -23055,6 +23844,9 @@ trexio_exit_code trexio_hdf5_read_determinant_list(trexio_t* const file,
                                                    int64_t* const list)
 {
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (rank < 2) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
   if (list == NULL) return TREXIO_INVALID_ARG_6;
 
@@ -23077,6 +23869,9 @@ trexio_exit_code trexio_hdf5_write_determinant_list(trexio_t* const file,
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (rank < 2) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
   if (list == NULL) return TREXIO_INVALID_ARG_5;
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
@@ -23118,6 +23913,9 @@ trexio_hdf5_create_write_dset_sparse (const hid_t group_id,
                                       const hsize_t* chunk_dims,
                                       const void* data_sparse)
 {
+  assert (chunk_dims != NULL);
+  assert (data_sparse != NULL);
+  assert (dset_name != NULL);
   const int h5_rank = 1;
   const hsize_t maxdims[1] = {H5S_UNLIMITED};
 

@@ -151,14 +151,46 @@ trexio_string_of_error (const trexio_exit_code error)
   case TREXIO_PHASE_CHANGE:
     return "The function succeeded with a change of sign";
     break;
+  case TREXIO_INVALID_MO_INDEX:
+    return "Invalid MO index";
+    break;
+  case TREXIO_INVALID_ARG_9:
+    return "Invalid argument 9";
+    break;
+  case TREXIO_INVALID_ARG_10:
+    return "Invalid argument 10";
+    break;
+  case TREXIO_INVALID_ARG_11:
+    return "Invalid argument 11";
+    break;
+  case TREXIO_INVALID_ARG_12:
+    return "Invalid argument 12";
+    break;
+  case TREXIO_INVALID_ARG_13:
+    return "Invalid argument 13";
+    break;
+  case TREXIO_INVALID_ARG_14:
+    return "Invalid argument 14";
+    break;
+  case TREXIO_CORRUPTION_ATTEMPT:
+    return "File offset is wrong, corruption risk";
+    break;
   }
   return "Unknown error";
 }
 
 void
-trexio_string_of_error_f (const trexio_exit_code error, char result[128])
+trexio_string_of_error_f (const trexio_exit_code error, const int32_t str_size, char* const result)
 {
-  strncpy(result, trexio_string_of_error(error), 128);
+  const char* pSrc = trexio_string_of_error(error);
+  int32_t sizeCp = (int32_t) strlen(pSrc);
+  if (sizeCp > str_size) {
+     sizeCp = str_size;
+  }
+  memcpy(result, pSrc, sizeCp);
+  for (int32_t i=sizeCp ; i<str_size ; ++i) {
+    result[i] = ' ';
+  }
 }
 
 bool trexio_has_back_end(back_end_t back_end) {
@@ -268,8 +300,11 @@ trexio_open(const char* file_name, const char mode,
 
   /* Data for the parent type */
 
-  strncpy(result->file_name, file_name, TREXIO_MAX_FILENAME_LENGTH);
-  if (result->file_name[TREXIO_MAX_FILENAME_LENGTH-1] != '\0') {
+  // See https://stackoverflow.com/a/50198398/4151327
+  size_t lenSrc = strlen(file_name);
+  if (lenSrc < TREXIO_MAX_FILENAME_LENGTH) {
+    memcpy(result->file_name, file_name, lenSrc+1);
+  } else {
     if (rc_open != NULL) *rc_open = TREXIO_INVALID_ARG_1;
     free(result);
     return NULL;
@@ -287,11 +322,9 @@ trexio_open(const char* file_name, const char mode,
   }
   // assert (irc == 0);
 
-  trexio_exit_code rc;
-
   /* Back end initialization */
 
-  rc = TREXIO_OPEN_ERROR;
+  trexio_exit_code rc = TREXIO_OPEN_ERROR;
 
   switch (back_end_local) {
 
@@ -741,8 +774,6 @@ trexio_pre_close (trexio_t* file)
 
   if (file == NULL) return TREXIO_FILE_ERROR;
 
-  trexio_exit_code rc;
-
   /* Check consistency between number of determinants and coefficients stored in the file */
 
   if (file->version_major >= 2 && file->version_minor >= 2) {
@@ -752,13 +783,15 @@ trexio_pre_close (trexio_t* file)
     int64_t ndet, ncoeff;
 
     if (has_det && has_coeff) {
+      trexio_exit_code rc = TREXIO_FAILURE;
+
       rc = trexio_read_determinant_num_64(file, &ndet);
       if (rc != TREXIO_SUCCESS) return rc;
 
       rc = trexio_read_determinant_coefficient_size(file, &ncoeff);
       if (rc != TREXIO_SUCCESS) return rc;
 
-      /* Maybe be even more direct and use assert here so that the user's code crushes in case of inconsistency */
+      /* Maybe be even more direct and use assert here so that the user's code crashes in case of inconsistency */
       if (ndet != ncoeff) return TREXIO_INVALID_DETERMINANT_NUM;
     }
 
@@ -771,7 +804,11 @@ trexio_pre_close (trexio_t* file)
   bool has_updn = (trexio_has_electron_num(file) == TREXIO_SUCCESS);
 
   if (file->mode != 'r') {
+
     if (has_updn && has_up && has_dn) {
+
+      trexio_exit_code rc = TREXIO_FAILURE;
+
       rc = trexio_read_electron_up_num(file, &nup);
       if (rc != TREXIO_SUCCESS) return rc;
 
@@ -790,7 +827,11 @@ trexio_pre_close (trexio_t* file)
           return TREXIO_INVALID_ELECTRON_NUM;
         }
       }
+
     } else if (has_up && has_dn) {
+
+      trexio_exit_code rc = TREXIO_FAILURE;
+
       rc = trexio_read_electron_up_num(file, &nup);
       if (rc != TREXIO_SUCCESS) return rc;
 
@@ -800,7 +841,11 @@ trexio_pre_close (trexio_t* file)
       nelec = nup + ndn;
       rc = trexio_write_electron_num(file, nelec);
       if (rc != TREXIO_SUCCESS) return rc;
+
     } else if (has_up) {
+
+      trexio_exit_code rc = TREXIO_FAILURE;
+
       rc = trexio_read_electron_up_num(file, &nup);
       if (rc != TREXIO_SUCCESS) return rc;
 
@@ -811,7 +856,11 @@ trexio_pre_close (trexio_t* file)
       nelec = nup;
       rc = trexio_write_electron_num(file, nelec);
       if (rc != TREXIO_SUCCESS) return rc;
+
     } else if (has_dn) {
+
+      trexio_exit_code rc = TREXIO_FAILURE;
+
       rc = trexio_read_electron_dn_num(file, &ndn);
       if (rc != TREXIO_SUCCESS) return rc;
 
@@ -822,6 +871,7 @@ trexio_pre_close (trexio_t* file)
       nelec = ndn;
       rc = trexio_write_electron_num(file, nelec);
       if (rc != TREXIO_SUCCESS) return rc;
+
     }
   }
 
@@ -915,10 +965,8 @@ trexio_exit_code trexio_to_orbital_list_up_dn(const int32_t N_int,
   if (occ_num_up == NULL) return TREXIO_INVALID_ARG_5;
   if (occ_num_dn == NULL) return TREXIO_INVALID_ARG_6;
 
-  trexio_exit_code rc;
-
   /* First process up-spin electrons */
-  rc = trexio_to_orbital_list(N_int, &d1[0], list_up, occ_num_up);
+  trexio_exit_code rc = trexio_to_orbital_list(N_int, &d1[0], list_up, occ_num_up);
   if (rc != TREXIO_SUCCESS) return rc;
 
   /* Now process down-spin electrons */
@@ -936,6 +984,14 @@ trexio_safe_to_orbital_list (const int32_t N_int,
                              const int64_t dim_out,
 			     int32_t* const num)
 {
+  if (dim_in < N_int) return TREXIO_INVALID_ARG_3;
+
+  /* Count number of up electrons in first bitfield */
+  int count = 0;
+  for (int i=0 ; i<N_int; i++) {
+    count += popcnt(dset_in[i]);
+  }
+  if (dim_out < count) return TREXIO_INVALID_ARG_5;
   return trexio_to_orbital_list(N_int, dset_in, dset_out, num);
 }
 
@@ -950,25 +1006,39 @@ trexio_safe_to_orbital_list_up_dn (const int32_t N_int,
 			           int32_t* const num_up,
 			           int32_t* const num_dn)
 {
+  if (dim_in < 2*N_int) return TREXIO_INVALID_ARG_3;
+
+  /* Count number of up electrons in first bitfield */
+  int count = 0;
+  for (int i=0 ; i<N_int; i++) {
+    count += popcnt(dset_in[i]);
+  }
+  if (dim_up_out < count) return TREXIO_INVALID_ARG_5;
+
+  /* Count number of up electrons in second bitfield */
+  count = 0;
+  for (int i=N_int ; i<2*N_int; i++) {
+    count += popcnt(dset_in[i]);
+  }
+  if (dim_dn_out < count) return TREXIO_INVALID_ARG_7;
   return trexio_to_orbital_list_up_dn(N_int, dset_in, dset_up_out, dset_dn_out, num_up, num_dn);
 }
 
 trexio_exit_code
 trexio_convert_nao_radius_32 (const float r, const float* const grid_r, float* const log_r_out)
 {
-  if (r < 0) return TREXIO_INVALID_ARG_1;
+  if (r <= 0.) return TREXIO_INVALID_ARG_1;
   if (grid_r == NULL) return TREXIO_INVALID_ARG_2;
   if (log_r_out == NULL) return TREXIO_INVALID_ARG_3;
 
-  *log_r_out = log(r / grid_r[0]) / log(grid_r[1] / grid_r[0]);
-
+  *log_r_out = (float) log((double) r / grid_r[0]) / log((double) grid_r[1] / grid_r[0]);
   return TREXIO_SUCCESS;
 }
 
 trexio_exit_code
 trexio_convert_nao_radius_64 (const double r, const double* const grid_r, double* const log_r_out)
 {
-  if (r < 0) return TREXIO_INVALID_ARG_1;
+  if (r <= 0.) return TREXIO_INVALID_ARG_1;
   if (grid_r == NULL) return TREXIO_INVALID_ARG_2;
   if (log_r_out == NULL) return TREXIO_INVALID_ARG_3;
 
@@ -980,9 +1050,10 @@ trexio_convert_nao_radius_64 (const double r, const double* const grid_r, double
 trexio_exit_code
 trexio_convert_nao_radius_py (const double r, double* grid_r, int32_t n_grid, double* const log_r_out)
 {
-  if (r < 0) return TREXIO_INVALID_ARG_1;
+  if (r <= 0.) return TREXIO_INVALID_ARG_1;
   if (grid_r == NULL) return TREXIO_INVALID_ARG_2;
-  if (log_r_out == NULL) return TREXIO_INVALID_ARG_3;
+  if (n_grid < 2) return TREXIO_INVALID_ARG_3;
+  if (log_r_out == NULL) return TREXIO_INVALID_ARG_4;
 
   *log_r_out = log(r / grid_r[0]) / log(grid_r[1] / grid_r[0]);
 
@@ -1001,12 +1072,12 @@ trexio_evaluate_nao_radial (const int32_t shell_index, const double r, const int
   if (interpolator == 0) return TREXIO_INVALID_ARG_6;
   if (normalization == 0) return TREXIO_INVALID_ARG_7;
 
-  const int32_t i0 = 4*grid_start[shell_index];
+  const int64_t i0 = 4*grid_start[shell_index];
 
-  // Convert radius to logarithmic units 
+  // Convert radius to logarithmic units
   double r_log = 0.0;
   trexio_convert_nao_radius_64 (r, grid_r + grid_start[shell_index], &r_log);
-  int32_t i_log = (int32_t) r_log;
+  int64_t i_log = (int64_t) r_log;
   if (i_log < 0)
     i_log = 0;
   else if (i_log >= grid_size[shell_index])
@@ -1024,7 +1095,7 @@ trexio_evaluate_nao_radial (const int32_t shell_index, const double r, const int
 
 trexio_exit_code
 trexio_evaluate_nao_radial_all (const int32_t shell_num, const int32_t* const nucleus_index, const double* const nucleus_coords, const int32_t* const grid_start,
-                            const int32_t* const grid_size, const double* const grid_r, const double* const interpolator, 
+                            const int32_t* const grid_size, const double* const grid_r, const double* const interpolator,
                             const double* const normalization,  const double rx, const double ry, const double rz, double* const amplitude)
 {
   if (shell_num < 0) return TREXIO_INVALID_ARG_1;
@@ -1036,8 +1107,6 @@ trexio_evaluate_nao_radial_all (const int32_t shell_num, const int32_t* const nu
   if (interpolator == 0) return TREXIO_INVALID_ARG_7;
   if (normalization == 0) return TREXIO_INVALID_ARG_8;
 
-  trexio_exit_code rc;
-
   for (int shell_index = 0; shell_index < shell_num; shell_index++) {
     const int32_t nuc_index = nucleus_index[shell_index];
     const double dx = nucleus_coords[3*nuc_index + 0] - rx;
@@ -1046,7 +1115,7 @@ trexio_evaluate_nao_radial_all (const int32_t shell_num, const int32_t* const nu
     const double r = sqrt(dx*dx + dy*dy + dz*dz);
 
     // All possibly reported errors have been caught above
-    rc = trexio_evaluate_nao_radial(shell_index, r, grid_start, 
+    trexio_exit_code rc = trexio_evaluate_nao_radial(shell_index, r, grid_start,
       grid_size, grid_r, interpolator, normalization, &amplitude[shell_index]);
 
     if (rc != TREXIO_SUCCESS)
@@ -1056,27 +1125,33 @@ trexio_evaluate_nao_radial_all (const int32_t shell_num, const int32_t* const nu
   return TREXIO_SUCCESS;
 }
 
-trexio_exit_code trexio_evaluate_nao_radial_py (const int shell_index, 
+trexio_exit_code trexio_evaluate_nao_radial_py (const int shell_index,
   const double r, int64_t* grid_start, int n_grid_st,
-  int64_t* grid_size, int n_grid_si, double* grid_r, int n_grid_r, 
-  double* interpolator, int n_interp, double* normalization, int n_norm, double* const amplitude)
+  int64_t* grid_size, int n_grid_si, double* grid_r, int n_grid_r,
+  double* interpolator, int n_interp, double* normalization, int n_norm,
+  double* const amplitude)
 {
   // Code needs to be copied because of the use of int64_t mandated by Python
   // If a 64-bit version is implemented, this can be avoided
   if (shell_index < 0) return TREXIO_INVALID_ARG_1;
   if (r < 0) return TREXIO_INVALID_ARG_2;
   if (grid_start == 0) return TREXIO_INVALID_ARG_3;
-  if (grid_size == 0) return TREXIO_INVALID_ARG_4;
-  if (grid_r == NULL) return TREXIO_INVALID_ARG_5;
-  if (interpolator == 0) return TREXIO_INVALID_ARG_6;
-  if (normalization == 0) return TREXIO_INVALID_ARG_7;
+  if (n_grid_st < shell_index) return TREXIO_INVALID_ARG_4;
+  if (grid_size == 0) return TREXIO_INVALID_ARG_5;
+  if (n_grid_si < shell_index) return TREXIO_INVALID_ARG_6;
+  if (grid_r == NULL) return TREXIO_INVALID_ARG_7;
+  if (n_grid_r < grid_start[shell_index]) return TREXIO_INVALID_ARG_8;
+  if (interpolator == NULL) return TREXIO_INVALID_ARG_9;
+  if (normalization == 0) return TREXIO_INVALID_ARG_11;
+  if (n_norm < shell_index) return TREXIO_INVALID_ARG_12;
 
-  const int32_t i0 = 4*grid_start[shell_index];
+  const int64_t i0 = 4*grid_start[shell_index];
+  if (n_interp < i0) return TREXIO_INVALID_ARG_10;
 
-  // Convert radius to logarithmic units 
+  // Convert radius to logarithmic units
   double r_log = 0.0;
   trexio_convert_nao_radius_64 (r, grid_r + grid_start[shell_index], &r_log);
-  int32_t i_log = (int32_t) r_log;
+  int64_t i_log = (int64_t) r_log;
   if (i_log < 0) {
     *amplitude = interpolator[i0] * normalization[shell_index] / r;
     return TREXIO_SUCCESS;
@@ -1086,6 +1161,8 @@ trexio_exit_code trexio_evaluate_nao_radial_py (const int shell_index,
   }
 
   double t = r_log - (double) i_log;
+  if (n_interp < i0+4*i_log+3) return TREXIO_INVALID_ARG_10;
+
   double val_spline = interpolator[i0 + 4*i_log + 0];
   val_spline += t * interpolator[i0 + 4*i_log + 1];
   val_spline += t * t * interpolator[i0 + 4*i_log + 2];
@@ -1100,29 +1177,38 @@ trexio_exit_code trexio_evaluate_nao_radial_all_py (const int32_t shell_num,
   int64_t* grid_start, int n_grid_st, int64_t* grid_size, int n_grid_si,
   double* grid_r, int n_grid_r, double* interpolator, int n_interp,
   double* normalization, int n_norm,
-  const double rx, const double ry, const double rz, double* const amplitudes, int amplitude_cnt)
+  const double rx, const double ry, const double rz,
+  double* const amplitudes, int amplitude_cnt)
 {
   if (shell_num < 0) return TREXIO_INVALID_ARG_1;
-  if (nucleus_index == 0) return TREXIO_INVALID_ARG_2;
-  if (nucleus_coords == 0) return TREXIO_INVALID_ARG_3;
-  if (grid_start == 0) return TREXIO_INVALID_ARG_4;
-  if (grid_size == 0) return TREXIO_INVALID_ARG_5;
-  if (grid_r == NULL) return TREXIO_INVALID_ARG_6;
-  if (interpolator == 0) return TREXIO_INVALID_ARG_7;
-  if (normalization == 0) return TREXIO_INVALID_ARG_8;
+  if (nucleus_index == NULL) return TREXIO_INVALID_ARG_2;
+  if (nucleus_coords == NULL) return TREXIO_INVALID_ARG_4;
+  if (grid_start == NULL) return TREXIO_INVALID_ARG_6;
+  if (grid_size == NULL) return TREXIO_INVALID_ARG_8;
+  if (grid_r == NULL) return TREXIO_INVALID_ARG_10;
+  if (interpolator == NULL) return TREXIO_INVALID_ARG_12;
+  if (normalization == NULL) return TREXIO_INVALID_ARG_14;
 
-  trexio_exit_code rc;
+  assert (amplitudes != NULL); // 19 arguments!!! Don't want to make TREXIO_INVALID_ARG_19
+  assert (amplitude_cnt > shell_num);
+
+  if (n_nuc_id < shell_num) return TREXIO_INVALID_ARG_3;
+  if (n_nuc_co <  3*nucleus_index[shell_num-1]+2) return TREXIO_INVALID_ARG_5;
 
   for (int shell_index = 0; shell_index < shell_num; shell_index++) {
-    const int32_t nuc_index = nucleus_index[shell_index];
+    const int64_t nuc_index = nucleus_index[shell_index];
+
     const double dx = nucleus_coords[3*nuc_index + 0] - rx;
     const double dy = nucleus_coords[3*nuc_index + 1] - ry;
     const double dz = nucleus_coords[3*nuc_index + 2] - rz;
     const double r = sqrt(dx*dx + dy*dy + dz*dz);
 
     // All possibly reported errors have been caught above
-    rc = trexio_evaluate_nao_radial_py(shell_index, r, grid_start, n_grid_st, 
-      grid_size, n_grid_si, grid_r, n_grid_r, interpolator, n_interp, normalization, n_norm, &amplitudes[shell_index]);
+    trexio_exit_code rc =
+      trexio_evaluate_nao_radial_py(shell_index, r, grid_start, n_grid_st, grid_size,
+                                    n_grid_si, grid_r, n_grid_r, interpolator, n_interp,
+                                    normalization, n_norm, &amplitudes[shell_index]);
+
     if (rc != TREXIO_SUCCESS)
       return rc;
   }
@@ -1977,6 +2063,35 @@ trexio_has_pbc_k_point_num (trexio_t* const file)
 /*
   case TREXIO_JSON:
     return trexio_json_has_pbc_k_point_num(file);
+    break;
+*/
+  }
+
+  return TREXIO_FAILURE;
+}
+
+trexio_exit_code
+trexio_has_pbc_madelung (trexio_t* const file)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    return trexio_text_has_pbc_madelung(file);
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    return trexio_hdf5_has_pbc_madelung(file);
+#else
+    return TREXIO_BACK_END_MISSING;
+#endif
+/*
+  case TREXIO_JSON:
+    return trexio_json_has_pbc_madelung(file);
     break;
 */
   }
@@ -7545,6 +7660,49 @@ trexio_read_pbc_k_point_num_32 (trexio_t* const file, int32_t* const num)
 }
 
 trexio_exit_code
+trexio_read_pbc_madelung_32 (trexio_t* const file, float* const num)
+{
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num  == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_pbc_madelung(file) != TREXIO_SUCCESS) return TREXIO_ATTR_MISSING;
+
+  double num_64 = 0;
+  trexio_exit_code rc = TREXIO_GROUP_READ_ERROR;
+
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_read_pbc_madelung(file, &num_64);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_read_pbc_madelung(file, &num_64);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break ;
+#endif
+/*
+  case TREXIO_JSON:
+    rc =trexio_json_read_pbc_madelung(file, &num_64);
+    break;
+*/
+  }
+
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  *num = (float) num_64;
+
+  /* Handle index type */
+  if ((false)) {
+    *num += (float) 1;
+  }
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
 trexio_read_electron_num_32 (trexio_t* const file, int32_t* const num)
 {
   if (file == NULL) return TREXIO_INVALID_ARG_1;
@@ -9397,6 +9555,44 @@ trexio_read_pbc_k_point_num_64 (trexio_t* const file, int64_t* const num)
 }
 
 trexio_exit_code
+trexio_read_pbc_madelung_64 (trexio_t* const file, double* const num)
+{
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (num  == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_pbc_madelung(file) != TREXIO_SUCCESS) return TREXIO_ATTR_MISSING;
+
+  trexio_exit_code rc = TREXIO_GROUP_READ_ERROR;
+
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_read_pbc_madelung(file, num);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_read_pbc_madelung(file, num);
+#else
+    rc = TREXIO_BACK_END_MISSING;
+#endif
+    break;
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_read_pbc_madelung(file, num);
+    break;
+*/
+  }
+
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  /* Handle index type */
+  if ((false)) {
+    *num += (double) 1;
+  }
+  return rc;
+}
+
+trexio_exit_code
 trexio_read_electron_num_64 (trexio_t* const file, int64_t* const num)
 {
   if (file == NULL) return TREXIO_INVALID_ARG_1;
@@ -10813,6 +11009,12 @@ trexio_read_pbc_k_point_num (trexio_t* const file, int32_t* const num)
 }
 
 trexio_exit_code
+trexio_read_pbc_madelung (trexio_t* const file, double* const num)
+{
+  return trexio_read_pbc_madelung_64(file, num);
+}
+
+trexio_exit_code
 trexio_read_electron_num (trexio_t* const file, int32_t* const num)
 {
   return trexio_read_electron_num_32(file, num);
@@ -11336,7 +11538,7 @@ trexio_read_determinant_coefficient (trexio_t* const file, const int64_t offset_
   if (dset  == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_determinant_coefficient(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   uint32_t rank = 1;
   uint64_t det_size = (uint64_t) (*buffer_size_read);
@@ -11365,8 +11567,8 @@ trexio_read_determinant_coefficient (trexio_t* const file, const int64_t offset_
     break;
 */
   default:
-    rc = TREXIO_FAILURE;  /* Impossible case */
-    break;
+    rc = TREXIO_FAILURE;
+    break;  /* Impossible case */
   }
 
   if (rc != TREXIO_SUCCESS && rc != TREXIO_END) return rc;
@@ -11410,6 +11612,7 @@ trexio_read_determinant_coefficient_size(trexio_t* const file, int64_t* const si
 trexio_exit_code
 trexio_read_safe_determinant_coefficient (trexio_t* const file, const int64_t offset_file, int64_t* const buffer_size_read, double* const dset_out, const int64_t dim_out)
 {
+  if (dim_out < (*buffer_size_read)) return TREXIO_INVALID_ARG_5;
   return trexio_read_determinant_coefficient(file, offset_file, buffer_size_read, dset_out);
 }
 
@@ -11421,7 +11624,7 @@ trexio_read_csf_coefficient (trexio_t* const file, const int64_t offset_file, in
   if (dset  == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_csf_coefficient(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   uint32_t rank = 1;
   uint64_t det_size = (uint64_t) (*buffer_size_read);
@@ -11450,8 +11653,8 @@ trexio_read_csf_coefficient (trexio_t* const file, const int64_t offset_file, in
     break;
 */
   default:
-    rc = TREXIO_FAILURE;  /* Impossible case */
-    break;
+    rc = TREXIO_FAILURE;
+    break;  /* Impossible case */
   }
 
   if (rc != TREXIO_SUCCESS && rc != TREXIO_END) return rc;
@@ -11495,6 +11698,7 @@ trexio_read_csf_coefficient_size(trexio_t* const file, int64_t* const size_max)
 trexio_exit_code
 trexio_read_safe_csf_coefficient (trexio_t* const file, const int64_t offset_file, int64_t* const buffer_size_read, double* const dset_out, const int64_t dim_out)
 {
+  if (dim_out < (*buffer_size_read)) return TREXIO_INVALID_ARG_5;
   return trexio_read_csf_coefficient(file, offset_file, buffer_size_read, dset_out);
 }
 
@@ -11506,8 +11710,9 @@ trexio_read_nucleus_charge_32 (trexio_t* const file, float* const nucleus_charge
   if (nucleus_charge == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_nucleus_charge(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t nucleus_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
@@ -11578,8 +11783,9 @@ trexio_read_nucleus_coord_32 (trexio_t* const file, float* const nucleus_coord)
   if (nucleus_coord == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_nucleus_coord(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t nucleus_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
@@ -11650,7 +11856,8 @@ trexio_read_cell_a_32 (trexio_t* const file, float* const cell_a)
   if (cell_a == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_a(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
 
@@ -11718,7 +11925,8 @@ trexio_read_cell_b_32 (trexio_t* const file, float* const cell_b)
   if (cell_b == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_b(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
 
@@ -11786,7 +11994,8 @@ trexio_read_cell_c_32 (trexio_t* const file, float* const cell_c)
   if (cell_c == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_c(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
 
@@ -11854,7 +12063,8 @@ trexio_read_cell_g_a_32 (trexio_t* const file, float* const cell_g_a)
   if (cell_g_a == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_g_a(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
 
@@ -11922,7 +12132,8 @@ trexio_read_cell_g_b_32 (trexio_t* const file, float* const cell_g_b)
   if (cell_g_b == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_g_b(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
 
@@ -11990,7 +12201,8 @@ trexio_read_cell_g_c_32 (trexio_t* const file, float* const cell_g_c)
   if (cell_g_c == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_g_c(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
 
@@ -12058,7 +12270,8 @@ trexio_read_pbc_k_point_32 (trexio_t* const file, float* const pbc_k_point)
   if (pbc_k_point == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_pbc_k_point(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
 
@@ -12126,8 +12339,9 @@ trexio_read_pbc_k_point_weight_32 (trexio_t* const file, float* const pbc_k_poin
   if (pbc_k_point_weight == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_pbc_k_point_weight(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t pbc_k_point_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_pbc_k_point_num_64(file, &(pbc_k_point_num));
@@ -12198,8 +12412,9 @@ trexio_read_basis_nucleus_index_32 (trexio_t* const file, int32_t* const basis_n
   if (basis_nucleus_index == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nucleus_index(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_shell_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -12270,8 +12485,9 @@ trexio_read_basis_shell_ang_mom_32 (trexio_t* const file, int32_t* const basis_s
   if (basis_shell_ang_mom == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_shell_ang_mom(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_shell_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -12342,8 +12558,9 @@ trexio_read_basis_shell_factor_32 (trexio_t* const file, float* const basis_shel
   if (basis_shell_factor == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_shell_factor(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_shell_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -12414,8 +12631,9 @@ trexio_read_basis_r_power_32 (trexio_t* const file, int32_t* const basis_r_power
   if (basis_r_power == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_r_power(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_shell_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -12486,8 +12704,9 @@ trexio_read_basis_nao_grid_start_32 (trexio_t* const file, int32_t* const basis_
   if (basis_nao_grid_start == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_start(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_shell_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -12558,8 +12777,9 @@ trexio_read_basis_nao_grid_size_32 (trexio_t* const file, int32_t* const basis_n
   if (basis_nao_grid_size == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_size(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_shell_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -12630,8 +12850,9 @@ trexio_read_basis_shell_index_32 (trexio_t* const file, int32_t* const basis_she
   if (basis_shell_index == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_shell_index(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_prim_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -12702,8 +12923,9 @@ trexio_read_basis_exponent_32 (trexio_t* const file, float* const basis_exponent
   if (basis_exponent == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_exponent(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_prim_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -12774,8 +12996,9 @@ trexio_read_basis_exponent_im_32 (trexio_t* const file, float* const basis_expon
   if (basis_exponent_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_exponent_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_prim_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -12846,8 +13069,9 @@ trexio_read_basis_coefficient_32 (trexio_t* const file, float* const basis_coeff
   if (basis_coefficient == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_coefficient(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_prim_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -12918,8 +13142,9 @@ trexio_read_basis_coefficient_im_32 (trexio_t* const file, float* const basis_co
   if (basis_coefficient_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_coefficient_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_prim_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -12990,8 +13215,9 @@ trexio_read_basis_oscillation_arg_32 (trexio_t* const file, float* const basis_o
   if (basis_oscillation_arg == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_oscillation_arg(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_prim_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -13062,8 +13288,9 @@ trexio_read_basis_prim_factor_32 (trexio_t* const file, float* const basis_prim_
   if (basis_prim_factor == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_prim_factor(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_prim_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -13134,8 +13361,9 @@ trexio_read_basis_nao_grid_radius_32 (trexio_t* const file, float* const basis_n
   if (basis_nao_grid_radius == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_radius(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_nao_grid_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -13206,8 +13434,9 @@ trexio_read_basis_nao_grid_phi_32 (trexio_t* const file, float* const basis_nao_
   if (basis_nao_grid_phi == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_phi(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_nao_grid_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -13278,8 +13507,9 @@ trexio_read_basis_nao_grid_grad_32 (trexio_t* const file, float* const basis_nao
   if (basis_nao_grid_grad == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_grad(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_nao_grid_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -13350,8 +13580,9 @@ trexio_read_basis_nao_grid_lap_32 (trexio_t* const file, float* const basis_nao_
   if (basis_nao_grid_lap == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_lap(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_nao_grid_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -13422,9 +13653,10 @@ trexio_read_basis_interpolator_phi_32 (trexio_t* const file, float* const basis_
   if (basis_interpolator_phi == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_interpolator_phi(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_nao_grid_num = 0;
   int64_t basis_interp_coeff_cnt = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -13498,9 +13730,10 @@ trexio_read_basis_interpolator_grad_32 (trexio_t* const file, float* const basis
   if (basis_interpolator_grad == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_interpolator_grad(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_nao_grid_num = 0;
   int64_t basis_interp_coeff_cnt = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -13574,9 +13807,10 @@ trexio_read_basis_interpolator_lap_32 (trexio_t* const file, float* const basis_
   if (basis_interpolator_lap == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_interpolator_lap(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_nao_grid_num = 0;
   int64_t basis_interp_coeff_cnt = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -13650,8 +13884,9 @@ trexio_read_ecp_max_ang_mom_plus_1_32 (trexio_t* const file, int32_t* const ecp_
   if (ecp_max_ang_mom_plus_1 == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_max_ang_mom_plus_1(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t nucleus_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
@@ -13722,8 +13957,9 @@ trexio_read_ecp_z_core_32 (trexio_t* const file, int32_t* const ecp_z_core)
   if (ecp_z_core == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_z_core(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t nucleus_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
@@ -13794,8 +14030,9 @@ trexio_read_ecp_ang_mom_32 (trexio_t* const file, int32_t* const ecp_ang_mom)
   if (ecp_ang_mom == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_ang_mom(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t ecp_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ecp_num_64(file, &(ecp_num));
@@ -13866,8 +14103,9 @@ trexio_read_ecp_nucleus_index_32 (trexio_t* const file, int32_t* const ecp_nucle
   if (ecp_nucleus_index == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_nucleus_index(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t ecp_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ecp_num_64(file, &(ecp_num));
@@ -13938,8 +14176,9 @@ trexio_read_ecp_exponent_32 (trexio_t* const file, float* const ecp_exponent)
   if (ecp_exponent == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_exponent(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t ecp_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ecp_num_64(file, &(ecp_num));
@@ -14010,8 +14249,9 @@ trexio_read_ecp_coefficient_32 (trexio_t* const file, float* const ecp_coefficie
   if (ecp_coefficient == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_coefficient(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t ecp_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ecp_num_64(file, &(ecp_num));
@@ -14082,8 +14322,9 @@ trexio_read_ecp_power_32 (trexio_t* const file, int32_t* const ecp_power)
   if (ecp_power == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_power(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t ecp_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ecp_num_64(file, &(ecp_num));
@@ -14154,8 +14395,9 @@ trexio_read_grid_coord_32 (trexio_t* const file, float* const grid_coord)
   if (grid_coord == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_coord(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t grid_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_grid_num_64(file, &(grid_num));
@@ -14226,8 +14468,9 @@ trexio_read_grid_weight_32 (trexio_t* const file, float* const grid_weight)
   if (grid_weight == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_weight(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t grid_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_grid_num_64(file, &(grid_num));
@@ -14298,8 +14541,9 @@ trexio_read_grid_ang_coord_32 (trexio_t* const file, float* const grid_ang_coord
   if (grid_ang_coord == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_ang_coord(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t grid_ang_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_grid_ang_num_64(file, &(grid_ang_num));
@@ -14370,8 +14614,9 @@ trexio_read_grid_ang_weight_32 (trexio_t* const file, float* const grid_ang_weig
   if (grid_ang_weight == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_ang_weight(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t grid_ang_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_grid_ang_num_64(file, &(grid_ang_num));
@@ -14442,8 +14687,9 @@ trexio_read_grid_rad_coord_32 (trexio_t* const file, float* const grid_rad_coord
   if (grid_rad_coord == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_rad_coord(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t grid_rad_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_grid_rad_num_64(file, &(grid_rad_num));
@@ -14514,8 +14760,9 @@ trexio_read_grid_rad_weight_32 (trexio_t* const file, float* const grid_rad_weig
   if (grid_rad_weight == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_rad_weight(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t grid_rad_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_grid_rad_num_64(file, &(grid_rad_num));
@@ -14586,8 +14833,9 @@ trexio_read_ao_shell_32 (trexio_t* const file, int32_t* const ao_shell)
   if (ao_shell == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_shell(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -14658,8 +14906,9 @@ trexio_read_ao_normalization_32 (trexio_t* const file, float* const ao_normaliza
   if (ao_normalization == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_normalization(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -14730,8 +14979,9 @@ trexio_read_ao_1e_int_overlap_32 (trexio_t* const file, float* const ao_1e_int_o
   if (ao_1e_int_overlap == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_overlap(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -14802,8 +15052,9 @@ trexio_read_ao_1e_int_kinetic_32 (trexio_t* const file, float* const ao_1e_int_k
   if (ao_1e_int_kinetic == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_kinetic(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -14874,8 +15125,9 @@ trexio_read_ao_1e_int_potential_n_e_32 (trexio_t* const file, float* const ao_1e
   if (ao_1e_int_potential_n_e == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_potential_n_e(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -14946,8 +15198,9 @@ trexio_read_ao_1e_int_ecp_32 (trexio_t* const file, float* const ao_1e_int_ecp)
   if (ao_1e_int_ecp == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_ecp(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -15018,8 +15271,9 @@ trexio_read_ao_1e_int_core_hamiltonian_32 (trexio_t* const file, float* const ao
   if (ao_1e_int_core_hamiltonian == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_core_hamiltonian(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -15090,8 +15344,9 @@ trexio_read_ao_1e_int_overlap_im_32 (trexio_t* const file, float* const ao_1e_in
   if (ao_1e_int_overlap_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_overlap_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -15162,8 +15417,9 @@ trexio_read_ao_1e_int_kinetic_im_32 (trexio_t* const file, float* const ao_1e_in
   if (ao_1e_int_kinetic_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_kinetic_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -15234,8 +15490,9 @@ trexio_read_ao_1e_int_potential_n_e_im_32 (trexio_t* const file, float* const ao
   if (ao_1e_int_potential_n_e_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_potential_n_e_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -15306,8 +15563,9 @@ trexio_read_ao_1e_int_ecp_im_32 (trexio_t* const file, float* const ao_1e_int_ec
   if (ao_1e_int_ecp_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_ecp_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -15378,8 +15636,9 @@ trexio_read_ao_1e_int_core_hamiltonian_im_32 (trexio_t* const file, float* const
   if (ao_1e_int_core_hamiltonian_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_core_hamiltonian_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -15450,9 +15709,10 @@ trexio_read_mo_coefficient_32 (trexio_t* const file, float* const mo_coefficient
   if (mo_coefficient == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_coefficient(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -15526,9 +15786,10 @@ trexio_read_mo_coefficient_im_32 (trexio_t* const file, float* const mo_coeffici
   if (mo_coefficient_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_coefficient_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -15602,8 +15863,9 @@ trexio_read_mo_occupation_32 (trexio_t* const file, float* const mo_occupation)
   if (mo_occupation == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_occupation(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -15674,8 +15936,9 @@ trexio_read_mo_energy_32 (trexio_t* const file, float* const mo_energy)
   if (mo_energy == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_energy(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -15746,8 +16009,9 @@ trexio_read_mo_spin_32 (trexio_t* const file, int32_t* const mo_spin)
   if (mo_spin == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_spin(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -15818,8 +16082,9 @@ trexio_read_mo_k_point_32 (trexio_t* const file, int32_t* const mo_k_point)
   if (mo_k_point == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_k_point(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -15890,8 +16155,9 @@ trexio_read_mo_1e_int_overlap_32 (trexio_t* const file, float* const mo_1e_int_o
   if (mo_1e_int_overlap == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_overlap(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -15962,8 +16228,9 @@ trexio_read_mo_1e_int_kinetic_32 (trexio_t* const file, float* const mo_1e_int_k
   if (mo_1e_int_kinetic == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_kinetic(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -16034,8 +16301,9 @@ trexio_read_mo_1e_int_potential_n_e_32 (trexio_t* const file, float* const mo_1e
   if (mo_1e_int_potential_n_e == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_potential_n_e(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -16106,8 +16374,9 @@ trexio_read_mo_1e_int_ecp_32 (trexio_t* const file, float* const mo_1e_int_ecp)
   if (mo_1e_int_ecp == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_ecp(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -16178,8 +16447,9 @@ trexio_read_mo_1e_int_core_hamiltonian_32 (trexio_t* const file, float* const mo
   if (mo_1e_int_core_hamiltonian == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_core_hamiltonian(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -16250,8 +16520,9 @@ trexio_read_mo_1e_int_overlap_im_32 (trexio_t* const file, float* const mo_1e_in
   if (mo_1e_int_overlap_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_overlap_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -16322,8 +16593,9 @@ trexio_read_mo_1e_int_kinetic_im_32 (trexio_t* const file, float* const mo_1e_in
   if (mo_1e_int_kinetic_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_kinetic_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -16394,8 +16666,9 @@ trexio_read_mo_1e_int_potential_n_e_im_32 (trexio_t* const file, float* const mo
   if (mo_1e_int_potential_n_e_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_potential_n_e_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -16466,8 +16739,9 @@ trexio_read_mo_1e_int_ecp_im_32 (trexio_t* const file, float* const mo_1e_int_ec
   if (mo_1e_int_ecp_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_ecp_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -16538,8 +16812,9 @@ trexio_read_mo_1e_int_core_hamiltonian_im_32 (trexio_t* const file, float* const
   if (mo_1e_int_core_hamiltonian_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_core_hamiltonian_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -16610,8 +16885,9 @@ trexio_read_rdm_1e_32 (trexio_t* const file, float* const rdm_1e)
   if (rdm_1e == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_rdm_1e(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -16682,8 +16958,9 @@ trexio_read_rdm_1e_up_32 (trexio_t* const file, float* const rdm_1e_up)
   if (rdm_1e_up == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_rdm_1e_up(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -16754,8 +17031,9 @@ trexio_read_rdm_1e_dn_32 (trexio_t* const file, float* const rdm_1e_dn)
   if (rdm_1e_dn == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_rdm_1e_dn(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -16826,9 +17104,10 @@ trexio_read_rdm_1e_transition_32 (trexio_t* const file, float* const rdm_1e_tran
   if (rdm_1e_transition == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_rdm_1e_transition(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t state_num = 0;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_state_num_64(file, &(state_num));
@@ -16902,8 +17181,9 @@ trexio_read_jastrow_en_32 (trexio_t* const file, float* const jastrow_en)
   if (jastrow_en == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_en(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t jastrow_en_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_jastrow_en_num_64(file, &(jastrow_en_num));
@@ -16974,8 +17254,9 @@ trexio_read_jastrow_ee_32 (trexio_t* const file, float* const jastrow_ee)
   if (jastrow_ee == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_ee(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t jastrow_ee_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_jastrow_ee_num_64(file, &(jastrow_ee_num));
@@ -17046,8 +17327,9 @@ trexio_read_jastrow_een_32 (trexio_t* const file, float* const jastrow_een)
   if (jastrow_een == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_een(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t jastrow_een_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_jastrow_een_num_64(file, &(jastrow_een_num));
@@ -17118,8 +17400,9 @@ trexio_read_jastrow_en_nucleus_32 (trexio_t* const file, int32_t* const jastrow_
   if (jastrow_en_nucleus == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_en_nucleus(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t jastrow_en_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_jastrow_en_num_64(file, &(jastrow_en_num));
@@ -17190,8 +17473,9 @@ trexio_read_jastrow_een_nucleus_32 (trexio_t* const file, int32_t* const jastrow
   if (jastrow_een_nucleus == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_een_nucleus(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t jastrow_een_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_jastrow_een_num_64(file, &(jastrow_een_num));
@@ -17262,8 +17546,9 @@ trexio_read_jastrow_en_scaling_32 (trexio_t* const file, float* const jastrow_en
   if (jastrow_en_scaling == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_en_scaling(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t nucleus_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
@@ -17334,9 +17619,10 @@ trexio_read_qmc_point_32 (trexio_t* const file, float* const qmc_point)
   if (qmc_point == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_qmc_point(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t qmc_num = 0;
   int64_t electron_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_qmc_num_64(file, &(qmc_num));
@@ -17410,8 +17696,9 @@ trexio_read_qmc_psi_32 (trexio_t* const file, float* const qmc_psi)
   if (qmc_psi == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_qmc_psi(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t qmc_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_qmc_num_64(file, &(qmc_num));
@@ -17482,8 +17769,9 @@ trexio_read_qmc_e_loc_32 (trexio_t* const file, float* const qmc_e_loc)
   if (qmc_e_loc == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_qmc_e_loc(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t qmc_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_qmc_num_64(file, &(qmc_num));
@@ -17554,8 +17842,10 @@ trexio_read_safe_nucleus_charge_32 (trexio_t* const file, float* const dset_out,
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_nucleus_charge(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t nucleus_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
@@ -17585,8 +17875,10 @@ trexio_read_safe_nucleus_coord_32 (trexio_t* const file, float* const dset_out, 
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_nucleus_coord(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t nucleus_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
@@ -17616,7 +17908,9 @@ trexio_read_safe_cell_a_32 (trexio_t* const file, float* const dset_out, const i
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_a(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 
@@ -17643,7 +17937,9 @@ trexio_read_safe_cell_b_32 (trexio_t* const file, float* const dset_out, const i
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_b(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 
@@ -17670,7 +17966,9 @@ trexio_read_safe_cell_c_32 (trexio_t* const file, float* const dset_out, const i
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_c(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 
@@ -17697,7 +17995,9 @@ trexio_read_safe_cell_g_a_32 (trexio_t* const file, float* const dset_out, const
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_g_a(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 
@@ -17724,7 +18024,9 @@ trexio_read_safe_cell_g_b_32 (trexio_t* const file, float* const dset_out, const
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_g_b(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 
@@ -17751,7 +18053,9 @@ trexio_read_safe_cell_g_c_32 (trexio_t* const file, float* const dset_out, const
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_g_c(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 
@@ -17778,7 +18082,9 @@ trexio_read_safe_pbc_k_point_32 (trexio_t* const file, float* const dset_out, co
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_pbc_k_point(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 
@@ -17805,8 +18111,10 @@ trexio_read_safe_pbc_k_point_weight_32 (trexio_t* const file, float* const dset_
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_pbc_k_point_weight(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t pbc_k_point_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_pbc_k_point_num_64(file, &(pbc_k_point_num));
@@ -17836,8 +18144,10 @@ trexio_read_safe_basis_nucleus_index_32 (trexio_t* const file, int32_t* const ds
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nucleus_index(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_shell_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -17867,8 +18177,10 @@ trexio_read_safe_basis_shell_ang_mom_32 (trexio_t* const file, int32_t* const ds
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_shell_ang_mom(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_shell_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -17898,8 +18210,10 @@ trexio_read_safe_basis_shell_factor_32 (trexio_t* const file, float* const dset_
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_shell_factor(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_shell_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -17929,8 +18243,10 @@ trexio_read_safe_basis_r_power_32 (trexio_t* const file, int32_t* const dset_out
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_r_power(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_shell_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -17960,8 +18276,10 @@ trexio_read_safe_basis_nao_grid_start_32 (trexio_t* const file, int32_t* const d
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_start(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_shell_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -17991,8 +18309,10 @@ trexio_read_safe_basis_nao_grid_size_32 (trexio_t* const file, int32_t* const ds
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_size(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_shell_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -18022,8 +18342,10 @@ trexio_read_safe_basis_shell_index_32 (trexio_t* const file, int32_t* const dset
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_shell_index(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_prim_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -18053,8 +18375,10 @@ trexio_read_safe_basis_exponent_32 (trexio_t* const file, float* const dset_out,
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_exponent(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_prim_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -18084,8 +18408,10 @@ trexio_read_safe_basis_exponent_im_32 (trexio_t* const file, float* const dset_o
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_exponent_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_prim_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -18115,8 +18441,10 @@ trexio_read_safe_basis_coefficient_32 (trexio_t* const file, float* const dset_o
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_coefficient(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_prim_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -18146,8 +18474,10 @@ trexio_read_safe_basis_coefficient_im_32 (trexio_t* const file, float* const dse
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_coefficient_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_prim_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -18177,8 +18507,10 @@ trexio_read_safe_basis_oscillation_arg_32 (trexio_t* const file, float* const ds
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_oscillation_arg(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_prim_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -18208,8 +18540,10 @@ trexio_read_safe_basis_prim_factor_32 (trexio_t* const file, float* const dset_o
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_prim_factor(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_prim_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -18239,8 +18573,10 @@ trexio_read_safe_basis_nao_grid_radius_32 (trexio_t* const file, float* const ds
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_radius(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_nao_grid_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -18270,8 +18606,10 @@ trexio_read_safe_basis_nao_grid_phi_32 (trexio_t* const file, float* const dset_
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_phi(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_nao_grid_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -18301,8 +18639,10 @@ trexio_read_safe_basis_nao_grid_grad_32 (trexio_t* const file, float* const dset
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_grad(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_nao_grid_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -18332,8 +18672,10 @@ trexio_read_safe_basis_nao_grid_lap_32 (trexio_t* const file, float* const dset_
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_lap(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_nao_grid_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -18363,9 +18705,11 @@ trexio_read_safe_basis_interpolator_phi_32 (trexio_t* const file, float* const d
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_interpolator_phi(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_nao_grid_num = 0;
 int64_t basis_interp_coeff_cnt = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -18398,9 +18742,11 @@ trexio_read_safe_basis_interpolator_grad_32 (trexio_t* const file, float* const 
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_interpolator_grad(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_nao_grid_num = 0;
 int64_t basis_interp_coeff_cnt = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -18433,9 +18779,11 @@ trexio_read_safe_basis_interpolator_lap_32 (trexio_t* const file, float* const d
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_interpolator_lap(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_nao_grid_num = 0;
 int64_t basis_interp_coeff_cnt = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -18468,8 +18816,10 @@ trexio_read_safe_ecp_max_ang_mom_plus_1_32 (trexio_t* const file, int32_t* const
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_max_ang_mom_plus_1(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t nucleus_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
@@ -18499,8 +18849,10 @@ trexio_read_safe_ecp_z_core_32 (trexio_t* const file, int32_t* const dset_out, c
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_z_core(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t nucleus_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
@@ -18530,8 +18882,10 @@ trexio_read_safe_ecp_ang_mom_32 (trexio_t* const file, int32_t* const dset_out, 
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_ang_mom(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t ecp_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ecp_num_64(file, &(ecp_num));
@@ -18561,8 +18915,10 @@ trexio_read_safe_ecp_nucleus_index_32 (trexio_t* const file, int32_t* const dset
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_nucleus_index(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t ecp_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ecp_num_64(file, &(ecp_num));
@@ -18592,8 +18948,10 @@ trexio_read_safe_ecp_exponent_32 (trexio_t* const file, float* const dset_out, c
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_exponent(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t ecp_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ecp_num_64(file, &(ecp_num));
@@ -18623,8 +18981,10 @@ trexio_read_safe_ecp_coefficient_32 (trexio_t* const file, float* const dset_out
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_coefficient(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t ecp_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ecp_num_64(file, &(ecp_num));
@@ -18654,8 +19014,10 @@ trexio_read_safe_ecp_power_32 (trexio_t* const file, int32_t* const dset_out, co
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_power(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t ecp_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ecp_num_64(file, &(ecp_num));
@@ -18685,8 +19047,10 @@ trexio_read_safe_grid_coord_32 (trexio_t* const file, float* const dset_out, con
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_coord(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t grid_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_grid_num_64(file, &(grid_num));
@@ -18716,8 +19080,10 @@ trexio_read_safe_grid_weight_32 (trexio_t* const file, float* const dset_out, co
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_weight(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t grid_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_grid_num_64(file, &(grid_num));
@@ -18747,8 +19113,10 @@ trexio_read_safe_grid_ang_coord_32 (trexio_t* const file, float* const dset_out,
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_ang_coord(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t grid_ang_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_grid_ang_num_64(file, &(grid_ang_num));
@@ -18778,8 +19146,10 @@ trexio_read_safe_grid_ang_weight_32 (trexio_t* const file, float* const dset_out
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_ang_weight(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t grid_ang_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_grid_ang_num_64(file, &(grid_ang_num));
@@ -18809,8 +19179,10 @@ trexio_read_safe_grid_rad_coord_32 (trexio_t* const file, float* const dset_out,
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_rad_coord(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t grid_rad_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_grid_rad_num_64(file, &(grid_rad_num));
@@ -18840,8 +19212,10 @@ trexio_read_safe_grid_rad_weight_32 (trexio_t* const file, float* const dset_out
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_rad_weight(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t grid_rad_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_grid_rad_num_64(file, &(grid_rad_num));
@@ -18871,8 +19245,10 @@ trexio_read_safe_ao_shell_32 (trexio_t* const file, int32_t* const dset_out, con
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_shell(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -18902,8 +19278,10 @@ trexio_read_safe_ao_normalization_32 (trexio_t* const file, float* const dset_ou
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_normalization(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -18933,8 +19311,10 @@ trexio_read_safe_ao_1e_int_overlap_32 (trexio_t* const file, float* const dset_o
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_overlap(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -18964,8 +19344,10 @@ trexio_read_safe_ao_1e_int_kinetic_32 (trexio_t* const file, float* const dset_o
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_kinetic(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -18995,8 +19377,10 @@ trexio_read_safe_ao_1e_int_potential_n_e_32 (trexio_t* const file, float* const 
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_potential_n_e(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -19026,8 +19410,10 @@ trexio_read_safe_ao_1e_int_ecp_32 (trexio_t* const file, float* const dset_out, 
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_ecp(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -19057,8 +19443,10 @@ trexio_read_safe_ao_1e_int_core_hamiltonian_32 (trexio_t* const file, float* con
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_core_hamiltonian(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -19088,8 +19476,10 @@ trexio_read_safe_ao_1e_int_overlap_im_32 (trexio_t* const file, float* const dse
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_overlap_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -19119,8 +19509,10 @@ trexio_read_safe_ao_1e_int_kinetic_im_32 (trexio_t* const file, float* const dse
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_kinetic_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -19150,8 +19542,10 @@ trexio_read_safe_ao_1e_int_potential_n_e_im_32 (trexio_t* const file, float* con
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_potential_n_e_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -19181,8 +19575,10 @@ trexio_read_safe_ao_1e_int_ecp_im_32 (trexio_t* const file, float* const dset_ou
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_ecp_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -19212,8 +19608,10 @@ trexio_read_safe_ao_1e_int_core_hamiltonian_im_32 (trexio_t* const file, float* 
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_core_hamiltonian_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -19243,9 +19641,11 @@ trexio_read_safe_mo_coefficient_32 (trexio_t* const file, float* const dset_out,
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_coefficient(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -19278,9 +19678,11 @@ trexio_read_safe_mo_coefficient_im_32 (trexio_t* const file, float* const dset_o
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_coefficient_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -19313,8 +19715,10 @@ trexio_read_safe_mo_occupation_32 (trexio_t* const file, float* const dset_out, 
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_occupation(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -19344,8 +19748,10 @@ trexio_read_safe_mo_energy_32 (trexio_t* const file, float* const dset_out, cons
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_energy(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -19375,8 +19781,10 @@ trexio_read_safe_mo_spin_32 (trexio_t* const file, int32_t* const dset_out, cons
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_spin(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -19406,8 +19814,10 @@ trexio_read_safe_mo_k_point_32 (trexio_t* const file, int32_t* const dset_out, c
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_k_point(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -19437,8 +19847,10 @@ trexio_read_safe_mo_1e_int_overlap_32 (trexio_t* const file, float* const dset_o
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_overlap(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -19468,8 +19880,10 @@ trexio_read_safe_mo_1e_int_kinetic_32 (trexio_t* const file, float* const dset_o
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_kinetic(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -19499,8 +19913,10 @@ trexio_read_safe_mo_1e_int_potential_n_e_32 (trexio_t* const file, float* const 
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_potential_n_e(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -19530,8 +19946,10 @@ trexio_read_safe_mo_1e_int_ecp_32 (trexio_t* const file, float* const dset_out, 
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_ecp(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -19561,8 +19979,10 @@ trexio_read_safe_mo_1e_int_core_hamiltonian_32 (trexio_t* const file, float* con
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_core_hamiltonian(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -19592,8 +20012,10 @@ trexio_read_safe_mo_1e_int_overlap_im_32 (trexio_t* const file, float* const dse
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_overlap_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -19623,8 +20045,10 @@ trexio_read_safe_mo_1e_int_kinetic_im_32 (trexio_t* const file, float* const dse
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_kinetic_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -19654,8 +20078,10 @@ trexio_read_safe_mo_1e_int_potential_n_e_im_32 (trexio_t* const file, float* con
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_potential_n_e_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -19685,8 +20111,10 @@ trexio_read_safe_mo_1e_int_ecp_im_32 (trexio_t* const file, float* const dset_ou
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_ecp_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -19716,8 +20144,10 @@ trexio_read_safe_mo_1e_int_core_hamiltonian_im_32 (trexio_t* const file, float* 
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_core_hamiltonian_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -19747,8 +20177,10 @@ trexio_read_safe_rdm_1e_32 (trexio_t* const file, float* const dset_out, const i
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_rdm_1e(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -19778,8 +20210,10 @@ trexio_read_safe_rdm_1e_up_32 (trexio_t* const file, float* const dset_out, cons
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_rdm_1e_up(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -19809,8 +20243,10 @@ trexio_read_safe_rdm_1e_dn_32 (trexio_t* const file, float* const dset_out, cons
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_rdm_1e_dn(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -19840,9 +20276,11 @@ trexio_read_safe_rdm_1e_transition_32 (trexio_t* const file, float* const dset_o
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_rdm_1e_transition(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t state_num = 0;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_state_num_64(file, &(state_num));
@@ -19875,8 +20313,10 @@ trexio_read_safe_jastrow_en_32 (trexio_t* const file, float* const dset_out, con
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_en(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t jastrow_en_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_jastrow_en_num_64(file, &(jastrow_en_num));
@@ -19906,8 +20346,10 @@ trexio_read_safe_jastrow_ee_32 (trexio_t* const file, float* const dset_out, con
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_ee(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t jastrow_ee_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_jastrow_ee_num_64(file, &(jastrow_ee_num));
@@ -19937,8 +20379,10 @@ trexio_read_safe_jastrow_een_32 (trexio_t* const file, float* const dset_out, co
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_een(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t jastrow_een_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_jastrow_een_num_64(file, &(jastrow_een_num));
@@ -19968,8 +20412,10 @@ trexio_read_safe_jastrow_en_nucleus_32 (trexio_t* const file, int32_t* const dse
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_en_nucleus(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t jastrow_en_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_jastrow_en_num_64(file, &(jastrow_en_num));
@@ -19999,8 +20445,10 @@ trexio_read_safe_jastrow_een_nucleus_32 (trexio_t* const file, int32_t* const ds
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_een_nucleus(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t jastrow_een_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_jastrow_een_num_64(file, &(jastrow_een_num));
@@ -20030,8 +20478,10 @@ trexio_read_safe_jastrow_en_scaling_32 (trexio_t* const file, float* const dset_
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_en_scaling(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t nucleus_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
@@ -20061,9 +20511,11 @@ trexio_read_safe_qmc_point_32 (trexio_t* const file, float* const dset_out, cons
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_qmc_point(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t qmc_num = 0;
 int64_t electron_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_qmc_num_64(file, &(qmc_num));
@@ -20096,8 +20548,10 @@ trexio_read_safe_qmc_psi_32 (trexio_t* const file, float* const dset_out, const 
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_qmc_psi(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t qmc_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_qmc_num_64(file, &(qmc_num));
@@ -20127,8 +20581,10 @@ trexio_read_safe_qmc_e_loc_32 (trexio_t* const file, float* const dset_out, cons
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_qmc_e_loc(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t qmc_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_qmc_num_64(file, &(qmc_num));
@@ -20158,8 +20614,9 @@ trexio_read_nucleus_charge_64 (trexio_t* const file, double* const nucleus_charg
   if (nucleus_charge == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_nucleus_charge(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t nucleus_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
@@ -20217,8 +20674,9 @@ trexio_read_nucleus_coord_64 (trexio_t* const file, double* const nucleus_coord)
   if (nucleus_coord == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_nucleus_coord(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t nucleus_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
@@ -20276,7 +20734,8 @@ trexio_read_cell_a_64 (trexio_t* const file, double* const cell_a)
   if (cell_a == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_a(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
 
@@ -20331,7 +20790,8 @@ trexio_read_cell_b_64 (trexio_t* const file, double* const cell_b)
   if (cell_b == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_b(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
 
@@ -20386,7 +20846,8 @@ trexio_read_cell_c_64 (trexio_t* const file, double* const cell_c)
   if (cell_c == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_c(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
 
@@ -20441,7 +20902,8 @@ trexio_read_cell_g_a_64 (trexio_t* const file, double* const cell_g_a)
   if (cell_g_a == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_g_a(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
 
@@ -20496,7 +20958,8 @@ trexio_read_cell_g_b_64 (trexio_t* const file, double* const cell_g_b)
   if (cell_g_b == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_g_b(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
 
@@ -20551,7 +21014,8 @@ trexio_read_cell_g_c_64 (trexio_t* const file, double* const cell_g_c)
   if (cell_g_c == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_g_c(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
 
@@ -20606,7 +21070,8 @@ trexio_read_pbc_k_point_64 (trexio_t* const file, double* const pbc_k_point)
   if (pbc_k_point == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_pbc_k_point(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
 
@@ -20661,8 +21126,9 @@ trexio_read_pbc_k_point_weight_64 (trexio_t* const file, double* const pbc_k_poi
   if (pbc_k_point_weight == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_pbc_k_point_weight(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t pbc_k_point_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_pbc_k_point_num_64(file, &(pbc_k_point_num));
@@ -20720,8 +21186,9 @@ trexio_read_basis_nucleus_index_64 (trexio_t* const file, int64_t* const basis_n
   if (basis_nucleus_index == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nucleus_index(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_shell_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -20779,8 +21246,9 @@ trexio_read_basis_shell_ang_mom_64 (trexio_t* const file, int64_t* const basis_s
   if (basis_shell_ang_mom == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_shell_ang_mom(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_shell_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -20838,8 +21306,9 @@ trexio_read_basis_shell_factor_64 (trexio_t* const file, double* const basis_she
   if (basis_shell_factor == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_shell_factor(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_shell_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -20897,8 +21366,9 @@ trexio_read_basis_r_power_64 (trexio_t* const file, int64_t* const basis_r_power
   if (basis_r_power == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_r_power(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_shell_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -20956,8 +21426,9 @@ trexio_read_basis_nao_grid_start_64 (trexio_t* const file, int64_t* const basis_
   if (basis_nao_grid_start == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_start(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_shell_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -21015,8 +21486,9 @@ trexio_read_basis_nao_grid_size_64 (trexio_t* const file, int64_t* const basis_n
   if (basis_nao_grid_size == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_size(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_shell_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -21074,8 +21546,9 @@ trexio_read_basis_shell_index_64 (trexio_t* const file, int64_t* const basis_she
   if (basis_shell_index == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_shell_index(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_prim_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -21133,8 +21606,9 @@ trexio_read_basis_exponent_64 (trexio_t* const file, double* const basis_exponen
   if (basis_exponent == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_exponent(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_prim_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -21192,8 +21666,9 @@ trexio_read_basis_exponent_im_64 (trexio_t* const file, double* const basis_expo
   if (basis_exponent_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_exponent_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_prim_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -21251,8 +21726,9 @@ trexio_read_basis_coefficient_64 (trexio_t* const file, double* const basis_coef
   if (basis_coefficient == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_coefficient(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_prim_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -21310,8 +21786,9 @@ trexio_read_basis_coefficient_im_64 (trexio_t* const file, double* const basis_c
   if (basis_coefficient_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_coefficient_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_prim_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -21369,8 +21846,9 @@ trexio_read_basis_oscillation_arg_64 (trexio_t* const file, double* const basis_
   if (basis_oscillation_arg == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_oscillation_arg(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_prim_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -21428,8 +21906,9 @@ trexio_read_basis_prim_factor_64 (trexio_t* const file, double* const basis_prim
   if (basis_prim_factor == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_prim_factor(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_prim_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -21487,8 +21966,9 @@ trexio_read_basis_nao_grid_radius_64 (trexio_t* const file, double* const basis_
   if (basis_nao_grid_radius == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_radius(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_nao_grid_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -21546,8 +22026,9 @@ trexio_read_basis_nao_grid_phi_64 (trexio_t* const file, double* const basis_nao
   if (basis_nao_grid_phi == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_phi(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_nao_grid_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -21605,8 +22086,9 @@ trexio_read_basis_nao_grid_grad_64 (trexio_t* const file, double* const basis_na
   if (basis_nao_grid_grad == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_grad(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_nao_grid_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -21664,8 +22146,9 @@ trexio_read_basis_nao_grid_lap_64 (trexio_t* const file, double* const basis_nao
   if (basis_nao_grid_lap == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_lap(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_nao_grid_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -21723,9 +22206,10 @@ trexio_read_basis_interpolator_phi_64 (trexio_t* const file, double* const basis
   if (basis_interpolator_phi == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_interpolator_phi(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_nao_grid_num = 0;
   int64_t basis_interp_coeff_cnt = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -21786,9 +22270,10 @@ trexio_read_basis_interpolator_grad_64 (trexio_t* const file, double* const basi
   if (basis_interpolator_grad == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_interpolator_grad(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_nao_grid_num = 0;
   int64_t basis_interp_coeff_cnt = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -21849,9 +22334,10 @@ trexio_read_basis_interpolator_lap_64 (trexio_t* const file, double* const basis
   if (basis_interpolator_lap == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_interpolator_lap(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t basis_nao_grid_num = 0;
   int64_t basis_interp_coeff_cnt = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -21912,8 +22398,9 @@ trexio_read_ecp_max_ang_mom_plus_1_64 (trexio_t* const file, int64_t* const ecp_
   if (ecp_max_ang_mom_plus_1 == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_max_ang_mom_plus_1(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t nucleus_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
@@ -21971,8 +22458,9 @@ trexio_read_ecp_z_core_64 (trexio_t* const file, int64_t* const ecp_z_core)
   if (ecp_z_core == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_z_core(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t nucleus_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
@@ -22030,8 +22518,9 @@ trexio_read_ecp_ang_mom_64 (trexio_t* const file, int64_t* const ecp_ang_mom)
   if (ecp_ang_mom == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_ang_mom(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t ecp_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ecp_num_64(file, &(ecp_num));
@@ -22089,8 +22578,9 @@ trexio_read_ecp_nucleus_index_64 (trexio_t* const file, int64_t* const ecp_nucle
   if (ecp_nucleus_index == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_nucleus_index(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t ecp_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ecp_num_64(file, &(ecp_num));
@@ -22148,8 +22638,9 @@ trexio_read_ecp_exponent_64 (trexio_t* const file, double* const ecp_exponent)
   if (ecp_exponent == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_exponent(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t ecp_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ecp_num_64(file, &(ecp_num));
@@ -22207,8 +22698,9 @@ trexio_read_ecp_coefficient_64 (trexio_t* const file, double* const ecp_coeffici
   if (ecp_coefficient == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_coefficient(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t ecp_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ecp_num_64(file, &(ecp_num));
@@ -22266,8 +22758,9 @@ trexio_read_ecp_power_64 (trexio_t* const file, int64_t* const ecp_power)
   if (ecp_power == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_power(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t ecp_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ecp_num_64(file, &(ecp_num));
@@ -22325,8 +22818,9 @@ trexio_read_grid_coord_64 (trexio_t* const file, double* const grid_coord)
   if (grid_coord == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_coord(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t grid_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_grid_num_64(file, &(grid_num));
@@ -22384,8 +22878,9 @@ trexio_read_grid_weight_64 (trexio_t* const file, double* const grid_weight)
   if (grid_weight == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_weight(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t grid_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_grid_num_64(file, &(grid_num));
@@ -22443,8 +22938,9 @@ trexio_read_grid_ang_coord_64 (trexio_t* const file, double* const grid_ang_coor
   if (grid_ang_coord == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_ang_coord(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t grid_ang_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_grid_ang_num_64(file, &(grid_ang_num));
@@ -22502,8 +22998,9 @@ trexio_read_grid_ang_weight_64 (trexio_t* const file, double* const grid_ang_wei
   if (grid_ang_weight == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_ang_weight(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t grid_ang_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_grid_ang_num_64(file, &(grid_ang_num));
@@ -22561,8 +23058,9 @@ trexio_read_grid_rad_coord_64 (trexio_t* const file, double* const grid_rad_coor
   if (grid_rad_coord == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_rad_coord(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t grid_rad_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_grid_rad_num_64(file, &(grid_rad_num));
@@ -22620,8 +23118,9 @@ trexio_read_grid_rad_weight_64 (trexio_t* const file, double* const grid_rad_wei
   if (grid_rad_weight == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_rad_weight(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t grid_rad_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_grid_rad_num_64(file, &(grid_rad_num));
@@ -22679,8 +23178,9 @@ trexio_read_ao_shell_64 (trexio_t* const file, int64_t* const ao_shell)
   if (ao_shell == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_shell(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -22738,8 +23238,9 @@ trexio_read_ao_normalization_64 (trexio_t* const file, double* const ao_normaliz
   if (ao_normalization == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_normalization(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -22797,8 +23298,9 @@ trexio_read_ao_1e_int_overlap_64 (trexio_t* const file, double* const ao_1e_int_
   if (ao_1e_int_overlap == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_overlap(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -22856,8 +23358,9 @@ trexio_read_ao_1e_int_kinetic_64 (trexio_t* const file, double* const ao_1e_int_
   if (ao_1e_int_kinetic == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_kinetic(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -22915,8 +23418,9 @@ trexio_read_ao_1e_int_potential_n_e_64 (trexio_t* const file, double* const ao_1
   if (ao_1e_int_potential_n_e == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_potential_n_e(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -22974,8 +23478,9 @@ trexio_read_ao_1e_int_ecp_64 (trexio_t* const file, double* const ao_1e_int_ecp)
   if (ao_1e_int_ecp == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_ecp(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -23033,8 +23538,9 @@ trexio_read_ao_1e_int_core_hamiltonian_64 (trexio_t* const file, double* const a
   if (ao_1e_int_core_hamiltonian == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_core_hamiltonian(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -23092,8 +23598,9 @@ trexio_read_ao_1e_int_overlap_im_64 (trexio_t* const file, double* const ao_1e_i
   if (ao_1e_int_overlap_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_overlap_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -23151,8 +23658,9 @@ trexio_read_ao_1e_int_kinetic_im_64 (trexio_t* const file, double* const ao_1e_i
   if (ao_1e_int_kinetic_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_kinetic_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -23210,8 +23718,9 @@ trexio_read_ao_1e_int_potential_n_e_im_64 (trexio_t* const file, double* const a
   if (ao_1e_int_potential_n_e_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_potential_n_e_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -23269,8 +23778,9 @@ trexio_read_ao_1e_int_ecp_im_64 (trexio_t* const file, double* const ao_1e_int_e
   if (ao_1e_int_ecp_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_ecp_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -23328,8 +23838,9 @@ trexio_read_ao_1e_int_core_hamiltonian_im_64 (trexio_t* const file, double* cons
   if (ao_1e_int_core_hamiltonian_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_core_hamiltonian_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -23387,9 +23898,10 @@ trexio_read_mo_coefficient_64 (trexio_t* const file, double* const mo_coefficien
   if (mo_coefficient == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_coefficient(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -23450,9 +23962,10 @@ trexio_read_mo_coefficient_im_64 (trexio_t* const file, double* const mo_coeffic
   if (mo_coefficient_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_coefficient_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -23513,8 +24026,9 @@ trexio_read_mo_occupation_64 (trexio_t* const file, double* const mo_occupation)
   if (mo_occupation == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_occupation(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -23572,8 +24086,9 @@ trexio_read_mo_energy_64 (trexio_t* const file, double* const mo_energy)
   if (mo_energy == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_energy(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -23631,8 +24146,9 @@ trexio_read_mo_spin_64 (trexio_t* const file, int64_t* const mo_spin)
   if (mo_spin == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_spin(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -23690,8 +24206,9 @@ trexio_read_mo_k_point_64 (trexio_t* const file, int64_t* const mo_k_point)
   if (mo_k_point == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_k_point(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -23749,8 +24266,9 @@ trexio_read_mo_1e_int_overlap_64 (trexio_t* const file, double* const mo_1e_int_
   if (mo_1e_int_overlap == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_overlap(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -23808,8 +24326,9 @@ trexio_read_mo_1e_int_kinetic_64 (trexio_t* const file, double* const mo_1e_int_
   if (mo_1e_int_kinetic == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_kinetic(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -23867,8 +24386,9 @@ trexio_read_mo_1e_int_potential_n_e_64 (trexio_t* const file, double* const mo_1
   if (mo_1e_int_potential_n_e == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_potential_n_e(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -23926,8 +24446,9 @@ trexio_read_mo_1e_int_ecp_64 (trexio_t* const file, double* const mo_1e_int_ecp)
   if (mo_1e_int_ecp == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_ecp(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -23985,8 +24506,9 @@ trexio_read_mo_1e_int_core_hamiltonian_64 (trexio_t* const file, double* const m
   if (mo_1e_int_core_hamiltonian == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_core_hamiltonian(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -24044,8 +24566,9 @@ trexio_read_mo_1e_int_overlap_im_64 (trexio_t* const file, double* const mo_1e_i
   if (mo_1e_int_overlap_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_overlap_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -24103,8 +24626,9 @@ trexio_read_mo_1e_int_kinetic_im_64 (trexio_t* const file, double* const mo_1e_i
   if (mo_1e_int_kinetic_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_kinetic_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -24162,8 +24686,9 @@ trexio_read_mo_1e_int_potential_n_e_im_64 (trexio_t* const file, double* const m
   if (mo_1e_int_potential_n_e_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_potential_n_e_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -24221,8 +24746,9 @@ trexio_read_mo_1e_int_ecp_im_64 (trexio_t* const file, double* const mo_1e_int_e
   if (mo_1e_int_ecp_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_ecp_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -24280,8 +24806,9 @@ trexio_read_mo_1e_int_core_hamiltonian_im_64 (trexio_t* const file, double* cons
   if (mo_1e_int_core_hamiltonian_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_core_hamiltonian_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -24339,8 +24866,9 @@ trexio_read_rdm_1e_64 (trexio_t* const file, double* const rdm_1e)
   if (rdm_1e == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_rdm_1e(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -24398,8 +24926,9 @@ trexio_read_rdm_1e_up_64 (trexio_t* const file, double* const rdm_1e_up)
   if (rdm_1e_up == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_rdm_1e_up(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -24457,8 +24986,9 @@ trexio_read_rdm_1e_dn_64 (trexio_t* const file, double* const rdm_1e_dn)
   if (rdm_1e_dn == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_rdm_1e_dn(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -24516,9 +25046,10 @@ trexio_read_rdm_1e_transition_64 (trexio_t* const file, double* const rdm_1e_tra
   if (rdm_1e_transition == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_rdm_1e_transition(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t state_num = 0;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_state_num_64(file, &(state_num));
@@ -24579,8 +25110,9 @@ trexio_read_jastrow_en_64 (trexio_t* const file, double* const jastrow_en)
   if (jastrow_en == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_en(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t jastrow_en_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_jastrow_en_num_64(file, &(jastrow_en_num));
@@ -24638,8 +25170,9 @@ trexio_read_jastrow_ee_64 (trexio_t* const file, double* const jastrow_ee)
   if (jastrow_ee == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_ee(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t jastrow_ee_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_jastrow_ee_num_64(file, &(jastrow_ee_num));
@@ -24697,8 +25230,9 @@ trexio_read_jastrow_een_64 (trexio_t* const file, double* const jastrow_een)
   if (jastrow_een == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_een(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t jastrow_een_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_jastrow_een_num_64(file, &(jastrow_een_num));
@@ -24756,8 +25290,9 @@ trexio_read_jastrow_en_nucleus_64 (trexio_t* const file, int64_t* const jastrow_
   if (jastrow_en_nucleus == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_en_nucleus(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t jastrow_en_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_jastrow_en_num_64(file, &(jastrow_en_num));
@@ -24815,8 +25350,9 @@ trexio_read_jastrow_een_nucleus_64 (trexio_t* const file, int64_t* const jastrow
   if (jastrow_een_nucleus == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_een_nucleus(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t jastrow_een_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_jastrow_een_num_64(file, &(jastrow_een_num));
@@ -24874,8 +25410,9 @@ trexio_read_jastrow_en_scaling_64 (trexio_t* const file, double* const jastrow_e
   if (jastrow_en_scaling == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_en_scaling(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t nucleus_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
@@ -24933,9 +25470,10 @@ trexio_read_qmc_point_64 (trexio_t* const file, double* const qmc_point)
   if (qmc_point == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_qmc_point(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t qmc_num = 0;
   int64_t electron_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_qmc_num_64(file, &(qmc_num));
@@ -24996,8 +25534,9 @@ trexio_read_qmc_psi_64 (trexio_t* const file, double* const qmc_psi)
   if (qmc_psi == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_qmc_psi(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t qmc_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_qmc_num_64(file, &(qmc_num));
@@ -25055,8 +25594,9 @@ trexio_read_qmc_e_loc_64 (trexio_t* const file, double* const qmc_e_loc)
   if (qmc_e_loc == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_qmc_e_loc(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t qmc_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_qmc_num_64(file, &(qmc_num));
@@ -25114,8 +25654,10 @@ trexio_read_safe_nucleus_charge_64 (trexio_t* const file, double* const dset_out
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_nucleus_charge(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t nucleus_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
@@ -25145,8 +25687,10 @@ trexio_read_safe_nucleus_coord_64 (trexio_t* const file, double* const dset_out,
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_nucleus_coord(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t nucleus_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
@@ -25176,7 +25720,9 @@ trexio_read_safe_cell_a_64 (trexio_t* const file, double* const dset_out, const 
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_a(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 
@@ -25203,7 +25749,9 @@ trexio_read_safe_cell_b_64 (trexio_t* const file, double* const dset_out, const 
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_b(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 
@@ -25230,7 +25778,9 @@ trexio_read_safe_cell_c_64 (trexio_t* const file, double* const dset_out, const 
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_c(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 
@@ -25257,7 +25807,9 @@ trexio_read_safe_cell_g_a_64 (trexio_t* const file, double* const dset_out, cons
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_g_a(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 
@@ -25284,7 +25836,9 @@ trexio_read_safe_cell_g_b_64 (trexio_t* const file, double* const dset_out, cons
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_g_b(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 
@@ -25311,7 +25865,9 @@ trexio_read_safe_cell_g_c_64 (trexio_t* const file, double* const dset_out, cons
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_g_c(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 
@@ -25338,7 +25894,9 @@ trexio_read_safe_pbc_k_point_64 (trexio_t* const file, double* const dset_out, c
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_pbc_k_point(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 
@@ -25365,8 +25923,10 @@ trexio_read_safe_pbc_k_point_weight_64 (trexio_t* const file, double* const dset
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_pbc_k_point_weight(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t pbc_k_point_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_pbc_k_point_num_64(file, &(pbc_k_point_num));
@@ -25396,8 +25956,10 @@ trexio_read_safe_basis_nucleus_index_64 (trexio_t* const file, int64_t* const ds
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nucleus_index(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_shell_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -25427,8 +25989,10 @@ trexio_read_safe_basis_shell_ang_mom_64 (trexio_t* const file, int64_t* const ds
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_shell_ang_mom(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_shell_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -25458,8 +26022,10 @@ trexio_read_safe_basis_shell_factor_64 (trexio_t* const file, double* const dset
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_shell_factor(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_shell_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -25489,8 +26055,10 @@ trexio_read_safe_basis_r_power_64 (trexio_t* const file, int64_t* const dset_out
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_r_power(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_shell_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -25520,8 +26088,10 @@ trexio_read_safe_basis_nao_grid_start_64 (trexio_t* const file, int64_t* const d
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_start(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_shell_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -25551,8 +26121,10 @@ trexio_read_safe_basis_nao_grid_size_64 (trexio_t* const file, int64_t* const ds
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_size(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_shell_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -25582,8 +26154,10 @@ trexio_read_safe_basis_shell_index_64 (trexio_t* const file, int64_t* const dset
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_shell_index(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_prim_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -25613,8 +26187,10 @@ trexio_read_safe_basis_exponent_64 (trexio_t* const file, double* const dset_out
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_exponent(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_prim_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -25644,8 +26220,10 @@ trexio_read_safe_basis_exponent_im_64 (trexio_t* const file, double* const dset_
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_exponent_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_prim_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -25675,8 +26253,10 @@ trexio_read_safe_basis_coefficient_64 (trexio_t* const file, double* const dset_
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_coefficient(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_prim_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -25706,8 +26286,10 @@ trexio_read_safe_basis_coefficient_im_64 (trexio_t* const file, double* const ds
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_coefficient_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_prim_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -25737,8 +26319,10 @@ trexio_read_safe_basis_oscillation_arg_64 (trexio_t* const file, double* const d
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_oscillation_arg(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_prim_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -25768,8 +26352,10 @@ trexio_read_safe_basis_prim_factor_64 (trexio_t* const file, double* const dset_
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_prim_factor(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_prim_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -25799,8 +26385,10 @@ trexio_read_safe_basis_nao_grid_radius_64 (trexio_t* const file, double* const d
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_radius(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_nao_grid_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -25830,8 +26418,10 @@ trexio_read_safe_basis_nao_grid_phi_64 (trexio_t* const file, double* const dset
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_phi(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_nao_grid_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -25861,8 +26451,10 @@ trexio_read_safe_basis_nao_grid_grad_64 (trexio_t* const file, double* const dse
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_grad(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_nao_grid_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -25892,8 +26484,10 @@ trexio_read_safe_basis_nao_grid_lap_64 (trexio_t* const file, double* const dset
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_lap(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_nao_grid_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -25923,9 +26517,11 @@ trexio_read_safe_basis_interpolator_phi_64 (trexio_t* const file, double* const 
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_interpolator_phi(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_nao_grid_num = 0;
 int64_t basis_interp_coeff_cnt = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -25958,9 +26554,11 @@ trexio_read_safe_basis_interpolator_grad_64 (trexio_t* const file, double* const
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_interpolator_grad(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_nao_grid_num = 0;
 int64_t basis_interp_coeff_cnt = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -25993,9 +26591,11 @@ trexio_read_safe_basis_interpolator_lap_64 (trexio_t* const file, double* const 
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_interpolator_lap(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t basis_nao_grid_num = 0;
 int64_t basis_interp_coeff_cnt = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -26028,8 +26628,10 @@ trexio_read_safe_ecp_max_ang_mom_plus_1_64 (trexio_t* const file, int64_t* const
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_max_ang_mom_plus_1(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t nucleus_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
@@ -26059,8 +26661,10 @@ trexio_read_safe_ecp_z_core_64 (trexio_t* const file, int64_t* const dset_out, c
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_z_core(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t nucleus_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
@@ -26090,8 +26694,10 @@ trexio_read_safe_ecp_ang_mom_64 (trexio_t* const file, int64_t* const dset_out, 
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_ang_mom(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t ecp_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ecp_num_64(file, &(ecp_num));
@@ -26121,8 +26727,10 @@ trexio_read_safe_ecp_nucleus_index_64 (trexio_t* const file, int64_t* const dset
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_nucleus_index(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t ecp_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ecp_num_64(file, &(ecp_num));
@@ -26152,8 +26760,10 @@ trexio_read_safe_ecp_exponent_64 (trexio_t* const file, double* const dset_out, 
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_exponent(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t ecp_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ecp_num_64(file, &(ecp_num));
@@ -26183,8 +26793,10 @@ trexio_read_safe_ecp_coefficient_64 (trexio_t* const file, double* const dset_ou
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_coefficient(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t ecp_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ecp_num_64(file, &(ecp_num));
@@ -26214,8 +26826,10 @@ trexio_read_safe_ecp_power_64 (trexio_t* const file, int64_t* const dset_out, co
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_power(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t ecp_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ecp_num_64(file, &(ecp_num));
@@ -26245,8 +26859,10 @@ trexio_read_safe_grid_coord_64 (trexio_t* const file, double* const dset_out, co
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_coord(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t grid_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_grid_num_64(file, &(grid_num));
@@ -26276,8 +26892,10 @@ trexio_read_safe_grid_weight_64 (trexio_t* const file, double* const dset_out, c
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_weight(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t grid_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_grid_num_64(file, &(grid_num));
@@ -26307,8 +26925,10 @@ trexio_read_safe_grid_ang_coord_64 (trexio_t* const file, double* const dset_out
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_ang_coord(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t grid_ang_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_grid_ang_num_64(file, &(grid_ang_num));
@@ -26338,8 +26958,10 @@ trexio_read_safe_grid_ang_weight_64 (trexio_t* const file, double* const dset_ou
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_ang_weight(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t grid_ang_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_grid_ang_num_64(file, &(grid_ang_num));
@@ -26369,8 +26991,10 @@ trexio_read_safe_grid_rad_coord_64 (trexio_t* const file, double* const dset_out
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_rad_coord(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t grid_rad_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_grid_rad_num_64(file, &(grid_rad_num));
@@ -26400,8 +27024,10 @@ trexio_read_safe_grid_rad_weight_64 (trexio_t* const file, double* const dset_ou
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_rad_weight(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t grid_rad_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_grid_rad_num_64(file, &(grid_rad_num));
@@ -26431,8 +27057,10 @@ trexio_read_safe_ao_shell_64 (trexio_t* const file, int64_t* const dset_out, con
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_shell(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -26462,8 +27090,10 @@ trexio_read_safe_ao_normalization_64 (trexio_t* const file, double* const dset_o
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_normalization(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -26493,8 +27123,10 @@ trexio_read_safe_ao_1e_int_overlap_64 (trexio_t* const file, double* const dset_
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_overlap(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -26524,8 +27156,10 @@ trexio_read_safe_ao_1e_int_kinetic_64 (trexio_t* const file, double* const dset_
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_kinetic(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -26555,8 +27189,10 @@ trexio_read_safe_ao_1e_int_potential_n_e_64 (trexio_t* const file, double* const
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_potential_n_e(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -26586,8 +27222,10 @@ trexio_read_safe_ao_1e_int_ecp_64 (trexio_t* const file, double* const dset_out,
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_ecp(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -26617,8 +27255,10 @@ trexio_read_safe_ao_1e_int_core_hamiltonian_64 (trexio_t* const file, double* co
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_core_hamiltonian(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -26648,8 +27288,10 @@ trexio_read_safe_ao_1e_int_overlap_im_64 (trexio_t* const file, double* const ds
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_overlap_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -26679,8 +27321,10 @@ trexio_read_safe_ao_1e_int_kinetic_im_64 (trexio_t* const file, double* const ds
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_kinetic_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -26710,8 +27354,10 @@ trexio_read_safe_ao_1e_int_potential_n_e_im_64 (trexio_t* const file, double* co
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_potential_n_e_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -26741,8 +27387,10 @@ trexio_read_safe_ao_1e_int_ecp_im_64 (trexio_t* const file, double* const dset_o
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_ecp_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -26772,8 +27420,10 @@ trexio_read_safe_ao_1e_int_core_hamiltonian_im_64 (trexio_t* const file, double*
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_core_hamiltonian_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -26803,9 +27453,11 @@ trexio_read_safe_mo_coefficient_64 (trexio_t* const file, double* const dset_out
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_coefficient(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -26838,9 +27490,11 @@ trexio_read_safe_mo_coefficient_im_64 (trexio_t* const file, double* const dset_
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_coefficient_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -26873,8 +27527,10 @@ trexio_read_safe_mo_occupation_64 (trexio_t* const file, double* const dset_out,
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_occupation(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -26904,8 +27560,10 @@ trexio_read_safe_mo_energy_64 (trexio_t* const file, double* const dset_out, con
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_energy(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -26935,8 +27593,10 @@ trexio_read_safe_mo_spin_64 (trexio_t* const file, int64_t* const dset_out, cons
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_spin(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -26966,8 +27626,10 @@ trexio_read_safe_mo_k_point_64 (trexio_t* const file, int64_t* const dset_out, c
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_k_point(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -26997,8 +27659,10 @@ trexio_read_safe_mo_1e_int_overlap_64 (trexio_t* const file, double* const dset_
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_overlap(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -27028,8 +27692,10 @@ trexio_read_safe_mo_1e_int_kinetic_64 (trexio_t* const file, double* const dset_
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_kinetic(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -27059,8 +27725,10 @@ trexio_read_safe_mo_1e_int_potential_n_e_64 (trexio_t* const file, double* const
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_potential_n_e(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -27090,8 +27758,10 @@ trexio_read_safe_mo_1e_int_ecp_64 (trexio_t* const file, double* const dset_out,
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_ecp(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -27121,8 +27791,10 @@ trexio_read_safe_mo_1e_int_core_hamiltonian_64 (trexio_t* const file, double* co
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_core_hamiltonian(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -27152,8 +27824,10 @@ trexio_read_safe_mo_1e_int_overlap_im_64 (trexio_t* const file, double* const ds
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_overlap_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -27183,8 +27857,10 @@ trexio_read_safe_mo_1e_int_kinetic_im_64 (trexio_t* const file, double* const ds
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_kinetic_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -27214,8 +27890,10 @@ trexio_read_safe_mo_1e_int_potential_n_e_im_64 (trexio_t* const file, double* co
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_potential_n_e_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -27245,8 +27923,10 @@ trexio_read_safe_mo_1e_int_ecp_im_64 (trexio_t* const file, double* const dset_o
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_ecp_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -27276,8 +27956,10 @@ trexio_read_safe_mo_1e_int_core_hamiltonian_im_64 (trexio_t* const file, double*
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_core_hamiltonian_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -27307,8 +27989,10 @@ trexio_read_safe_rdm_1e_64 (trexio_t* const file, double* const dset_out, const 
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_rdm_1e(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -27338,8 +28022,10 @@ trexio_read_safe_rdm_1e_up_64 (trexio_t* const file, double* const dset_out, con
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_rdm_1e_up(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -27369,8 +28055,10 @@ trexio_read_safe_rdm_1e_dn_64 (trexio_t* const file, double* const dset_out, con
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_rdm_1e_dn(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -27400,9 +28088,11 @@ trexio_read_safe_rdm_1e_transition_64 (trexio_t* const file, double* const dset_
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_rdm_1e_transition(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t state_num = 0;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_state_num_64(file, &(state_num));
@@ -27435,8 +28125,10 @@ trexio_read_safe_jastrow_en_64 (trexio_t* const file, double* const dset_out, co
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_en(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t jastrow_en_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_jastrow_en_num_64(file, &(jastrow_en_num));
@@ -27466,8 +28158,10 @@ trexio_read_safe_jastrow_ee_64 (trexio_t* const file, double* const dset_out, co
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_ee(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t jastrow_ee_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_jastrow_ee_num_64(file, &(jastrow_ee_num));
@@ -27497,8 +28191,10 @@ trexio_read_safe_jastrow_een_64 (trexio_t* const file, double* const dset_out, c
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_een(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t jastrow_een_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_jastrow_een_num_64(file, &(jastrow_een_num));
@@ -27528,8 +28224,10 @@ trexio_read_safe_jastrow_en_nucleus_64 (trexio_t* const file, int64_t* const dse
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_en_nucleus(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t jastrow_en_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_jastrow_en_num_64(file, &(jastrow_en_num));
@@ -27559,8 +28257,10 @@ trexio_read_safe_jastrow_een_nucleus_64 (trexio_t* const file, int64_t* const ds
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_een_nucleus(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t jastrow_een_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_jastrow_een_num_64(file, &(jastrow_een_num));
@@ -27590,8 +28290,10 @@ trexio_read_safe_jastrow_en_scaling_64 (trexio_t* const file, double* const dset
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_en_scaling(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t nucleus_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
@@ -27621,9 +28323,11 @@ trexio_read_safe_qmc_point_64 (trexio_t* const file, double* const dset_out, con
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_qmc_point(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t qmc_num = 0;
 int64_t electron_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_qmc_num_64(file, &(qmc_num));
@@ -27656,8 +28360,10 @@ trexio_read_safe_qmc_psi_64 (trexio_t* const file, double* const dset_out, const
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_qmc_psi(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t qmc_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_qmc_num_64(file, &(qmc_num));
@@ -27687,8 +28393,10 @@ trexio_read_safe_qmc_e_loc_64 (trexio_t* const file, double* const dset_out, con
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_qmc_e_loc(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-trexio_exit_code rc;
 int64_t qmc_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_qmc_num_64(file, &(qmc_num));
@@ -28727,6 +29435,12 @@ trexio_exit_code trexio_read_safe_ao_2e_int_eri(trexio_t* const file,
                                                const int64_t size_value_read
                                                )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 4;
+
+  if (size_index_read < rank * (*buffer_size_read)) return TREXIO_INVALID_ARG_5;
+  if (size_value_read <        (*buffer_size_read)) return TREXIO_INVALID_ARG_7;
+
   return trexio_read_ao_2e_int_eri(file, offset_file, buffer_size_read, index_sparse_read, value_sparse_read);
 }
 
@@ -28748,10 +29462,9 @@ trexio_read_ao_2e_int_eri(trexio_t* const file,
   const uint32_t rank = 4;  // To be set by generator : number of indices
 
   int64_t size_max;         // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_ao_2e_int_eri_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_ao_2e_int_eri_size(file, &size_max);
   if (rc != TREXIO_SUCCESS) return rc;
 
   /* To be set by generator : number of unique dimensions
@@ -28823,6 +29536,12 @@ trexio_exit_code trexio_read_safe_ao_2e_int_eri_lr(trexio_t* const file,
                                                const int64_t size_value_read
                                                )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 4;
+
+  if (size_index_read < rank * (*buffer_size_read)) return TREXIO_INVALID_ARG_5;
+  if (size_value_read <        (*buffer_size_read)) return TREXIO_INVALID_ARG_7;
+
   return trexio_read_ao_2e_int_eri_lr(file, offset_file, buffer_size_read, index_sparse_read, value_sparse_read);
 }
 
@@ -28844,10 +29563,9 @@ trexio_read_ao_2e_int_eri_lr(trexio_t* const file,
   const uint32_t rank = 4;  // To be set by generator : number of indices
 
   int64_t size_max;         // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_ao_2e_int_eri_lr_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_ao_2e_int_eri_lr_size(file, &size_max);
   if (rc != TREXIO_SUCCESS) return rc;
 
   /* To be set by generator : number of unique dimensions
@@ -28919,6 +29637,12 @@ trexio_exit_code trexio_read_safe_ao_2e_int_eri_cholesky(trexio_t* const file,
                                                const int64_t size_value_read
                                                )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 3;
+
+  if (size_index_read < rank * (*buffer_size_read)) return TREXIO_INVALID_ARG_5;
+  if (size_value_read <        (*buffer_size_read)) return TREXIO_INVALID_ARG_7;
+
   return trexio_read_ao_2e_int_eri_cholesky(file, offset_file, buffer_size_read, index_sparse_read, value_sparse_read);
 }
 
@@ -28940,10 +29664,9 @@ trexio_read_ao_2e_int_eri_cholesky(trexio_t* const file,
   const uint32_t rank = 3;  // To be set by generator : number of indices
 
   int64_t size_max;         // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_ao_2e_int_eri_cholesky_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_ao_2e_int_eri_cholesky_size(file, &size_max);
   if (rc != TREXIO_SUCCESS) return rc;
 
   /* To be set by generator : number of unique dimensions
@@ -28952,8 +29675,8 @@ trexio_read_ao_2e_int_eri_cholesky(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_ao_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_ao_2e_int_eri_cholesky_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_ao_2e_int_eri_cholesky_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_ao_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -29016,6 +29739,12 @@ trexio_exit_code trexio_read_safe_ao_2e_int_eri_lr_cholesky(trexio_t* const file
                                                const int64_t size_value_read
                                                )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 3;
+
+  if (size_index_read < rank * (*buffer_size_read)) return TREXIO_INVALID_ARG_5;
+  if (size_value_read <        (*buffer_size_read)) return TREXIO_INVALID_ARG_7;
+
   return trexio_read_ao_2e_int_eri_lr_cholesky(file, offset_file, buffer_size_read, index_sparse_read, value_sparse_read);
 }
 
@@ -29037,10 +29766,9 @@ trexio_read_ao_2e_int_eri_lr_cholesky(trexio_t* const file,
   const uint32_t rank = 3;  // To be set by generator : number of indices
 
   int64_t size_max;         // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_ao_2e_int_eri_lr_cholesky_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_ao_2e_int_eri_lr_cholesky_size(file, &size_max);
   if (rc != TREXIO_SUCCESS) return rc;
 
   /* To be set by generator : number of unique dimensions
@@ -29113,6 +29841,12 @@ trexio_exit_code trexio_read_safe_mo_2e_int_eri(trexio_t* const file,
                                                const int64_t size_value_read
                                                )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 4;
+
+  if (size_index_read < rank * (*buffer_size_read)) return TREXIO_INVALID_ARG_5;
+  if (size_value_read <        (*buffer_size_read)) return TREXIO_INVALID_ARG_7;
+
   return trexio_read_mo_2e_int_eri(file, offset_file, buffer_size_read, index_sparse_read, value_sparse_read);
 }
 
@@ -29134,10 +29868,9 @@ trexio_read_mo_2e_int_eri(trexio_t* const file,
   const uint32_t rank = 4;  // To be set by generator : number of indices
 
   int64_t size_max;         // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_mo_2e_int_eri_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_mo_2e_int_eri_size(file, &size_max);
   if (rc != TREXIO_SUCCESS) return rc;
 
   /* To be set by generator : number of unique dimensions
@@ -29209,6 +29942,12 @@ trexio_exit_code trexio_read_safe_mo_2e_int_eri_lr(trexio_t* const file,
                                                const int64_t size_value_read
                                                )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 4;
+
+  if (size_index_read < rank * (*buffer_size_read)) return TREXIO_INVALID_ARG_5;
+  if (size_value_read <        (*buffer_size_read)) return TREXIO_INVALID_ARG_7;
+
   return trexio_read_mo_2e_int_eri_lr(file, offset_file, buffer_size_read, index_sparse_read, value_sparse_read);
 }
 
@@ -29230,10 +29969,9 @@ trexio_read_mo_2e_int_eri_lr(trexio_t* const file,
   const uint32_t rank = 4;  // To be set by generator : number of indices
 
   int64_t size_max;         // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_mo_2e_int_eri_lr_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_mo_2e_int_eri_lr_size(file, &size_max);
   if (rc != TREXIO_SUCCESS) return rc;
 
   /* To be set by generator : number of unique dimensions
@@ -29305,6 +30043,12 @@ trexio_exit_code trexio_read_safe_mo_2e_int_eri_cholesky(trexio_t* const file,
                                                const int64_t size_value_read
                                                )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 3;
+
+  if (size_index_read < rank * (*buffer_size_read)) return TREXIO_INVALID_ARG_5;
+  if (size_value_read <        (*buffer_size_read)) return TREXIO_INVALID_ARG_7;
+
   return trexio_read_mo_2e_int_eri_cholesky(file, offset_file, buffer_size_read, index_sparse_read, value_sparse_read);
 }
 
@@ -29326,10 +30070,9 @@ trexio_read_mo_2e_int_eri_cholesky(trexio_t* const file,
   const uint32_t rank = 3;  // To be set by generator : number of indices
 
   int64_t size_max;         // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_mo_2e_int_eri_cholesky_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_mo_2e_int_eri_cholesky_size(file, &size_max);
   if (rc != TREXIO_SUCCESS) return rc;
 
   /* To be set by generator : number of unique dimensions
@@ -29402,6 +30145,12 @@ trexio_exit_code trexio_read_safe_mo_2e_int_eri_lr_cholesky(trexio_t* const file
                                                const int64_t size_value_read
                                                )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 3;
+
+  if (size_index_read < rank * (*buffer_size_read)) return TREXIO_INVALID_ARG_5;
+  if (size_value_read <        (*buffer_size_read)) return TREXIO_INVALID_ARG_7;
+
   return trexio_read_mo_2e_int_eri_lr_cholesky(file, offset_file, buffer_size_read, index_sparse_read, value_sparse_read);
 }
 
@@ -29423,10 +30172,9 @@ trexio_read_mo_2e_int_eri_lr_cholesky(trexio_t* const file,
   const uint32_t rank = 3;  // To be set by generator : number of indices
 
   int64_t size_max;         // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_mo_2e_int_eri_lr_cholesky_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_mo_2e_int_eri_lr_cholesky_size(file, &size_max);
   if (rc != TREXIO_SUCCESS) return rc;
 
   /* To be set by generator : number of unique dimensions
@@ -29435,8 +30183,8 @@ trexio_read_mo_2e_int_eri_lr_cholesky(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_mo_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_mo_2e_int_eri_lr_cholesky_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_2e_int_eri_lr_cholesky_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -29499,6 +30247,12 @@ trexio_exit_code trexio_read_safe_csf_det_coefficient(trexio_t* const file,
                                                const int64_t size_value_read
                                                )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 2;
+
+  if (size_index_read < rank * (*buffer_size_read)) return TREXIO_INVALID_ARG_5;
+  if (size_value_read <        (*buffer_size_read)) return TREXIO_INVALID_ARG_7;
+
   return trexio_read_csf_det_coefficient(file, offset_file, buffer_size_read, index_sparse_read, value_sparse_read);
 }
 
@@ -29520,10 +30274,9 @@ trexio_read_csf_det_coefficient(trexio_t* const file,
   const uint32_t rank = 2;  // To be set by generator : number of indices
 
   int64_t size_max;         // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_csf_det_coefficient_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_csf_det_coefficient_size(file, &size_max);
   if (rc != TREXIO_SUCCESS) return rc;
 
   /* To be set by generator : number of unique dimensions
@@ -29532,8 +30285,8 @@ trexio_read_csf_det_coefficient(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_csf_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_determinant_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_determinant_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_csf_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -29596,6 +30349,12 @@ trexio_exit_code trexio_read_safe_amplitude_single(trexio_t* const file,
                                                const int64_t size_value_read
                                                )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 2;
+
+  if (size_index_read < rank * (*buffer_size_read)) return TREXIO_INVALID_ARG_5;
+  if (size_value_read <        (*buffer_size_read)) return TREXIO_INVALID_ARG_7;
+
   return trexio_read_amplitude_single(file, offset_file, buffer_size_read, index_sparse_read, value_sparse_read);
 }
 
@@ -29617,10 +30376,9 @@ trexio_read_amplitude_single(trexio_t* const file,
   const uint32_t rank = 2;  // To be set by generator : number of indices
 
   int64_t size_max;         // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_amplitude_single_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_amplitude_single_size(file, &size_max);
   if (rc != TREXIO_SUCCESS) return rc;
 
   /* To be set by generator : number of unique dimensions
@@ -29692,6 +30450,12 @@ trexio_exit_code trexio_read_safe_amplitude_single_exp(trexio_t* const file,
                                                const int64_t size_value_read
                                                )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 2;
+
+  if (size_index_read < rank * (*buffer_size_read)) return TREXIO_INVALID_ARG_5;
+  if (size_value_read <        (*buffer_size_read)) return TREXIO_INVALID_ARG_7;
+
   return trexio_read_amplitude_single_exp(file, offset_file, buffer_size_read, index_sparse_read, value_sparse_read);
 }
 
@@ -29713,10 +30477,9 @@ trexio_read_amplitude_single_exp(trexio_t* const file,
   const uint32_t rank = 2;  // To be set by generator : number of indices
 
   int64_t size_max;         // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_amplitude_single_exp_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_amplitude_single_exp_size(file, &size_max);
   if (rc != TREXIO_SUCCESS) return rc;
 
   /* To be set by generator : number of unique dimensions
@@ -29788,6 +30551,12 @@ trexio_exit_code trexio_read_safe_amplitude_double(trexio_t* const file,
                                                const int64_t size_value_read
                                                )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 4;
+
+  if (size_index_read < rank * (*buffer_size_read)) return TREXIO_INVALID_ARG_5;
+  if (size_value_read <        (*buffer_size_read)) return TREXIO_INVALID_ARG_7;
+
   return trexio_read_amplitude_double(file, offset_file, buffer_size_read, index_sparse_read, value_sparse_read);
 }
 
@@ -29809,10 +30578,9 @@ trexio_read_amplitude_double(trexio_t* const file,
   const uint32_t rank = 4;  // To be set by generator : number of indices
 
   int64_t size_max;         // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_amplitude_double_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_amplitude_double_size(file, &size_max);
   if (rc != TREXIO_SUCCESS) return rc;
 
   /* To be set by generator : number of unique dimensions
@@ -29884,6 +30652,12 @@ trexio_exit_code trexio_read_safe_amplitude_double_exp(trexio_t* const file,
                                                const int64_t size_value_read
                                                )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 4;
+
+  if (size_index_read < rank * (*buffer_size_read)) return TREXIO_INVALID_ARG_5;
+  if (size_value_read <        (*buffer_size_read)) return TREXIO_INVALID_ARG_7;
+
   return trexio_read_amplitude_double_exp(file, offset_file, buffer_size_read, index_sparse_read, value_sparse_read);
 }
 
@@ -29905,10 +30679,9 @@ trexio_read_amplitude_double_exp(trexio_t* const file,
   const uint32_t rank = 4;  // To be set by generator : number of indices
 
   int64_t size_max;         // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_amplitude_double_exp_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_amplitude_double_exp_size(file, &size_max);
   if (rc != TREXIO_SUCCESS) return rc;
 
   /* To be set by generator : number of unique dimensions
@@ -29980,6 +30753,12 @@ trexio_exit_code trexio_read_safe_amplitude_triple(trexio_t* const file,
                                                const int64_t size_value_read
                                                )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 6;
+
+  if (size_index_read < rank * (*buffer_size_read)) return TREXIO_INVALID_ARG_5;
+  if (size_value_read <        (*buffer_size_read)) return TREXIO_INVALID_ARG_7;
+
   return trexio_read_amplitude_triple(file, offset_file, buffer_size_read, index_sparse_read, value_sparse_read);
 }
 
@@ -30001,10 +30780,9 @@ trexio_read_amplitude_triple(trexio_t* const file,
   const uint32_t rank = 6;  // To be set by generator : number of indices
 
   int64_t size_max;         // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_amplitude_triple_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_amplitude_triple_size(file, &size_max);
   if (rc != TREXIO_SUCCESS) return rc;
 
   /* To be set by generator : number of unique dimensions
@@ -30076,6 +30854,12 @@ trexio_exit_code trexio_read_safe_amplitude_triple_exp(trexio_t* const file,
                                                const int64_t size_value_read
                                                )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 6;
+
+  if (size_index_read < rank * (*buffer_size_read)) return TREXIO_INVALID_ARG_5;
+  if (size_value_read <        (*buffer_size_read)) return TREXIO_INVALID_ARG_7;
+
   return trexio_read_amplitude_triple_exp(file, offset_file, buffer_size_read, index_sparse_read, value_sparse_read);
 }
 
@@ -30097,10 +30881,9 @@ trexio_read_amplitude_triple_exp(trexio_t* const file,
   const uint32_t rank = 6;  // To be set by generator : number of indices
 
   int64_t size_max;         // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_amplitude_triple_exp_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_amplitude_triple_exp_size(file, &size_max);
   if (rc != TREXIO_SUCCESS) return rc;
 
   /* To be set by generator : number of unique dimensions
@@ -30172,6 +30955,12 @@ trexio_exit_code trexio_read_safe_amplitude_quadruple(trexio_t* const file,
                                                const int64_t size_value_read
                                                )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 8;
+
+  if (size_index_read < rank * (*buffer_size_read)) return TREXIO_INVALID_ARG_5;
+  if (size_value_read <        (*buffer_size_read)) return TREXIO_INVALID_ARG_7;
+
   return trexio_read_amplitude_quadruple(file, offset_file, buffer_size_read, index_sparse_read, value_sparse_read);
 }
 
@@ -30193,10 +30982,9 @@ trexio_read_amplitude_quadruple(trexio_t* const file,
   const uint32_t rank = 8;  // To be set by generator : number of indices
 
   int64_t size_max;         // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_amplitude_quadruple_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_amplitude_quadruple_size(file, &size_max);
   if (rc != TREXIO_SUCCESS) return rc;
 
   /* To be set by generator : number of unique dimensions
@@ -30268,6 +31056,12 @@ trexio_exit_code trexio_read_safe_amplitude_quadruple_exp(trexio_t* const file,
                                                const int64_t size_value_read
                                                )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 8;
+
+  if (size_index_read < rank * (*buffer_size_read)) return TREXIO_INVALID_ARG_5;
+  if (size_value_read <        (*buffer_size_read)) return TREXIO_INVALID_ARG_7;
+
   return trexio_read_amplitude_quadruple_exp(file, offset_file, buffer_size_read, index_sparse_read, value_sparse_read);
 }
 
@@ -30289,10 +31083,9 @@ trexio_read_amplitude_quadruple_exp(trexio_t* const file,
   const uint32_t rank = 8;  // To be set by generator : number of indices
 
   int64_t size_max;         // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_amplitude_quadruple_exp_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_amplitude_quadruple_exp_size(file, &size_max);
   if (rc != TREXIO_SUCCESS) return rc;
 
   /* To be set by generator : number of unique dimensions
@@ -30364,6 +31157,12 @@ trexio_exit_code trexio_read_safe_rdm_2e(trexio_t* const file,
                                                const int64_t size_value_read
                                                )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 4;
+
+  if (size_index_read < rank * (*buffer_size_read)) return TREXIO_INVALID_ARG_5;
+  if (size_value_read <        (*buffer_size_read)) return TREXIO_INVALID_ARG_7;
+
   return trexio_read_rdm_2e(file, offset_file, buffer_size_read, index_sparse_read, value_sparse_read);
 }
 
@@ -30385,10 +31184,9 @@ trexio_read_rdm_2e(trexio_t* const file,
   const uint32_t rank = 4;  // To be set by generator : number of indices
 
   int64_t size_max;         // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_rdm_2e_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_rdm_2e_size(file, &size_max);
   if (rc != TREXIO_SUCCESS) return rc;
 
   /* To be set by generator : number of unique dimensions
@@ -30460,6 +31258,12 @@ trexio_exit_code trexio_read_safe_rdm_2e_upup(trexio_t* const file,
                                                const int64_t size_value_read
                                                )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 4;
+
+  if (size_index_read < rank * (*buffer_size_read)) return TREXIO_INVALID_ARG_5;
+  if (size_value_read <        (*buffer_size_read)) return TREXIO_INVALID_ARG_7;
+
   return trexio_read_rdm_2e_upup(file, offset_file, buffer_size_read, index_sparse_read, value_sparse_read);
 }
 
@@ -30481,10 +31285,9 @@ trexio_read_rdm_2e_upup(trexio_t* const file,
   const uint32_t rank = 4;  // To be set by generator : number of indices
 
   int64_t size_max;         // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_rdm_2e_upup_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_rdm_2e_upup_size(file, &size_max);
   if (rc != TREXIO_SUCCESS) return rc;
 
   /* To be set by generator : number of unique dimensions
@@ -30556,6 +31359,12 @@ trexio_exit_code trexio_read_safe_rdm_2e_dndn(trexio_t* const file,
                                                const int64_t size_value_read
                                                )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 4;
+
+  if (size_index_read < rank * (*buffer_size_read)) return TREXIO_INVALID_ARG_5;
+  if (size_value_read <        (*buffer_size_read)) return TREXIO_INVALID_ARG_7;
+
   return trexio_read_rdm_2e_dndn(file, offset_file, buffer_size_read, index_sparse_read, value_sparse_read);
 }
 
@@ -30577,10 +31386,9 @@ trexio_read_rdm_2e_dndn(trexio_t* const file,
   const uint32_t rank = 4;  // To be set by generator : number of indices
 
   int64_t size_max;         // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_rdm_2e_dndn_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_rdm_2e_dndn_size(file, &size_max);
   if (rc != TREXIO_SUCCESS) return rc;
 
   /* To be set by generator : number of unique dimensions
@@ -30652,6 +31460,12 @@ trexio_exit_code trexio_read_safe_rdm_2e_updn(trexio_t* const file,
                                                const int64_t size_value_read
                                                )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 4;
+
+  if (size_index_read < rank * (*buffer_size_read)) return TREXIO_INVALID_ARG_5;
+  if (size_value_read <        (*buffer_size_read)) return TREXIO_INVALID_ARG_7;
+
   return trexio_read_rdm_2e_updn(file, offset_file, buffer_size_read, index_sparse_read, value_sparse_read);
 }
 
@@ -30673,10 +31487,9 @@ trexio_read_rdm_2e_updn(trexio_t* const file,
   const uint32_t rank = 4;  // To be set by generator : number of indices
 
   int64_t size_max;         // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_rdm_2e_updn_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_rdm_2e_updn_size(file, &size_max);
   if (rc != TREXIO_SUCCESS) return rc;
 
   /* To be set by generator : number of unique dimensions
@@ -30748,6 +31561,12 @@ trexio_exit_code trexio_read_safe_rdm_2e_transition(trexio_t* const file,
                                                const int64_t size_value_read
                                                )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 6;
+
+  if (size_index_read < rank * (*buffer_size_read)) return TREXIO_INVALID_ARG_5;
+  if (size_value_read <        (*buffer_size_read)) return TREXIO_INVALID_ARG_7;
+
   return trexio_read_rdm_2e_transition(file, offset_file, buffer_size_read, index_sparse_read, value_sparse_read);
 }
 
@@ -30769,10 +31588,9 @@ trexio_read_rdm_2e_transition(trexio_t* const file,
   const uint32_t rank = 6;  // To be set by generator : number of indices
 
   int64_t size_max;         // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_rdm_2e_transition_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_rdm_2e_transition_size(file, &size_max);
   if (rc != TREXIO_SUCCESS) return rc;
 
   /* To be set by generator : number of unique dimensions
@@ -30781,8 +31599,8 @@ trexio_read_rdm_2e_transition(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_mo_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_state_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_state_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -30845,6 +31663,12 @@ trexio_exit_code trexio_read_safe_rdm_2e_cholesky(trexio_t* const file,
                                                const int64_t size_value_read
                                                )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 3;
+
+  if (size_index_read < rank * (*buffer_size_read)) return TREXIO_INVALID_ARG_5;
+  if (size_value_read <        (*buffer_size_read)) return TREXIO_INVALID_ARG_7;
+
   return trexio_read_rdm_2e_cholesky(file, offset_file, buffer_size_read, index_sparse_read, value_sparse_read);
 }
 
@@ -30866,10 +31690,9 @@ trexio_read_rdm_2e_cholesky(trexio_t* const file,
   const uint32_t rank = 3;  // To be set by generator : number of indices
 
   int64_t size_max;         // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_rdm_2e_cholesky_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_rdm_2e_cholesky_size(file, &size_max);
   if (rc != TREXIO_SUCCESS) return rc;
 
   /* To be set by generator : number of unique dimensions
@@ -30878,8 +31701,8 @@ trexio_read_rdm_2e_cholesky(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_mo_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_rdm_2e_cholesky_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_rdm_2e_cholesky_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -30942,6 +31765,12 @@ trexio_exit_code trexio_read_safe_rdm_2e_upup_cholesky(trexio_t* const file,
                                                const int64_t size_value_read
                                                )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 3;
+
+  if (size_index_read < rank * (*buffer_size_read)) return TREXIO_INVALID_ARG_5;
+  if (size_value_read <        (*buffer_size_read)) return TREXIO_INVALID_ARG_7;
+
   return trexio_read_rdm_2e_upup_cholesky(file, offset_file, buffer_size_read, index_sparse_read, value_sparse_read);
 }
 
@@ -30963,10 +31792,9 @@ trexio_read_rdm_2e_upup_cholesky(trexio_t* const file,
   const uint32_t rank = 3;  // To be set by generator : number of indices
 
   int64_t size_max;         // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_rdm_2e_upup_cholesky_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_rdm_2e_upup_cholesky_size(file, &size_max);
   if (rc != TREXIO_SUCCESS) return rc;
 
   /* To be set by generator : number of unique dimensions
@@ -31039,6 +31867,12 @@ trexio_exit_code trexio_read_safe_rdm_2e_dndn_cholesky(trexio_t* const file,
                                                const int64_t size_value_read
                                                )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 3;
+
+  if (size_index_read < rank * (*buffer_size_read)) return TREXIO_INVALID_ARG_5;
+  if (size_value_read <        (*buffer_size_read)) return TREXIO_INVALID_ARG_7;
+
   return trexio_read_rdm_2e_dndn_cholesky(file, offset_file, buffer_size_read, index_sparse_read, value_sparse_read);
 }
 
@@ -31060,10 +31894,9 @@ trexio_read_rdm_2e_dndn_cholesky(trexio_t* const file,
   const uint32_t rank = 3;  // To be set by generator : number of indices
 
   int64_t size_max;         // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_rdm_2e_dndn_cholesky_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_rdm_2e_dndn_cholesky_size(file, &size_max);
   if (rc != TREXIO_SUCCESS) return rc;
 
   /* To be set by generator : number of unique dimensions
@@ -31072,8 +31905,8 @@ trexio_read_rdm_2e_dndn_cholesky(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_mo_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_rdm_2e_dndn_cholesky_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_rdm_2e_dndn_cholesky_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -31136,6 +31969,12 @@ trexio_exit_code trexio_read_safe_rdm_2e_updn_cholesky(trexio_t* const file,
                                                const int64_t size_value_read
                                                )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 3;
+
+  if (size_index_read < rank * (*buffer_size_read)) return TREXIO_INVALID_ARG_5;
+  if (size_value_read <        (*buffer_size_read)) return TREXIO_INVALID_ARG_7;
+
   return trexio_read_rdm_2e_updn_cholesky(file, offset_file, buffer_size_read, index_sparse_read, value_sparse_read);
 }
 
@@ -31157,10 +31996,9 @@ trexio_read_rdm_2e_updn_cholesky(trexio_t* const file,
   const uint32_t rank = 3;  // To be set by generator : number of indices
 
   int64_t size_max;         // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_rdm_2e_updn_cholesky_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_rdm_2e_updn_cholesky_size(file, &size_max);
   if (rc != TREXIO_SUCCESS) return rc;
 
   /* To be set by generator : number of unique dimensions
@@ -31169,8 +32007,8 @@ trexio_read_rdm_2e_updn_cholesky(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_mo_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_rdm_2e_updn_cholesky_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_rdm_2e_updn_cholesky_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -32013,11 +32851,10 @@ trexio_read_metadata_code_low (trexio_t* const file, char* dset_out, const int32
   if (max_str_len <= 0) return TREXIO_INVALID_ARG_3;
   if (trexio_has_metadata_code(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t metadata_code_num = 0;
 
   /* Error handling for this call is added by the generator */
-  rc = trexio_read_metadata_code_num_64(file, &(metadata_code_num));
+  trexio_exit_code rc = trexio_read_metadata_code_num_64(file, &(metadata_code_num));
   if (rc != TREXIO_SUCCESS) return rc;
 
   if (metadata_code_num == 0L) return TREXIO_INVALID_NUM;
@@ -32057,11 +32894,10 @@ trexio_read_metadata_code (trexio_t* const file, char** dset_out, const int32_t 
 
   assert(file->back_end < TREXIO_INVALID_BACK_END);
 
-  trexio_exit_code rc;
   int64_t dset_dim = 0;
 
   /* Error handling for this call is added by the generator */
-  rc = trexio_read_metadata_code_num_64(file, &(dset_dim));
+  trexio_exit_code rc = trexio_read_metadata_code_num_64(file, &(dset_dim));
   if (rc != TREXIO_SUCCESS) return rc;
 
   if (dset_dim == 0L) return TREXIO_INVALID_NUM;
@@ -32103,11 +32939,10 @@ trexio_read_metadata_author_low (trexio_t* const file, char* dset_out, const int
   if (max_str_len <= 0) return TREXIO_INVALID_ARG_3;
   if (trexio_has_metadata_author(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t metadata_author_num = 0;
 
   /* Error handling for this call is added by the generator */
-  rc = trexio_read_metadata_author_num_64(file, &(metadata_author_num));
+  trexio_exit_code rc = trexio_read_metadata_author_num_64(file, &(metadata_author_num));
   if (rc != TREXIO_SUCCESS) return rc;
 
   if (metadata_author_num == 0L) return TREXIO_INVALID_NUM;
@@ -32147,11 +32982,10 @@ trexio_read_metadata_author (trexio_t* const file, char** dset_out, const int32_
 
   assert(file->back_end < TREXIO_INVALID_BACK_END);
 
-  trexio_exit_code rc;
   int64_t dset_dim = 0;
 
   /* Error handling for this call is added by the generator */
-  rc = trexio_read_metadata_author_num_64(file, &(dset_dim));
+  trexio_exit_code rc = trexio_read_metadata_author_num_64(file, &(dset_dim));
   if (rc != TREXIO_SUCCESS) return rc;
 
   if (dset_dim == 0L) return TREXIO_INVALID_NUM;
@@ -32193,11 +33027,10 @@ trexio_read_nucleus_label_low (trexio_t* const file, char* dset_out, const int32
   if (max_str_len <= 0) return TREXIO_INVALID_ARG_3;
   if (trexio_has_nucleus_label(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t nucleus_num = 0;
 
   /* Error handling for this call is added by the generator */
-  rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
+  trexio_exit_code rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
   if (rc != TREXIO_SUCCESS) return rc;
 
   if (nucleus_num == 0L) return TREXIO_INVALID_NUM;
@@ -32237,11 +33070,10 @@ trexio_read_nucleus_label (trexio_t* const file, char** dset_out, const int32_t 
 
   assert(file->back_end < TREXIO_INVALID_BACK_END);
 
-  trexio_exit_code rc;
   int64_t dset_dim = 0;
 
   /* Error handling for this call is added by the generator */
-  rc = trexio_read_nucleus_num_64(file, &(dset_dim));
+  trexio_exit_code rc = trexio_read_nucleus_num_64(file, &(dset_dim));
   if (rc != TREXIO_SUCCESS) return rc;
 
   if (dset_dim == 0L) return TREXIO_INVALID_NUM;
@@ -32283,11 +33115,10 @@ trexio_read_state_label_low (trexio_t* const file, char* dset_out, const int32_t
   if (max_str_len <= 0) return TREXIO_INVALID_ARG_3;
   if (trexio_has_state_label(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t state_num = 0;
 
   /* Error handling for this call is added by the generator */
-  rc = trexio_read_state_num_64(file, &(state_num));
+  trexio_exit_code rc = trexio_read_state_num_64(file, &(state_num));
   if (rc != TREXIO_SUCCESS) return rc;
 
   if (state_num == 0L) return TREXIO_INVALID_NUM;
@@ -32327,11 +33158,10 @@ trexio_read_state_label (trexio_t* const file, char** dset_out, const int32_t ma
 
   assert(file->back_end < TREXIO_INVALID_BACK_END);
 
-  trexio_exit_code rc;
   int64_t dset_dim = 0;
 
   /* Error handling for this call is added by the generator */
-  rc = trexio_read_state_num_64(file, &(dset_dim));
+  trexio_exit_code rc = trexio_read_state_num_64(file, &(dset_dim));
   if (rc != TREXIO_SUCCESS) return rc;
 
   if (dset_dim == 0L) return TREXIO_INVALID_NUM;
@@ -32373,11 +33203,10 @@ trexio_read_state_file_name_low (trexio_t* const file, char* dset_out, const int
   if (max_str_len <= 0) return TREXIO_INVALID_ARG_3;
   if (trexio_has_state_file_name(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t state_num = 0;
 
   /* Error handling for this call is added by the generator */
-  rc = trexio_read_state_num_64(file, &(state_num));
+  trexio_exit_code rc = trexio_read_state_num_64(file, &(state_num));
   if (rc != TREXIO_SUCCESS) return rc;
 
   if (state_num == 0L) return TREXIO_INVALID_NUM;
@@ -32417,11 +33246,10 @@ trexio_read_state_file_name (trexio_t* const file, char** dset_out, const int32_
 
   assert(file->back_end < TREXIO_INVALID_BACK_END);
 
-  trexio_exit_code rc;
   int64_t dset_dim = 0;
 
   /* Error handling for this call is added by the generator */
-  rc = trexio_read_state_num_64(file, &(dset_dim));
+  trexio_exit_code rc = trexio_read_state_num_64(file, &(dset_dim));
   if (rc != TREXIO_SUCCESS) return rc;
 
   if (dset_dim == 0L) return TREXIO_INVALID_NUM;
@@ -32463,11 +33291,10 @@ trexio_read_mo_class_low (trexio_t* const file, char* dset_out, const int32_t ma
   if (max_str_len <= 0) return TREXIO_INVALID_ARG_3;
   if (trexio_has_mo_class(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
 
   /* Error handling for this call is added by the generator */
-  rc = trexio_read_mo_num_64(file, &(mo_num));
+  trexio_exit_code rc = trexio_read_mo_num_64(file, &(mo_num));
   if (rc != TREXIO_SUCCESS) return rc;
 
   if (mo_num == 0L) return TREXIO_INVALID_NUM;
@@ -32507,11 +33334,10 @@ trexio_read_mo_class (trexio_t* const file, char** dset_out, const int32_t max_s
 
   assert(file->back_end < TREXIO_INVALID_BACK_END);
 
-  trexio_exit_code rc;
   int64_t dset_dim = 0;
 
   /* Error handling for this call is added by the generator */
-  rc = trexio_read_mo_num_64(file, &(dset_dim));
+  trexio_exit_code rc = trexio_read_mo_num_64(file, &(dset_dim));
   if (rc != TREXIO_SUCCESS) return rc;
 
   if (dset_dim == 0L) return TREXIO_INVALID_NUM;
@@ -32553,11 +33379,10 @@ trexio_read_mo_symmetry_low (trexio_t* const file, char* dset_out, const int32_t
   if (max_str_len <= 0) return TREXIO_INVALID_ARG_3;
   if (trexio_has_mo_symmetry(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
 
   /* Error handling for this call is added by the generator */
-  rc = trexio_read_mo_num_64(file, &(mo_num));
+  trexio_exit_code rc = trexio_read_mo_num_64(file, &(mo_num));
   if (rc != TREXIO_SUCCESS) return rc;
 
   if (mo_num == 0L) return TREXIO_INVALID_NUM;
@@ -32597,11 +33422,10 @@ trexio_read_mo_symmetry (trexio_t* const file, char** dset_out, const int32_t ma
 
   assert(file->back_end < TREXIO_INVALID_BACK_END);
 
-  trexio_exit_code rc;
   int64_t dset_dim = 0;
 
   /* Error handling for this call is added by the generator */
-  rc = trexio_read_mo_num_64(file, &(dset_dim));
+  trexio_exit_code rc = trexio_read_mo_num_64(file, &(dset_dim));
   if (rc != TREXIO_SUCCESS) return rc;
 
   if (dset_dim == 0L) return TREXIO_INVALID_NUM;
@@ -32903,6 +33727,40 @@ trexio_write_pbc_k_point_num_32 (trexio_t* const file, const int32_t num)
 /*
   case TREXIO_JSON:
     return trexio_json_write_pbc_k_point_num(file, (int64_t) num_write);
+    break;
+*/
+  }
+
+  return TREXIO_FAILURE;
+}
+
+trexio_exit_code
+trexio_write_pbc_madelung_32 (trexio_t* const file, const float num)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (trexio_has_pbc_madelung(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_ATTR_ALREADY_EXISTS;
+
+  /* Handle index type */
+  float num_write = num;
+  if ((false)) {
+    num_write -= (float) 1;
+  }
+
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    return trexio_text_write_pbc_madelung(file, (double) num_write);
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    return trexio_hdf5_write_pbc_madelung(file, (double) num_write);
+#else
+    return TREXIO_BACK_END_MISSING;
+#endif
+/*
+  case TREXIO_JSON:
+    return trexio_json_write_pbc_madelung(file, (double) num_write);
     break;
 */
   }
@@ -34421,6 +35279,38 @@ trexio_write_pbc_k_point_num_64 (trexio_t* const file, const int64_t num)
 }
 
 trexio_exit_code
+trexio_write_pbc_madelung_64 (trexio_t* const file, const double num)
+{
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (trexio_has_pbc_madelung(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_ATTR_ALREADY_EXISTS;
+
+  /* Handle index type */
+  double num_write = num;
+  if ((false)) {
+    num_write -= (double) 1;
+  }
+
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    return trexio_text_write_pbc_madelung(file, num_write);
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    return trexio_hdf5_write_pbc_madelung(file, num_write);
+#else
+    return TREXIO_BACK_END_MISSING;
+#endif
+/*
+  case TREXIO_JSON:
+    return trexio_json_write_pbc_madelung(file, num_write);
+*/
+  }
+
+  return TREXIO_FAILURE;
+}
+
+trexio_exit_code
 trexio_write_electron_num_64 (trexio_t* const file, const int64_t num)
 {
   if (file == NULL) return TREXIO_INVALID_ARG_1;
@@ -35647,6 +36537,12 @@ trexio_write_pbc_k_point_num (trexio_t* const file, const int32_t num)
 }
 
 trexio_exit_code
+trexio_write_pbc_madelung (trexio_t* const file, const double num)
+{
+  return trexio_write_pbc_madelung_64(file, num);
+}
+
+trexio_exit_code
 trexio_write_electron_num (trexio_t* const file, const int32_t num)
 {
   return trexio_write_electron_num_32(file, num);
@@ -36221,6 +37117,9 @@ trexio_write_determinant_coefficient (trexio_t* const file, const int64_t offset
 trexio_exit_code
 trexio_write_safe_determinant_coefficient (trexio_t* const file, const int64_t offset_file, const int64_t buffer_size, const double* dset_in, const int64_t dim_in)
 {
+  /* Check that dim_in is large enough */
+  if (dim_in < buffer_size) return TREXIO_INVALID_ARG_5;
+
   return trexio_write_determinant_coefficient(file, offset_file, buffer_size, dset_in);
 }
 
@@ -36263,6 +37162,9 @@ trexio_write_csf_coefficient (trexio_t* const file, const int64_t offset_file, c
 trexio_exit_code
 trexio_write_safe_csf_coefficient (trexio_t* const file, const int64_t offset_file, const int64_t buffer_size, const double* dset_in, const int64_t dim_in)
 {
+  /* Check that dim_in is large enough */
+  if (dim_in < buffer_size) return TREXIO_INVALID_ARG_5;
+
   return trexio_write_csf_coefficient(file, offset_file, buffer_size, dset_in);
 }
 
@@ -36274,8 +37176,9 @@ trexio_write_nucleus_charge_32 (trexio_t* const file, const float* nucleus_charg
   if (nucleus_charge == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_nucleus_charge(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t nucleus_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
@@ -36344,8 +37247,9 @@ trexio_write_nucleus_coord_32 (trexio_t* const file, const float* nucleus_coord)
   if (nucleus_coord == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_nucleus_coord(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t nucleus_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
@@ -36414,7 +37318,8 @@ trexio_write_cell_a_32 (trexio_t* const file, const float* cell_a)
   if (cell_a == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_a(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
 
@@ -36480,7 +37385,8 @@ trexio_write_cell_b_32 (trexio_t* const file, const float* cell_b)
   if (cell_b == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_b(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
 
@@ -36546,7 +37452,8 @@ trexio_write_cell_c_32 (trexio_t* const file, const float* cell_c)
   if (cell_c == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_c(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
 
@@ -36612,7 +37519,8 @@ trexio_write_cell_g_a_32 (trexio_t* const file, const float* cell_g_a)
   if (cell_g_a == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_g_a(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
 
@@ -36678,7 +37586,8 @@ trexio_write_cell_g_b_32 (trexio_t* const file, const float* cell_g_b)
   if (cell_g_b == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_g_b(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
 
@@ -36744,7 +37653,8 @@ trexio_write_cell_g_c_32 (trexio_t* const file, const float* cell_g_c)
   if (cell_g_c == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_g_c(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
 
@@ -36810,7 +37720,8 @@ trexio_write_pbc_k_point_32 (trexio_t* const file, const float* pbc_k_point)
   if (pbc_k_point == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_pbc_k_point(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
 
@@ -36876,8 +37787,9 @@ trexio_write_pbc_k_point_weight_32 (trexio_t* const file, const float* pbc_k_poi
   if (pbc_k_point_weight == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_pbc_k_point_weight(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t pbc_k_point_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_pbc_k_point_num_64(file, &(pbc_k_point_num));
@@ -36946,8 +37858,9 @@ trexio_write_basis_nucleus_index_32 (trexio_t* const file, const int32_t* basis_
   if (basis_nucleus_index == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nucleus_index(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t basis_shell_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -37016,8 +37929,9 @@ trexio_write_basis_shell_ang_mom_32 (trexio_t* const file, const int32_t* basis_
   if (basis_shell_ang_mom == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_shell_ang_mom(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t basis_shell_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -37086,8 +38000,9 @@ trexio_write_basis_shell_factor_32 (trexio_t* const file, const float* basis_she
   if (basis_shell_factor == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_shell_factor(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t basis_shell_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -37156,8 +38071,9 @@ trexio_write_basis_r_power_32 (trexio_t* const file, const int32_t* basis_r_powe
   if (basis_r_power == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_r_power(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t basis_shell_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -37226,8 +38142,9 @@ trexio_write_basis_nao_grid_start_32 (trexio_t* const file, const int32_t* basis
   if (basis_nao_grid_start == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_start(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t basis_shell_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -37296,8 +38213,9 @@ trexio_write_basis_nao_grid_size_32 (trexio_t* const file, const int32_t* basis_
   if (basis_nao_grid_size == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_size(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t basis_shell_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -37366,8 +38284,9 @@ trexio_write_basis_shell_index_32 (trexio_t* const file, const int32_t* basis_sh
   if (basis_shell_index == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_shell_index(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t basis_prim_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -37436,8 +38355,9 @@ trexio_write_basis_exponent_32 (trexio_t* const file, const float* basis_exponen
   if (basis_exponent == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_exponent(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t basis_prim_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -37506,8 +38426,9 @@ trexio_write_basis_exponent_im_32 (trexio_t* const file, const float* basis_expo
   if (basis_exponent_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_exponent_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t basis_prim_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -37576,8 +38497,9 @@ trexio_write_basis_coefficient_32 (trexio_t* const file, const float* basis_coef
   if (basis_coefficient == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_coefficient(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t basis_prim_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -37646,8 +38568,9 @@ trexio_write_basis_coefficient_im_32 (trexio_t* const file, const float* basis_c
   if (basis_coefficient_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_coefficient_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t basis_prim_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -37716,8 +38639,9 @@ trexio_write_basis_oscillation_arg_32 (trexio_t* const file, const float* basis_
   if (basis_oscillation_arg == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_oscillation_arg(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t basis_prim_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -37786,8 +38710,9 @@ trexio_write_basis_prim_factor_32 (trexio_t* const file, const float* basis_prim
   if (basis_prim_factor == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_prim_factor(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t basis_prim_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -37856,8 +38781,9 @@ trexio_write_basis_nao_grid_radius_32 (trexio_t* const file, const float* basis_
   if (basis_nao_grid_radius == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_radius(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t basis_nao_grid_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -37926,8 +38852,9 @@ trexio_write_basis_nao_grid_phi_32 (trexio_t* const file, const float* basis_nao
   if (basis_nao_grid_phi == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_phi(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t basis_nao_grid_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -37996,8 +38923,9 @@ trexio_write_basis_nao_grid_grad_32 (trexio_t* const file, const float* basis_na
   if (basis_nao_grid_grad == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_grad(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t basis_nao_grid_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -38066,8 +38994,9 @@ trexio_write_basis_nao_grid_lap_32 (trexio_t* const file, const float* basis_nao
   if (basis_nao_grid_lap == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_lap(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t basis_nao_grid_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -38136,9 +39065,10 @@ trexio_write_basis_interpolator_phi_32 (trexio_t* const file, const float* basis
   if (basis_interpolator_phi == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_interpolator_phi(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t basis_nao_grid_num = 0;
   int64_t basis_interp_coeff_cnt = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -38210,9 +39140,10 @@ trexio_write_basis_interpolator_grad_32 (trexio_t* const file, const float* basi
   if (basis_interpolator_grad == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_interpolator_grad(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t basis_nao_grid_num = 0;
   int64_t basis_interp_coeff_cnt = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -38284,9 +39215,10 @@ trexio_write_basis_interpolator_lap_32 (trexio_t* const file, const float* basis
   if (basis_interpolator_lap == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_interpolator_lap(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t basis_nao_grid_num = 0;
   int64_t basis_interp_coeff_cnt = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -38358,8 +39290,9 @@ trexio_write_ecp_max_ang_mom_plus_1_32 (trexio_t* const file, const int32_t* ecp
   if (ecp_max_ang_mom_plus_1 == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_max_ang_mom_plus_1(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t nucleus_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
@@ -38428,8 +39361,9 @@ trexio_write_ecp_z_core_32 (trexio_t* const file, const int32_t* ecp_z_core)
   if (ecp_z_core == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_z_core(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t nucleus_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
@@ -38498,8 +39432,9 @@ trexio_write_ecp_ang_mom_32 (trexio_t* const file, const int32_t* ecp_ang_mom)
   if (ecp_ang_mom == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_ang_mom(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t ecp_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ecp_num_64(file, &(ecp_num));
@@ -38568,8 +39503,9 @@ trexio_write_ecp_nucleus_index_32 (trexio_t* const file, const int32_t* ecp_nucl
   if (ecp_nucleus_index == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_nucleus_index(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t ecp_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ecp_num_64(file, &(ecp_num));
@@ -38638,8 +39574,9 @@ trexio_write_ecp_exponent_32 (trexio_t* const file, const float* ecp_exponent)
   if (ecp_exponent == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_exponent(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t ecp_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ecp_num_64(file, &(ecp_num));
@@ -38708,8 +39645,9 @@ trexio_write_ecp_coefficient_32 (trexio_t* const file, const float* ecp_coeffici
   if (ecp_coefficient == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_coefficient(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t ecp_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ecp_num_64(file, &(ecp_num));
@@ -38778,8 +39716,9 @@ trexio_write_ecp_power_32 (trexio_t* const file, const int32_t* ecp_power)
   if (ecp_power == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_power(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t ecp_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ecp_num_64(file, &(ecp_num));
@@ -38848,8 +39787,9 @@ trexio_write_grid_coord_32 (trexio_t* const file, const float* grid_coord)
   if (grid_coord == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_coord(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t grid_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_grid_num_64(file, &(grid_num));
@@ -38918,8 +39858,9 @@ trexio_write_grid_weight_32 (trexio_t* const file, const float* grid_weight)
   if (grid_weight == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_weight(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t grid_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_grid_num_64(file, &(grid_num));
@@ -38988,8 +39929,9 @@ trexio_write_grid_ang_coord_32 (trexio_t* const file, const float* grid_ang_coor
   if (grid_ang_coord == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_ang_coord(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t grid_ang_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_grid_ang_num_64(file, &(grid_ang_num));
@@ -39058,8 +40000,9 @@ trexio_write_grid_ang_weight_32 (trexio_t* const file, const float* grid_ang_wei
   if (grid_ang_weight == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_ang_weight(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t grid_ang_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_grid_ang_num_64(file, &(grid_ang_num));
@@ -39128,8 +40071,9 @@ trexio_write_grid_rad_coord_32 (trexio_t* const file, const float* grid_rad_coor
   if (grid_rad_coord == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_rad_coord(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t grid_rad_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_grid_rad_num_64(file, &(grid_rad_num));
@@ -39198,8 +40142,9 @@ trexio_write_grid_rad_weight_32 (trexio_t* const file, const float* grid_rad_wei
   if (grid_rad_weight == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_rad_weight(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t grid_rad_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_grid_rad_num_64(file, &(grid_rad_num));
@@ -39268,8 +40213,9 @@ trexio_write_ao_shell_32 (trexio_t* const file, const int32_t* ao_shell)
   if (ao_shell == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_shell(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -39338,8 +40284,9 @@ trexio_write_ao_normalization_32 (trexio_t* const file, const float* ao_normaliz
   if (ao_normalization == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_normalization(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -39408,8 +40355,9 @@ trexio_write_ao_1e_int_overlap_32 (trexio_t* const file, const float* ao_1e_int_
   if (ao_1e_int_overlap == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_overlap(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -39478,8 +40426,9 @@ trexio_write_ao_1e_int_kinetic_32 (trexio_t* const file, const float* ao_1e_int_
   if (ao_1e_int_kinetic == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_kinetic(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -39548,8 +40497,9 @@ trexio_write_ao_1e_int_potential_n_e_32 (trexio_t* const file, const float* ao_1
   if (ao_1e_int_potential_n_e == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_potential_n_e(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -39618,8 +40568,9 @@ trexio_write_ao_1e_int_ecp_32 (trexio_t* const file, const float* ao_1e_int_ecp)
   if (ao_1e_int_ecp == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_ecp(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -39688,8 +40639,9 @@ trexio_write_ao_1e_int_core_hamiltonian_32 (trexio_t* const file, const float* a
   if (ao_1e_int_core_hamiltonian == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_core_hamiltonian(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -39758,8 +40710,9 @@ trexio_write_ao_1e_int_overlap_im_32 (trexio_t* const file, const float* ao_1e_i
   if (ao_1e_int_overlap_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_overlap_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -39828,8 +40781,9 @@ trexio_write_ao_1e_int_kinetic_im_32 (trexio_t* const file, const float* ao_1e_i
   if (ao_1e_int_kinetic_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_kinetic_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -39898,8 +40852,9 @@ trexio_write_ao_1e_int_potential_n_e_im_32 (trexio_t* const file, const float* a
   if (ao_1e_int_potential_n_e_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_potential_n_e_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -39968,8 +40923,9 @@ trexio_write_ao_1e_int_ecp_im_32 (trexio_t* const file, const float* ao_1e_int_e
   if (ao_1e_int_ecp_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_ecp_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -40038,8 +40994,9 @@ trexio_write_ao_1e_int_core_hamiltonian_im_32 (trexio_t* const file, const float
   if (ao_1e_int_core_hamiltonian_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_core_hamiltonian_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -40108,9 +41065,10 @@ trexio_write_mo_coefficient_32 (trexio_t* const file, const float* mo_coefficien
   if (mo_coefficient == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_coefficient(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -40182,9 +41140,10 @@ trexio_write_mo_coefficient_im_32 (trexio_t* const file, const float* mo_coeffic
   if (mo_coefficient_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_coefficient_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
   int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -40256,8 +41215,9 @@ trexio_write_mo_occupation_32 (trexio_t* const file, const float* mo_occupation)
   if (mo_occupation == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_occupation(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -40326,8 +41286,9 @@ trexio_write_mo_energy_32 (trexio_t* const file, const float* mo_energy)
   if (mo_energy == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_energy(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -40396,8 +41357,9 @@ trexio_write_mo_spin_32 (trexio_t* const file, const int32_t* mo_spin)
   if (mo_spin == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_spin(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -40466,8 +41428,9 @@ trexio_write_mo_k_point_32 (trexio_t* const file, const int32_t* mo_k_point)
   if (mo_k_point == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_k_point(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -40536,8 +41499,9 @@ trexio_write_mo_1e_int_overlap_32 (trexio_t* const file, const float* mo_1e_int_
   if (mo_1e_int_overlap == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_overlap(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -40606,8 +41570,9 @@ trexio_write_mo_1e_int_kinetic_32 (trexio_t* const file, const float* mo_1e_int_
   if (mo_1e_int_kinetic == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_kinetic(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -40676,8 +41641,9 @@ trexio_write_mo_1e_int_potential_n_e_32 (trexio_t* const file, const float* mo_1
   if (mo_1e_int_potential_n_e == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_potential_n_e(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -40746,8 +41712,9 @@ trexio_write_mo_1e_int_ecp_32 (trexio_t* const file, const float* mo_1e_int_ecp)
   if (mo_1e_int_ecp == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_ecp(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -40816,8 +41783,9 @@ trexio_write_mo_1e_int_core_hamiltonian_32 (trexio_t* const file, const float* m
   if (mo_1e_int_core_hamiltonian == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_core_hamiltonian(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -40886,8 +41854,9 @@ trexio_write_mo_1e_int_overlap_im_32 (trexio_t* const file, const float* mo_1e_i
   if (mo_1e_int_overlap_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_overlap_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -40956,8 +41925,9 @@ trexio_write_mo_1e_int_kinetic_im_32 (trexio_t* const file, const float* mo_1e_i
   if (mo_1e_int_kinetic_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_kinetic_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -41026,8 +41996,9 @@ trexio_write_mo_1e_int_potential_n_e_im_32 (trexio_t* const file, const float* m
   if (mo_1e_int_potential_n_e_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_potential_n_e_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -41096,8 +42067,9 @@ trexio_write_mo_1e_int_ecp_im_32 (trexio_t* const file, const float* mo_1e_int_e
   if (mo_1e_int_ecp_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_ecp_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -41166,8 +42138,9 @@ trexio_write_mo_1e_int_core_hamiltonian_im_32 (trexio_t* const file, const float
   if (mo_1e_int_core_hamiltonian_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_core_hamiltonian_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -41236,8 +42209,9 @@ trexio_write_rdm_1e_32 (trexio_t* const file, const float* rdm_1e)
   if (rdm_1e == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_rdm_1e(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -41306,8 +42280,9 @@ trexio_write_rdm_1e_up_32 (trexio_t* const file, const float* rdm_1e_up)
   if (rdm_1e_up == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_rdm_1e_up(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -41376,8 +42351,9 @@ trexio_write_rdm_1e_dn_32 (trexio_t* const file, const float* rdm_1e_dn)
   if (rdm_1e_dn == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_rdm_1e_dn(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -41446,9 +42422,10 @@ trexio_write_rdm_1e_transition_32 (trexio_t* const file, const float* rdm_1e_tra
   if (rdm_1e_transition == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_rdm_1e_transition(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t state_num = 0;
   int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_state_num_64(file, &(state_num));
@@ -41520,8 +42497,9 @@ trexio_write_jastrow_en_32 (trexio_t* const file, const float* jastrow_en)
   if (jastrow_en == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_en(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t jastrow_en_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_jastrow_en_num_64(file, &(jastrow_en_num));
@@ -41590,8 +42568,9 @@ trexio_write_jastrow_ee_32 (trexio_t* const file, const float* jastrow_ee)
   if (jastrow_ee == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_ee(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t jastrow_ee_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_jastrow_ee_num_64(file, &(jastrow_ee_num));
@@ -41660,8 +42639,9 @@ trexio_write_jastrow_een_32 (trexio_t* const file, const float* jastrow_een)
   if (jastrow_een == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_een(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t jastrow_een_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_jastrow_een_num_64(file, &(jastrow_een_num));
@@ -41730,8 +42710,9 @@ trexio_write_jastrow_en_nucleus_32 (trexio_t* const file, const int32_t* jastrow
   if (jastrow_en_nucleus == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_en_nucleus(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t jastrow_en_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_jastrow_en_num_64(file, &(jastrow_en_num));
@@ -41800,8 +42781,9 @@ trexio_write_jastrow_een_nucleus_32 (trexio_t* const file, const int32_t* jastro
   if (jastrow_een_nucleus == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_een_nucleus(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t jastrow_een_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_jastrow_een_num_64(file, &(jastrow_een_num));
@@ -41870,8 +42852,9 @@ trexio_write_jastrow_en_scaling_32 (trexio_t* const file, const float* jastrow_e
   if (jastrow_en_scaling == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_en_scaling(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t nucleus_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
@@ -41940,9 +42923,10 @@ trexio_write_qmc_point_32 (trexio_t* const file, const float* qmc_point)
   if (qmc_point == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_qmc_point(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t qmc_num = 0;
   int64_t electron_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_qmc_num_64(file, &(qmc_num));
@@ -42014,8 +42998,9 @@ trexio_write_qmc_psi_32 (trexio_t* const file, const float* qmc_psi)
   if (qmc_psi == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_qmc_psi(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t qmc_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_qmc_num_64(file, &(qmc_num));
@@ -42084,8 +43069,9 @@ trexio_write_qmc_e_loc_32 (trexio_t* const file, const float* qmc_e_loc)
   if (qmc_e_loc == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_qmc_e_loc(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t qmc_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
   rc = trexio_read_qmc_num_64(file, &(qmc_num));
@@ -42154,8 +43140,10 @@ trexio_write_safe_nucleus_charge_32 (trexio_t* const file, const float* dset_in,
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_nucleus_charge(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t nucleus_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
@@ -42185,8 +43173,10 @@ trexio_write_safe_nucleus_coord_32 (trexio_t* const file, const float* dset_in, 
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_nucleus_coord(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t nucleus_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
@@ -42216,7 +43206,9 @@ trexio_write_safe_cell_a_32 (trexio_t* const file, const float* dset_in, const i
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_a(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 
@@ -42243,7 +43235,9 @@ trexio_write_safe_cell_b_32 (trexio_t* const file, const float* dset_in, const i
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_b(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 
@@ -42270,7 +43264,9 @@ trexio_write_safe_cell_c_32 (trexio_t* const file, const float* dset_in, const i
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_c(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 
@@ -42297,7 +43293,9 @@ trexio_write_safe_cell_g_a_32 (trexio_t* const file, const float* dset_in, const
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_g_a(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 
@@ -42324,7 +43322,9 @@ trexio_write_safe_cell_g_b_32 (trexio_t* const file, const float* dset_in, const
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_g_b(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 
@@ -42351,7 +43351,9 @@ trexio_write_safe_cell_g_c_32 (trexio_t* const file, const float* dset_in, const
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_g_c(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 
@@ -42378,7 +43380,9 @@ trexio_write_safe_pbc_k_point_32 (trexio_t* const file, const float* dset_in, co
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_pbc_k_point(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 
@@ -42405,8 +43409,10 @@ trexio_write_safe_pbc_k_point_weight_32 (trexio_t* const file, const float* dset
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_pbc_k_point_weight(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t pbc_k_point_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_pbc_k_point_num_64(file, &(pbc_k_point_num));
@@ -42436,8 +43442,10 @@ trexio_write_safe_basis_nucleus_index_32 (trexio_t* const file, const int32_t* d
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nucleus_index(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_shell_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -42467,8 +43475,10 @@ trexio_write_safe_basis_shell_ang_mom_32 (trexio_t* const file, const int32_t* d
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_shell_ang_mom(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_shell_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -42498,8 +43508,10 @@ trexio_write_safe_basis_shell_factor_32 (trexio_t* const file, const float* dset
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_shell_factor(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_shell_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -42529,8 +43541,10 @@ trexio_write_safe_basis_r_power_32 (trexio_t* const file, const int32_t* dset_in
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_r_power(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_shell_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -42560,8 +43574,10 @@ trexio_write_safe_basis_nao_grid_start_32 (trexio_t* const file, const int32_t* 
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_start(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_shell_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -42591,8 +43607,10 @@ trexio_write_safe_basis_nao_grid_size_32 (trexio_t* const file, const int32_t* d
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_size(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_shell_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -42622,8 +43640,10 @@ trexio_write_safe_basis_shell_index_32 (trexio_t* const file, const int32_t* dse
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_shell_index(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_prim_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -42653,8 +43673,10 @@ trexio_write_safe_basis_exponent_32 (trexio_t* const file, const float* dset_in,
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_exponent(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_prim_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -42684,8 +43706,10 @@ trexio_write_safe_basis_exponent_im_32 (trexio_t* const file, const float* dset_
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_exponent_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_prim_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -42715,8 +43739,10 @@ trexio_write_safe_basis_coefficient_32 (trexio_t* const file, const float* dset_
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_coefficient(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_prim_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -42746,8 +43772,10 @@ trexio_write_safe_basis_coefficient_im_32 (trexio_t* const file, const float* ds
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_coefficient_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_prim_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -42777,8 +43805,10 @@ trexio_write_safe_basis_oscillation_arg_32 (trexio_t* const file, const float* d
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_oscillation_arg(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_prim_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -42808,8 +43838,10 @@ trexio_write_safe_basis_prim_factor_32 (trexio_t* const file, const float* dset_
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_prim_factor(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_prim_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -42839,8 +43871,10 @@ trexio_write_safe_basis_nao_grid_radius_32 (trexio_t* const file, const float* d
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_radius(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_nao_grid_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -42870,8 +43904,10 @@ trexio_write_safe_basis_nao_grid_phi_32 (trexio_t* const file, const float* dset
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_phi(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_nao_grid_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -42901,8 +43937,10 @@ trexio_write_safe_basis_nao_grid_grad_32 (trexio_t* const file, const float* dse
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_grad(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_nao_grid_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -42932,8 +43970,10 @@ trexio_write_safe_basis_nao_grid_lap_32 (trexio_t* const file, const float* dset
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_lap(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_nao_grid_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -42963,9 +44003,11 @@ trexio_write_safe_basis_interpolator_phi_32 (trexio_t* const file, const float* 
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_interpolator_phi(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_nao_grid_num = 0;
 int64_t basis_interp_coeff_cnt = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -42998,9 +44040,11 @@ trexio_write_safe_basis_interpolator_grad_32 (trexio_t* const file, const float*
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_interpolator_grad(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_nao_grid_num = 0;
 int64_t basis_interp_coeff_cnt = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -43033,9 +44077,11 @@ trexio_write_safe_basis_interpolator_lap_32 (trexio_t* const file, const float* 
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_interpolator_lap(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_nao_grid_num = 0;
 int64_t basis_interp_coeff_cnt = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -43068,8 +44114,10 @@ trexio_write_safe_ecp_max_ang_mom_plus_1_32 (trexio_t* const file, const int32_t
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_max_ang_mom_plus_1(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t nucleus_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
@@ -43099,8 +44147,10 @@ trexio_write_safe_ecp_z_core_32 (trexio_t* const file, const int32_t* dset_in, c
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_z_core(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t nucleus_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
@@ -43130,8 +44180,10 @@ trexio_write_safe_ecp_ang_mom_32 (trexio_t* const file, const int32_t* dset_in, 
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_ang_mom(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t ecp_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ecp_num_64(file, &(ecp_num));
@@ -43161,8 +44213,10 @@ trexio_write_safe_ecp_nucleus_index_32 (trexio_t* const file, const int32_t* dse
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_nucleus_index(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t ecp_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ecp_num_64(file, &(ecp_num));
@@ -43192,8 +44246,10 @@ trexio_write_safe_ecp_exponent_32 (trexio_t* const file, const float* dset_in, c
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_exponent(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t ecp_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ecp_num_64(file, &(ecp_num));
@@ -43223,8 +44279,10 @@ trexio_write_safe_ecp_coefficient_32 (trexio_t* const file, const float* dset_in
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_coefficient(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t ecp_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ecp_num_64(file, &(ecp_num));
@@ -43254,8 +44312,10 @@ trexio_write_safe_ecp_power_32 (trexio_t* const file, const int32_t* dset_in, co
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_power(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t ecp_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ecp_num_64(file, &(ecp_num));
@@ -43285,8 +44345,10 @@ trexio_write_safe_grid_coord_32 (trexio_t* const file, const float* dset_in, con
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_coord(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t grid_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_grid_num_64(file, &(grid_num));
@@ -43316,8 +44378,10 @@ trexio_write_safe_grid_weight_32 (trexio_t* const file, const float* dset_in, co
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_weight(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t grid_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_grid_num_64(file, &(grid_num));
@@ -43347,8 +44411,10 @@ trexio_write_safe_grid_ang_coord_32 (trexio_t* const file, const float* dset_in,
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_ang_coord(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t grid_ang_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_grid_ang_num_64(file, &(grid_ang_num));
@@ -43378,8 +44444,10 @@ trexio_write_safe_grid_ang_weight_32 (trexio_t* const file, const float* dset_in
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_ang_weight(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t grid_ang_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_grid_ang_num_64(file, &(grid_ang_num));
@@ -43409,8 +44477,10 @@ trexio_write_safe_grid_rad_coord_32 (trexio_t* const file, const float* dset_in,
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_rad_coord(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t grid_rad_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_grid_rad_num_64(file, &(grid_rad_num));
@@ -43440,8 +44510,10 @@ trexio_write_safe_grid_rad_weight_32 (trexio_t* const file, const float* dset_in
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_rad_weight(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t grid_rad_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_grid_rad_num_64(file, &(grid_rad_num));
@@ -43471,8 +44543,10 @@ trexio_write_safe_ao_shell_32 (trexio_t* const file, const int32_t* dset_in, con
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_shell(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -43502,8 +44576,10 @@ trexio_write_safe_ao_normalization_32 (trexio_t* const file, const float* dset_i
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_normalization(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -43533,8 +44609,10 @@ trexio_write_safe_ao_1e_int_overlap_32 (trexio_t* const file, const float* dset_
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_overlap(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -43564,8 +44642,10 @@ trexio_write_safe_ao_1e_int_kinetic_32 (trexio_t* const file, const float* dset_
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_kinetic(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -43595,8 +44675,10 @@ trexio_write_safe_ao_1e_int_potential_n_e_32 (trexio_t* const file, const float*
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_potential_n_e(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -43626,8 +44708,10 @@ trexio_write_safe_ao_1e_int_ecp_32 (trexio_t* const file, const float* dset_in, 
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_ecp(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -43657,8 +44741,10 @@ trexio_write_safe_ao_1e_int_core_hamiltonian_32 (trexio_t* const file, const flo
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_core_hamiltonian(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -43688,8 +44774,10 @@ trexio_write_safe_ao_1e_int_overlap_im_32 (trexio_t* const file, const float* ds
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_overlap_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -43719,8 +44807,10 @@ trexio_write_safe_ao_1e_int_kinetic_im_32 (trexio_t* const file, const float* ds
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_kinetic_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -43750,8 +44840,10 @@ trexio_write_safe_ao_1e_int_potential_n_e_im_32 (trexio_t* const file, const flo
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_potential_n_e_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -43781,8 +44873,10 @@ trexio_write_safe_ao_1e_int_ecp_im_32 (trexio_t* const file, const float* dset_i
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_ecp_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -43812,8 +44906,10 @@ trexio_write_safe_ao_1e_int_core_hamiltonian_im_32 (trexio_t* const file, const 
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_core_hamiltonian_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -43843,9 +44939,11 @@ trexio_write_safe_mo_coefficient_32 (trexio_t* const file, const float* dset_in,
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_coefficient(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -43878,9 +44976,11 @@ trexio_write_safe_mo_coefficient_im_32 (trexio_t* const file, const float* dset_
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_coefficient_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -43913,8 +45013,10 @@ trexio_write_safe_mo_occupation_32 (trexio_t* const file, const float* dset_in, 
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_occupation(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -43944,8 +45046,10 @@ trexio_write_safe_mo_energy_32 (trexio_t* const file, const float* dset_in, cons
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_energy(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -43975,8 +45079,10 @@ trexio_write_safe_mo_spin_32 (trexio_t* const file, const int32_t* dset_in, cons
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_spin(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -44006,8 +45112,10 @@ trexio_write_safe_mo_k_point_32 (trexio_t* const file, const int32_t* dset_in, c
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_k_point(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -44037,8 +45145,10 @@ trexio_write_safe_mo_1e_int_overlap_32 (trexio_t* const file, const float* dset_
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_overlap(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -44068,8 +45178,10 @@ trexio_write_safe_mo_1e_int_kinetic_32 (trexio_t* const file, const float* dset_
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_kinetic(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -44099,8 +45211,10 @@ trexio_write_safe_mo_1e_int_potential_n_e_32 (trexio_t* const file, const float*
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_potential_n_e(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -44130,8 +45244,10 @@ trexio_write_safe_mo_1e_int_ecp_32 (trexio_t* const file, const float* dset_in, 
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_ecp(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -44161,8 +45277,10 @@ trexio_write_safe_mo_1e_int_core_hamiltonian_32 (trexio_t* const file, const flo
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_core_hamiltonian(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -44192,8 +45310,10 @@ trexio_write_safe_mo_1e_int_overlap_im_32 (trexio_t* const file, const float* ds
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_overlap_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -44223,8 +45343,10 @@ trexio_write_safe_mo_1e_int_kinetic_im_32 (trexio_t* const file, const float* ds
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_kinetic_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -44254,8 +45376,10 @@ trexio_write_safe_mo_1e_int_potential_n_e_im_32 (trexio_t* const file, const flo
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_potential_n_e_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -44285,8 +45409,10 @@ trexio_write_safe_mo_1e_int_ecp_im_32 (trexio_t* const file, const float* dset_i
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_ecp_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -44316,8 +45442,10 @@ trexio_write_safe_mo_1e_int_core_hamiltonian_im_32 (trexio_t* const file, const 
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_core_hamiltonian_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -44347,8 +45475,10 @@ trexio_write_safe_rdm_1e_32 (trexio_t* const file, const float* dset_in, const i
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_rdm_1e(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -44378,8 +45508,10 @@ trexio_write_safe_rdm_1e_up_32 (trexio_t* const file, const float* dset_in, cons
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_rdm_1e_up(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -44409,8 +45541,10 @@ trexio_write_safe_rdm_1e_dn_32 (trexio_t* const file, const float* dset_in, cons
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_rdm_1e_dn(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -44440,9 +45574,11 @@ trexio_write_safe_rdm_1e_transition_32 (trexio_t* const file, const float* dset_
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_rdm_1e_transition(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t state_num = 0;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_state_num_64(file, &(state_num));
@@ -44475,8 +45611,10 @@ trexio_write_safe_jastrow_en_32 (trexio_t* const file, const float* dset_in, con
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_en(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t jastrow_en_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_jastrow_en_num_64(file, &(jastrow_en_num));
@@ -44506,8 +45644,10 @@ trexio_write_safe_jastrow_ee_32 (trexio_t* const file, const float* dset_in, con
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_ee(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t jastrow_ee_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_jastrow_ee_num_64(file, &(jastrow_ee_num));
@@ -44537,8 +45677,10 @@ trexio_write_safe_jastrow_een_32 (trexio_t* const file, const float* dset_in, co
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_een(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t jastrow_een_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_jastrow_een_num_64(file, &(jastrow_een_num));
@@ -44568,8 +45710,10 @@ trexio_write_safe_jastrow_en_nucleus_32 (trexio_t* const file, const int32_t* ds
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_en_nucleus(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t jastrow_en_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_jastrow_en_num_64(file, &(jastrow_en_num));
@@ -44599,8 +45743,10 @@ trexio_write_safe_jastrow_een_nucleus_32 (trexio_t* const file, const int32_t* d
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_een_nucleus(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t jastrow_een_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_jastrow_een_num_64(file, &(jastrow_een_num));
@@ -44630,8 +45776,10 @@ trexio_write_safe_jastrow_en_scaling_32 (trexio_t* const file, const float* dset
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_en_scaling(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t nucleus_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
@@ -44661,9 +45809,11 @@ trexio_write_safe_qmc_point_32 (trexio_t* const file, const float* dset_in, cons
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_qmc_point(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t qmc_num = 0;
 int64_t electron_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_qmc_num_64(file, &(qmc_num));
@@ -44696,8 +45846,10 @@ trexio_write_safe_qmc_psi_32 (trexio_t* const file, const float* dset_in, const 
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_qmc_psi(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t qmc_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_qmc_num_64(file, &(qmc_num));
@@ -44727,8 +45879,10 @@ trexio_write_safe_qmc_e_loc_32 (trexio_t* const file, const float* dset_in, cons
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_qmc_e_loc(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t qmc_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_qmc_num_64(file, &(qmc_num));
@@ -44760,10 +45914,9 @@ trexio_write_nucleus_charge_64 (trexio_t* const file, const double* nucleus_char
   if (nucleus_charge == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_nucleus_charge(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t nucleus_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -44855,10 +46008,9 @@ trexio_write_nucleus_coord_64 (trexio_t* const file, const double* nucleus_coord
   if (nucleus_coord == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_nucleus_coord(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t nucleus_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -44951,8 +46103,7 @@ trexio_write_cell_a_64 (trexio_t* const file, const double* cell_a)
   if (trexio_has_cell_a(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
 
-  trexio_exit_code rc;
-
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
 
 
@@ -45042,8 +46193,7 @@ trexio_write_cell_b_64 (trexio_t* const file, const double* cell_b)
   if (trexio_has_cell_b(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
 
-  trexio_exit_code rc;
-
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
 
 
@@ -45133,8 +46283,7 @@ trexio_write_cell_c_64 (trexio_t* const file, const double* cell_c)
   if (trexio_has_cell_c(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
 
-  trexio_exit_code rc;
-
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
 
 
@@ -45224,8 +46373,7 @@ trexio_write_cell_g_a_64 (trexio_t* const file, const double* cell_g_a)
   if (trexio_has_cell_g_a(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
 
-  trexio_exit_code rc;
-
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
 
 
@@ -45315,8 +46463,7 @@ trexio_write_cell_g_b_64 (trexio_t* const file, const double* cell_g_b)
   if (trexio_has_cell_g_b(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
 
-  trexio_exit_code rc;
-
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
 
 
@@ -45406,8 +46553,7 @@ trexio_write_cell_g_c_64 (trexio_t* const file, const double* cell_g_c)
   if (trexio_has_cell_g_c(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
 
-  trexio_exit_code rc;
-
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
 
 
@@ -45497,8 +46643,7 @@ trexio_write_pbc_k_point_64 (trexio_t* const file, const double* pbc_k_point)
   if (trexio_has_pbc_k_point(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
 
-  trexio_exit_code rc;
-
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
 
 
@@ -45587,10 +46732,9 @@ trexio_write_pbc_k_point_weight_64 (trexio_t* const file, const double* pbc_k_po
   if (pbc_k_point_weight == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_pbc_k_point_weight(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t pbc_k_point_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_pbc_k_point_num_64(file, &(pbc_k_point_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -45682,10 +46826,9 @@ trexio_write_basis_nucleus_index_64 (trexio_t* const file, const int64_t* basis_
   if (basis_nucleus_index == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nucleus_index(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t basis_shell_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -45777,10 +46920,9 @@ trexio_write_basis_shell_ang_mom_64 (trexio_t* const file, const int64_t* basis_
   if (basis_shell_ang_mom == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_shell_ang_mom(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t basis_shell_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -45872,10 +47014,9 @@ trexio_write_basis_shell_factor_64 (trexio_t* const file, const double* basis_sh
   if (basis_shell_factor == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_shell_factor(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t basis_shell_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -45967,10 +47108,9 @@ trexio_write_basis_r_power_64 (trexio_t* const file, const int64_t* basis_r_powe
   if (basis_r_power == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_r_power(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t basis_shell_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -46062,10 +47202,9 @@ trexio_write_basis_nao_grid_start_64 (trexio_t* const file, const int64_t* basis
   if (basis_nao_grid_start == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_start(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t basis_shell_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -46157,10 +47296,9 @@ trexio_write_basis_nao_grid_size_64 (trexio_t* const file, const int64_t* basis_
   if (basis_nao_grid_size == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_size(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t basis_shell_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -46252,10 +47390,9 @@ trexio_write_basis_shell_index_64 (trexio_t* const file, const int64_t* basis_sh
   if (basis_shell_index == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_shell_index(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t basis_prim_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -46347,10 +47484,9 @@ trexio_write_basis_exponent_64 (trexio_t* const file, const double* basis_expone
   if (basis_exponent == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_exponent(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t basis_prim_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -46442,10 +47578,9 @@ trexio_write_basis_exponent_im_64 (trexio_t* const file, const double* basis_exp
   if (basis_exponent_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_exponent_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t basis_prim_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -46537,10 +47672,9 @@ trexio_write_basis_coefficient_64 (trexio_t* const file, const double* basis_coe
   if (basis_coefficient == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_coefficient(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t basis_prim_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -46632,10 +47766,9 @@ trexio_write_basis_coefficient_im_64 (trexio_t* const file, const double* basis_
   if (basis_coefficient_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_coefficient_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t basis_prim_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -46727,10 +47860,9 @@ trexio_write_basis_oscillation_arg_64 (trexio_t* const file, const double* basis
   if (basis_oscillation_arg == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_oscillation_arg(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t basis_prim_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -46822,10 +47954,9 @@ trexio_write_basis_prim_factor_64 (trexio_t* const file, const double* basis_pri
   if (basis_prim_factor == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_prim_factor(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t basis_prim_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -46917,10 +48048,9 @@ trexio_write_basis_nao_grid_radius_64 (trexio_t* const file, const double* basis
   if (basis_nao_grid_radius == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_radius(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t basis_nao_grid_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -47012,10 +48142,9 @@ trexio_write_basis_nao_grid_phi_64 (trexio_t* const file, const double* basis_na
   if (basis_nao_grid_phi == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_phi(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t basis_nao_grid_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -47107,10 +48236,9 @@ trexio_write_basis_nao_grid_grad_64 (trexio_t* const file, const double* basis_n
   if (basis_nao_grid_grad == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_grad(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t basis_nao_grid_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -47202,10 +48330,9 @@ trexio_write_basis_nao_grid_lap_64 (trexio_t* const file, const double* basis_na
   if (basis_nao_grid_lap == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_lap(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t basis_nao_grid_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -47297,11 +48424,10 @@ trexio_write_basis_interpolator_phi_64 (trexio_t* const file, const double* basi
   if (basis_interpolator_phi == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_interpolator_phi(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t basis_nao_grid_num = 0;
   int64_t basis_interp_coeff_cnt = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -47396,11 +48522,10 @@ trexio_write_basis_interpolator_grad_64 (trexio_t* const file, const double* bas
   if (basis_interpolator_grad == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_interpolator_grad(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t basis_nao_grid_num = 0;
   int64_t basis_interp_coeff_cnt = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -47495,11 +48620,10 @@ trexio_write_basis_interpolator_lap_64 (trexio_t* const file, const double* basi
   if (basis_interpolator_lap == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_interpolator_lap(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t basis_nao_grid_num = 0;
   int64_t basis_interp_coeff_cnt = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -47594,10 +48718,9 @@ trexio_write_ecp_max_ang_mom_plus_1_64 (trexio_t* const file, const int64_t* ecp
   if (ecp_max_ang_mom_plus_1 == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_max_ang_mom_plus_1(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t nucleus_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -47689,10 +48812,9 @@ trexio_write_ecp_z_core_64 (trexio_t* const file, const int64_t* ecp_z_core)
   if (ecp_z_core == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_z_core(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t nucleus_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -47784,10 +48906,9 @@ trexio_write_ecp_ang_mom_64 (trexio_t* const file, const int64_t* ecp_ang_mom)
   if (ecp_ang_mom == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_ang_mom(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t ecp_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ecp_num_64(file, &(ecp_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -47879,10 +49000,9 @@ trexio_write_ecp_nucleus_index_64 (trexio_t* const file, const int64_t* ecp_nucl
   if (ecp_nucleus_index == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_nucleus_index(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t ecp_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ecp_num_64(file, &(ecp_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -47974,10 +49094,9 @@ trexio_write_ecp_exponent_64 (trexio_t* const file, const double* ecp_exponent)
   if (ecp_exponent == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_exponent(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t ecp_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ecp_num_64(file, &(ecp_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -48069,10 +49188,9 @@ trexio_write_ecp_coefficient_64 (trexio_t* const file, const double* ecp_coeffic
   if (ecp_coefficient == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_coefficient(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t ecp_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ecp_num_64(file, &(ecp_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -48164,10 +49282,9 @@ trexio_write_ecp_power_64 (trexio_t* const file, const int64_t* ecp_power)
   if (ecp_power == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_power(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t ecp_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ecp_num_64(file, &(ecp_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -48259,10 +49376,9 @@ trexio_write_grid_coord_64 (trexio_t* const file, const double* grid_coord)
   if (grid_coord == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_coord(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t grid_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_grid_num_64(file, &(grid_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -48354,10 +49470,9 @@ trexio_write_grid_weight_64 (trexio_t* const file, const double* grid_weight)
   if (grid_weight == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_weight(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t grid_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_grid_num_64(file, &(grid_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -48449,10 +49564,9 @@ trexio_write_grid_ang_coord_64 (trexio_t* const file, const double* grid_ang_coo
   if (grid_ang_coord == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_ang_coord(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t grid_ang_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_grid_ang_num_64(file, &(grid_ang_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -48544,10 +49658,9 @@ trexio_write_grid_ang_weight_64 (trexio_t* const file, const double* grid_ang_we
   if (grid_ang_weight == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_ang_weight(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t grid_ang_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_grid_ang_num_64(file, &(grid_ang_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -48639,10 +49752,9 @@ trexio_write_grid_rad_coord_64 (trexio_t* const file, const double* grid_rad_coo
   if (grid_rad_coord == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_rad_coord(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t grid_rad_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_grid_rad_num_64(file, &(grid_rad_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -48734,10 +49846,9 @@ trexio_write_grid_rad_weight_64 (trexio_t* const file, const double* grid_rad_we
   if (grid_rad_weight == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_rad_weight(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t grid_rad_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_grid_rad_num_64(file, &(grid_rad_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -48829,10 +49940,9 @@ trexio_write_ao_shell_64 (trexio_t* const file, const int64_t* ao_shell)
   if (ao_shell == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_shell(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t ao_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -48924,10 +50034,9 @@ trexio_write_ao_normalization_64 (trexio_t* const file, const double* ao_normali
   if (ao_normalization == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_normalization(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t ao_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -49019,10 +50128,9 @@ trexio_write_ao_1e_int_overlap_64 (trexio_t* const file, const double* ao_1e_int
   if (ao_1e_int_overlap == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_overlap(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t ao_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -49114,10 +50222,9 @@ trexio_write_ao_1e_int_kinetic_64 (trexio_t* const file, const double* ao_1e_int
   if (ao_1e_int_kinetic == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_kinetic(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t ao_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -49209,10 +50316,9 @@ trexio_write_ao_1e_int_potential_n_e_64 (trexio_t* const file, const double* ao_
   if (ao_1e_int_potential_n_e == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_potential_n_e(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t ao_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -49304,10 +50410,9 @@ trexio_write_ao_1e_int_ecp_64 (trexio_t* const file, const double* ao_1e_int_ecp
   if (ao_1e_int_ecp == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_ecp(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t ao_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -49399,10 +50504,9 @@ trexio_write_ao_1e_int_core_hamiltonian_64 (trexio_t* const file, const double* 
   if (ao_1e_int_core_hamiltonian == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_core_hamiltonian(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t ao_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -49494,10 +50598,9 @@ trexio_write_ao_1e_int_overlap_im_64 (trexio_t* const file, const double* ao_1e_
   if (ao_1e_int_overlap_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_overlap_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t ao_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -49589,10 +50692,9 @@ trexio_write_ao_1e_int_kinetic_im_64 (trexio_t* const file, const double* ao_1e_
   if (ao_1e_int_kinetic_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_kinetic_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t ao_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -49684,10 +50786,9 @@ trexio_write_ao_1e_int_potential_n_e_im_64 (trexio_t* const file, const double* 
   if (ao_1e_int_potential_n_e_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_potential_n_e_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t ao_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -49779,10 +50880,9 @@ trexio_write_ao_1e_int_ecp_im_64 (trexio_t* const file, const double* ao_1e_int_
   if (ao_1e_int_ecp_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_ecp_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t ao_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -49874,10 +50974,9 @@ trexio_write_ao_1e_int_core_hamiltonian_im_64 (trexio_t* const file, const doubl
   if (ao_1e_int_core_hamiltonian_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_core_hamiltonian_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t ao_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_ao_num_64(file, &(ao_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -49969,11 +51068,10 @@ trexio_write_mo_coefficient_64 (trexio_t* const file, const double* mo_coefficie
   if (mo_coefficient == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_coefficient(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t mo_num = 0;
   int64_t ao_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -50068,11 +51166,10 @@ trexio_write_mo_coefficient_im_64 (trexio_t* const file, const double* mo_coeffi
   if (mo_coefficient_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_coefficient_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t mo_num = 0;
   int64_t ao_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -50167,10 +51264,9 @@ trexio_write_mo_occupation_64 (trexio_t* const file, const double* mo_occupation
   if (mo_occupation == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_occupation(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t mo_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -50262,10 +51358,9 @@ trexio_write_mo_energy_64 (trexio_t* const file, const double* mo_energy)
   if (mo_energy == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_energy(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t mo_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -50357,10 +51452,9 @@ trexio_write_mo_spin_64 (trexio_t* const file, const int64_t* mo_spin)
   if (mo_spin == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_spin(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t mo_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -50452,10 +51546,9 @@ trexio_write_mo_k_point_64 (trexio_t* const file, const int64_t* mo_k_point)
   if (mo_k_point == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_k_point(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t mo_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -50547,10 +51640,9 @@ trexio_write_mo_1e_int_overlap_64 (trexio_t* const file, const double* mo_1e_int
   if (mo_1e_int_overlap == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_overlap(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t mo_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -50642,10 +51734,9 @@ trexio_write_mo_1e_int_kinetic_64 (trexio_t* const file, const double* mo_1e_int
   if (mo_1e_int_kinetic == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_kinetic(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t mo_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -50737,10 +51828,9 @@ trexio_write_mo_1e_int_potential_n_e_64 (trexio_t* const file, const double* mo_
   if (mo_1e_int_potential_n_e == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_potential_n_e(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t mo_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -50832,10 +51922,9 @@ trexio_write_mo_1e_int_ecp_64 (trexio_t* const file, const double* mo_1e_int_ecp
   if (mo_1e_int_ecp == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_ecp(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t mo_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -50927,10 +52016,9 @@ trexio_write_mo_1e_int_core_hamiltonian_64 (trexio_t* const file, const double* 
   if (mo_1e_int_core_hamiltonian == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_core_hamiltonian(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t mo_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -51022,10 +52110,9 @@ trexio_write_mo_1e_int_overlap_im_64 (trexio_t* const file, const double* mo_1e_
   if (mo_1e_int_overlap_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_overlap_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t mo_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -51117,10 +52204,9 @@ trexio_write_mo_1e_int_kinetic_im_64 (trexio_t* const file, const double* mo_1e_
   if (mo_1e_int_kinetic_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_kinetic_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t mo_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -51212,10 +52298,9 @@ trexio_write_mo_1e_int_potential_n_e_im_64 (trexio_t* const file, const double* 
   if (mo_1e_int_potential_n_e_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_potential_n_e_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t mo_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -51307,10 +52392,9 @@ trexio_write_mo_1e_int_ecp_im_64 (trexio_t* const file, const double* mo_1e_int_
   if (mo_1e_int_ecp_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_ecp_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t mo_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -51402,10 +52486,9 @@ trexio_write_mo_1e_int_core_hamiltonian_im_64 (trexio_t* const file, const doubl
   if (mo_1e_int_core_hamiltonian_im == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_core_hamiltonian_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t mo_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -51497,10 +52580,9 @@ trexio_write_rdm_1e_64 (trexio_t* const file, const double* rdm_1e)
   if (rdm_1e == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_rdm_1e(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t mo_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -51592,10 +52674,9 @@ trexio_write_rdm_1e_up_64 (trexio_t* const file, const double* rdm_1e_up)
   if (rdm_1e_up == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_rdm_1e_up(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t mo_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -51687,10 +52768,9 @@ trexio_write_rdm_1e_dn_64 (trexio_t* const file, const double* rdm_1e_dn)
   if (rdm_1e_dn == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_rdm_1e_dn(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t mo_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_mo_num_64(file, &(mo_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -51782,11 +52862,10 @@ trexio_write_rdm_1e_transition_64 (trexio_t* const file, const double* rdm_1e_tr
   if (rdm_1e_transition == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_rdm_1e_transition(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t state_num = 0;
   int64_t mo_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_state_num_64(file, &(state_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -51881,10 +52960,9 @@ trexio_write_jastrow_en_64 (trexio_t* const file, const double* jastrow_en)
   if (jastrow_en == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_en(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t jastrow_en_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_jastrow_en_num_64(file, &(jastrow_en_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -51976,10 +53054,9 @@ trexio_write_jastrow_ee_64 (trexio_t* const file, const double* jastrow_ee)
   if (jastrow_ee == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_ee(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t jastrow_ee_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_jastrow_ee_num_64(file, &(jastrow_ee_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -52071,10 +53148,9 @@ trexio_write_jastrow_een_64 (trexio_t* const file, const double* jastrow_een)
   if (jastrow_een == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_een(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t jastrow_een_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_jastrow_een_num_64(file, &(jastrow_een_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -52166,10 +53242,9 @@ trexio_write_jastrow_en_nucleus_64 (trexio_t* const file, const int64_t* jastrow
   if (jastrow_en_nucleus == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_en_nucleus(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t jastrow_en_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_jastrow_en_num_64(file, &(jastrow_en_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -52261,10 +53336,9 @@ trexio_write_jastrow_een_nucleus_64 (trexio_t* const file, const int64_t* jastro
   if (jastrow_een_nucleus == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_een_nucleus(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t jastrow_een_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_jastrow_een_num_64(file, &(jastrow_een_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -52356,10 +53430,9 @@ trexio_write_jastrow_en_scaling_64 (trexio_t* const file, const double* jastrow_
   if (jastrow_en_scaling == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_en_scaling(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t nucleus_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -52451,11 +53524,10 @@ trexio_write_qmc_point_64 (trexio_t* const file, const double* qmc_point)
   if (qmc_point == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_qmc_point(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t qmc_num = 0;
   int64_t electron_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_qmc_num_64(file, &(qmc_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -52550,10 +53622,9 @@ trexio_write_qmc_psi_64 (trexio_t* const file, const double* qmc_psi)
   if (qmc_psi == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_qmc_psi(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t qmc_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_qmc_num_64(file, &(qmc_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -52645,10 +53716,9 @@ trexio_write_qmc_e_loc_64 (trexio_t* const file, const double* qmc_e_loc)
   if (qmc_e_loc == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_qmc_e_loc(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-
-  trexio_exit_code rc;
   int64_t qmc_num = 0;
 
+  trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
   rc = trexio_read_qmc_num_64(file, &(qmc_num));
   if (rc != TREXIO_SUCCESS) return rc;
@@ -52738,8 +53808,10 @@ trexio_write_safe_nucleus_charge_64 (trexio_t* const file, const double* dset_in
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_nucleus_charge(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t nucleus_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
@@ -52769,8 +53841,10 @@ trexio_write_safe_nucleus_coord_64 (trexio_t* const file, const double* dset_in,
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_nucleus_coord(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t nucleus_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
@@ -52800,7 +53874,9 @@ trexio_write_safe_cell_a_64 (trexio_t* const file, const double* dset_in, const 
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_a(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 
@@ -52827,7 +53903,9 @@ trexio_write_safe_cell_b_64 (trexio_t* const file, const double* dset_in, const 
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_b(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 
@@ -52854,7 +53932,9 @@ trexio_write_safe_cell_c_64 (trexio_t* const file, const double* dset_in, const 
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_c(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 
@@ -52881,7 +53961,9 @@ trexio_write_safe_cell_g_a_64 (trexio_t* const file, const double* dset_in, cons
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_g_a(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 
@@ -52908,7 +53990,9 @@ trexio_write_safe_cell_g_b_64 (trexio_t* const file, const double* dset_in, cons
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_g_b(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 
@@ -52935,7 +54019,9 @@ trexio_write_safe_cell_g_c_64 (trexio_t* const file, const double* dset_in, cons
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_cell_g_c(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 
@@ -52962,7 +54048,9 @@ trexio_write_safe_pbc_k_point_64 (trexio_t* const file, const double* dset_in, c
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_pbc_k_point(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 
@@ -52989,8 +54077,10 @@ trexio_write_safe_pbc_k_point_weight_64 (trexio_t* const file, const double* dse
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_pbc_k_point_weight(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t pbc_k_point_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_pbc_k_point_num_64(file, &(pbc_k_point_num));
@@ -53020,8 +54110,10 @@ trexio_write_safe_basis_nucleus_index_64 (trexio_t* const file, const int64_t* d
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nucleus_index(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_shell_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -53051,8 +54143,10 @@ trexio_write_safe_basis_shell_ang_mom_64 (trexio_t* const file, const int64_t* d
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_shell_ang_mom(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_shell_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -53082,8 +54176,10 @@ trexio_write_safe_basis_shell_factor_64 (trexio_t* const file, const double* dse
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_shell_factor(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_shell_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -53113,8 +54209,10 @@ trexio_write_safe_basis_r_power_64 (trexio_t* const file, const int64_t* dset_in
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_r_power(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_shell_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -53144,8 +54242,10 @@ trexio_write_safe_basis_nao_grid_start_64 (trexio_t* const file, const int64_t* 
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_start(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_shell_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -53175,8 +54275,10 @@ trexio_write_safe_basis_nao_grid_size_64 (trexio_t* const file, const int64_t* d
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_size(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_shell_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_shell_num_64(file, &(basis_shell_num));
@@ -53206,8 +54308,10 @@ trexio_write_safe_basis_shell_index_64 (trexio_t* const file, const int64_t* dse
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_shell_index(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_prim_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -53237,8 +54341,10 @@ trexio_write_safe_basis_exponent_64 (trexio_t* const file, const double* dset_in
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_exponent(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_prim_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -53268,8 +54374,10 @@ trexio_write_safe_basis_exponent_im_64 (trexio_t* const file, const double* dset
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_exponent_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_prim_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -53299,8 +54407,10 @@ trexio_write_safe_basis_coefficient_64 (trexio_t* const file, const double* dset
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_coefficient(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_prim_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -53330,8 +54440,10 @@ trexio_write_safe_basis_coefficient_im_64 (trexio_t* const file, const double* d
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_coefficient_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_prim_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -53361,8 +54473,10 @@ trexio_write_safe_basis_oscillation_arg_64 (trexio_t* const file, const double* 
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_oscillation_arg(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_prim_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -53392,8 +54506,10 @@ trexio_write_safe_basis_prim_factor_64 (trexio_t* const file, const double* dset
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_prim_factor(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_prim_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_prim_num_64(file, &(basis_prim_num));
@@ -53423,8 +54539,10 @@ trexio_write_safe_basis_nao_grid_radius_64 (trexio_t* const file, const double* 
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_radius(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_nao_grid_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -53454,8 +54572,10 @@ trexio_write_safe_basis_nao_grid_phi_64 (trexio_t* const file, const double* dse
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_phi(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_nao_grid_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -53485,8 +54605,10 @@ trexio_write_safe_basis_nao_grid_grad_64 (trexio_t* const file, const double* ds
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_grad(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_nao_grid_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -53516,8 +54638,10 @@ trexio_write_safe_basis_nao_grid_lap_64 (trexio_t* const file, const double* dse
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_nao_grid_lap(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_nao_grid_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -53547,9 +54671,11 @@ trexio_write_safe_basis_interpolator_phi_64 (trexio_t* const file, const double*
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_interpolator_phi(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_nao_grid_num = 0;
 int64_t basis_interp_coeff_cnt = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -53582,9 +54708,11 @@ trexio_write_safe_basis_interpolator_grad_64 (trexio_t* const file, const double
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_interpolator_grad(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_nao_grid_num = 0;
 int64_t basis_interp_coeff_cnt = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -53617,9 +54745,11 @@ trexio_write_safe_basis_interpolator_lap_64 (trexio_t* const file, const double*
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_basis_interpolator_lap(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t basis_nao_grid_num = 0;
 int64_t basis_interp_coeff_cnt = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_basis_nao_grid_num_64(file, &(basis_nao_grid_num));
@@ -53652,8 +54782,10 @@ trexio_write_safe_ecp_max_ang_mom_plus_1_64 (trexio_t* const file, const int64_t
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_max_ang_mom_plus_1(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t nucleus_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
@@ -53683,8 +54815,10 @@ trexio_write_safe_ecp_z_core_64 (trexio_t* const file, const int64_t* dset_in, c
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_z_core(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t nucleus_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
@@ -53714,8 +54848,10 @@ trexio_write_safe_ecp_ang_mom_64 (trexio_t* const file, const int64_t* dset_in, 
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_ang_mom(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t ecp_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ecp_num_64(file, &(ecp_num));
@@ -53745,8 +54881,10 @@ trexio_write_safe_ecp_nucleus_index_64 (trexio_t* const file, const int64_t* dse
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_nucleus_index(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t ecp_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ecp_num_64(file, &(ecp_num));
@@ -53776,8 +54914,10 @@ trexio_write_safe_ecp_exponent_64 (trexio_t* const file, const double* dset_in, 
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_exponent(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t ecp_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ecp_num_64(file, &(ecp_num));
@@ -53807,8 +54947,10 @@ trexio_write_safe_ecp_coefficient_64 (trexio_t* const file, const double* dset_i
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_coefficient(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t ecp_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ecp_num_64(file, &(ecp_num));
@@ -53838,8 +54980,10 @@ trexio_write_safe_ecp_power_64 (trexio_t* const file, const int64_t* dset_in, co
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ecp_power(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t ecp_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ecp_num_64(file, &(ecp_num));
@@ -53869,8 +55013,10 @@ trexio_write_safe_grid_coord_64 (trexio_t* const file, const double* dset_in, co
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_coord(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t grid_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_grid_num_64(file, &(grid_num));
@@ -53900,8 +55046,10 @@ trexio_write_safe_grid_weight_64 (trexio_t* const file, const double* dset_in, c
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_weight(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t grid_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_grid_num_64(file, &(grid_num));
@@ -53931,8 +55079,10 @@ trexio_write_safe_grid_ang_coord_64 (trexio_t* const file, const double* dset_in
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_ang_coord(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t grid_ang_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_grid_ang_num_64(file, &(grid_ang_num));
@@ -53962,8 +55112,10 @@ trexio_write_safe_grid_ang_weight_64 (trexio_t* const file, const double* dset_i
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_ang_weight(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t grid_ang_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_grid_ang_num_64(file, &(grid_ang_num));
@@ -53993,8 +55145,10 @@ trexio_write_safe_grid_rad_coord_64 (trexio_t* const file, const double* dset_in
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_rad_coord(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t grid_rad_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_grid_rad_num_64(file, &(grid_rad_num));
@@ -54024,8 +55178,10 @@ trexio_write_safe_grid_rad_weight_64 (trexio_t* const file, const double* dset_i
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_grid_rad_weight(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t grid_rad_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_grid_rad_num_64(file, &(grid_rad_num));
@@ -54055,8 +55211,10 @@ trexio_write_safe_ao_shell_64 (trexio_t* const file, const int64_t* dset_in, con
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_shell(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -54086,8 +55244,10 @@ trexio_write_safe_ao_normalization_64 (trexio_t* const file, const double* dset_
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_normalization(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -54117,8 +55277,10 @@ trexio_write_safe_ao_1e_int_overlap_64 (trexio_t* const file, const double* dset
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_overlap(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -54148,8 +55310,10 @@ trexio_write_safe_ao_1e_int_kinetic_64 (trexio_t* const file, const double* dset
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_kinetic(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -54179,8 +55343,10 @@ trexio_write_safe_ao_1e_int_potential_n_e_64 (trexio_t* const file, const double
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_potential_n_e(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -54210,8 +55376,10 @@ trexio_write_safe_ao_1e_int_ecp_64 (trexio_t* const file, const double* dset_in,
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_ecp(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -54241,8 +55409,10 @@ trexio_write_safe_ao_1e_int_core_hamiltonian_64 (trexio_t* const file, const dou
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_core_hamiltonian(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -54272,8 +55442,10 @@ trexio_write_safe_ao_1e_int_overlap_im_64 (trexio_t* const file, const double* d
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_overlap_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -54303,8 +55475,10 @@ trexio_write_safe_ao_1e_int_kinetic_im_64 (trexio_t* const file, const double* d
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_kinetic_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -54334,8 +55508,10 @@ trexio_write_safe_ao_1e_int_potential_n_e_im_64 (trexio_t* const file, const dou
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_potential_n_e_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -54365,8 +55541,10 @@ trexio_write_safe_ao_1e_int_ecp_im_64 (trexio_t* const file, const double* dset_
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_ecp_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -54396,8 +55574,10 @@ trexio_write_safe_ao_1e_int_core_hamiltonian_im_64 (trexio_t* const file, const 
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_ao_1e_int_core_hamiltonian_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_ao_num_64(file, &(ao_num));
@@ -54427,9 +55607,11 @@ trexio_write_safe_mo_coefficient_64 (trexio_t* const file, const double* dset_in
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_coefficient(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -54462,9 +55644,11 @@ trexio_write_safe_mo_coefficient_im_64 (trexio_t* const file, const double* dset
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_coefficient_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
 int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -54497,8 +55681,10 @@ trexio_write_safe_mo_occupation_64 (trexio_t* const file, const double* dset_in,
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_occupation(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -54528,8 +55714,10 @@ trexio_write_safe_mo_energy_64 (trexio_t* const file, const double* dset_in, con
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_energy(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -54559,8 +55747,10 @@ trexio_write_safe_mo_spin_64 (trexio_t* const file, const int64_t* dset_in, cons
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_spin(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -54590,8 +55780,10 @@ trexio_write_safe_mo_k_point_64 (trexio_t* const file, const int64_t* dset_in, c
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_k_point(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -54621,8 +55813,10 @@ trexio_write_safe_mo_1e_int_overlap_64 (trexio_t* const file, const double* dset
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_overlap(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -54652,8 +55846,10 @@ trexio_write_safe_mo_1e_int_kinetic_64 (trexio_t* const file, const double* dset
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_kinetic(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -54683,8 +55879,10 @@ trexio_write_safe_mo_1e_int_potential_n_e_64 (trexio_t* const file, const double
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_potential_n_e(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -54714,8 +55912,10 @@ trexio_write_safe_mo_1e_int_ecp_64 (trexio_t* const file, const double* dset_in,
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_ecp(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -54745,8 +55945,10 @@ trexio_write_safe_mo_1e_int_core_hamiltonian_64 (trexio_t* const file, const dou
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_core_hamiltonian(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -54776,8 +55978,10 @@ trexio_write_safe_mo_1e_int_overlap_im_64 (trexio_t* const file, const double* d
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_overlap_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -54807,8 +56011,10 @@ trexio_write_safe_mo_1e_int_kinetic_im_64 (trexio_t* const file, const double* d
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_kinetic_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -54838,8 +56044,10 @@ trexio_write_safe_mo_1e_int_potential_n_e_im_64 (trexio_t* const file, const dou
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_potential_n_e_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -54869,8 +56077,10 @@ trexio_write_safe_mo_1e_int_ecp_im_64 (trexio_t* const file, const double* dset_
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_ecp_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -54900,8 +56110,10 @@ trexio_write_safe_mo_1e_int_core_hamiltonian_im_64 (trexio_t* const file, const 
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_mo_1e_int_core_hamiltonian_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -54931,8 +56143,10 @@ trexio_write_safe_rdm_1e_64 (trexio_t* const file, const double* dset_in, const 
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_rdm_1e(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -54962,8 +56176,10 @@ trexio_write_safe_rdm_1e_up_64 (trexio_t* const file, const double* dset_in, con
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_rdm_1e_up(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -54993,8 +56209,10 @@ trexio_write_safe_rdm_1e_dn_64 (trexio_t* const file, const double* dset_in, con
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_rdm_1e_dn(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_mo_num_64(file, &(mo_num));
@@ -55024,9 +56242,11 @@ trexio_write_safe_rdm_1e_transition_64 (trexio_t* const file, const double* dset
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_rdm_1e_transition(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t state_num = 0;
 int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_state_num_64(file, &(state_num));
@@ -55059,8 +56279,10 @@ trexio_write_safe_jastrow_en_64 (trexio_t* const file, const double* dset_in, co
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_en(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t jastrow_en_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_jastrow_en_num_64(file, &(jastrow_en_num));
@@ -55090,8 +56312,10 @@ trexio_write_safe_jastrow_ee_64 (trexio_t* const file, const double* dset_in, co
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_ee(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t jastrow_ee_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_jastrow_ee_num_64(file, &(jastrow_ee_num));
@@ -55121,8 +56345,10 @@ trexio_write_safe_jastrow_een_64 (trexio_t* const file, const double* dset_in, c
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_een(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t jastrow_een_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_jastrow_een_num_64(file, &(jastrow_een_num));
@@ -55152,8 +56378,10 @@ trexio_write_safe_jastrow_en_nucleus_64 (trexio_t* const file, const int64_t* ds
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_en_nucleus(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t jastrow_en_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_jastrow_en_num_64(file, &(jastrow_en_num));
@@ -55183,8 +56411,10 @@ trexio_write_safe_jastrow_een_nucleus_64 (trexio_t* const file, const int64_t* d
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_een_nucleus(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t jastrow_een_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_jastrow_een_num_64(file, &(jastrow_een_num));
@@ -55214,8 +56444,10 @@ trexio_write_safe_jastrow_en_scaling_64 (trexio_t* const file, const double* dse
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_jastrow_en_scaling(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t nucleus_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
@@ -55245,9 +56477,11 @@ trexio_write_safe_qmc_point_64 (trexio_t* const file, const double* dset_in, con
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_qmc_point(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t qmc_num = 0;
 int64_t electron_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_qmc_num_64(file, &(qmc_num));
@@ -55280,8 +56514,10 @@ trexio_write_safe_qmc_psi_64 (trexio_t* const file, const double* dset_in, const
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_qmc_psi(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t qmc_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_qmc_num_64(file, &(qmc_num));
@@ -55311,8 +56547,10 @@ trexio_write_safe_qmc_e_loc_64 (trexio_t* const file, const double* dset_in, con
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_qmc_e_loc(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-trexio_exit_code rc;
 int64_t qmc_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
 rc = trexio_read_qmc_num_64(file, &(qmc_num));
@@ -56351,6 +57589,12 @@ trexio_exit_code trexio_write_safe_ao_2e_int_eri(trexio_t* const file,
                                                 const int64_t size_value_write
                                                 )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 4;
+
+  if (size_index_write < rank * buffer_size) return TREXIO_INVALID_ARG_5;
+  if (size_value_write <        buffer_size) return TREXIO_INVALID_ARG_7;
+
   return trexio_write_ao_2e_int_eri(file, offset_file, buffer_size, index_sparse_write, value_sparse_write);
 }
 
@@ -56372,12 +57616,14 @@ trexio_write_ao_2e_int_eri(trexio_t* const file,
   const uint32_t rank = 4;
 
   int64_t size_max = 0L; // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_ao_2e_int_eri_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_ao_2e_int_eri_size(file, &size_max);
   if (rc != TREXIO_SUCCESS && rc != TREXIO_DSET_MISSING) return rc;
   if (rc == TREXIO_DSET_MISSING) size_max = 0L;
+
+  /* Dummy check to avoid overwriting existing data */
+  if (offset_file < size_max) return TREXIO_CORRUPTION_ATTEMPT;
 
   /* To be set by generator : number of unique dimensions
      (e.g. 1 for ERI in AO basis because only ao_num is present in the list of dimensions) */
@@ -56479,6 +57725,12 @@ trexio_exit_code trexio_write_safe_ao_2e_int_eri_lr(trexio_t* const file,
                                                 const int64_t size_value_write
                                                 )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 4;
+
+  if (size_index_write < rank * buffer_size) return TREXIO_INVALID_ARG_5;
+  if (size_value_write <        buffer_size) return TREXIO_INVALID_ARG_7;
+
   return trexio_write_ao_2e_int_eri_lr(file, offset_file, buffer_size, index_sparse_write, value_sparse_write);
 }
 
@@ -56500,12 +57752,14 @@ trexio_write_ao_2e_int_eri_lr(trexio_t* const file,
   const uint32_t rank = 4;
 
   int64_t size_max = 0L; // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_ao_2e_int_eri_lr_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_ao_2e_int_eri_lr_size(file, &size_max);
   if (rc != TREXIO_SUCCESS && rc != TREXIO_DSET_MISSING) return rc;
   if (rc == TREXIO_DSET_MISSING) size_max = 0L;
+
+  /* Dummy check to avoid overwriting existing data */
+  if (offset_file < size_max) return TREXIO_CORRUPTION_ATTEMPT;
 
   /* To be set by generator : number of unique dimensions
      (e.g. 1 for ERI in AO basis because only ao_num is present in the list of dimensions) */
@@ -56607,6 +57861,12 @@ trexio_exit_code trexio_write_safe_ao_2e_int_eri_cholesky(trexio_t* const file,
                                                 const int64_t size_value_write
                                                 )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 3;
+
+  if (size_index_write < rank * buffer_size) return TREXIO_INVALID_ARG_5;
+  if (size_value_write <        buffer_size) return TREXIO_INVALID_ARG_7;
+
   return trexio_write_ao_2e_int_eri_cholesky(file, offset_file, buffer_size, index_sparse_write, value_sparse_write);
 }
 
@@ -56628,12 +57888,14 @@ trexio_write_ao_2e_int_eri_cholesky(trexio_t* const file,
   const uint32_t rank = 3;
 
   int64_t size_max = 0L; // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_ao_2e_int_eri_cholesky_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_ao_2e_int_eri_cholesky_size(file, &size_max);
   if (rc != TREXIO_SUCCESS && rc != TREXIO_DSET_MISSING) return rc;
   if (rc == TREXIO_DSET_MISSING) size_max = 0L;
+
+  /* Dummy check to avoid overwriting existing data */
+  if (offset_file < size_max) return TREXIO_CORRUPTION_ATTEMPT;
 
   /* To be set by generator : number of unique dimensions
      (e.g. 1 for ERI in AO basis because only ao_num is present in the list of dimensions) */
@@ -56641,8 +57903,8 @@ trexio_write_ao_2e_int_eri_cholesky(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_ao_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_ao_2e_int_eri_cholesky_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_ao_2e_int_eri_cholesky_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_ao_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -56736,6 +57998,12 @@ trexio_exit_code trexio_write_safe_ao_2e_int_eri_lr_cholesky(trexio_t* const fil
                                                 const int64_t size_value_write
                                                 )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 3;
+
+  if (size_index_write < rank * buffer_size) return TREXIO_INVALID_ARG_5;
+  if (size_value_write <        buffer_size) return TREXIO_INVALID_ARG_7;
+
   return trexio_write_ao_2e_int_eri_lr_cholesky(file, offset_file, buffer_size, index_sparse_write, value_sparse_write);
 }
 
@@ -56757,12 +58025,14 @@ trexio_write_ao_2e_int_eri_lr_cholesky(trexio_t* const file,
   const uint32_t rank = 3;
 
   int64_t size_max = 0L; // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_ao_2e_int_eri_lr_cholesky_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_ao_2e_int_eri_lr_cholesky_size(file, &size_max);
   if (rc != TREXIO_SUCCESS && rc != TREXIO_DSET_MISSING) return rc;
   if (rc == TREXIO_DSET_MISSING) size_max = 0L;
+
+  /* Dummy check to avoid overwriting existing data */
+  if (offset_file < size_max) return TREXIO_CORRUPTION_ATTEMPT;
 
   /* To be set by generator : number of unique dimensions
      (e.g. 1 for ERI in AO basis because only ao_num is present in the list of dimensions) */
@@ -56865,6 +58135,12 @@ trexio_exit_code trexio_write_safe_mo_2e_int_eri(trexio_t* const file,
                                                 const int64_t size_value_write
                                                 )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 4;
+
+  if (size_index_write < rank * buffer_size) return TREXIO_INVALID_ARG_5;
+  if (size_value_write <        buffer_size) return TREXIO_INVALID_ARG_7;
+
   return trexio_write_mo_2e_int_eri(file, offset_file, buffer_size, index_sparse_write, value_sparse_write);
 }
 
@@ -56886,12 +58162,14 @@ trexio_write_mo_2e_int_eri(trexio_t* const file,
   const uint32_t rank = 4;
 
   int64_t size_max = 0L; // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_mo_2e_int_eri_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_mo_2e_int_eri_size(file, &size_max);
   if (rc != TREXIO_SUCCESS && rc != TREXIO_DSET_MISSING) return rc;
   if (rc == TREXIO_DSET_MISSING) size_max = 0L;
+
+  /* Dummy check to avoid overwriting existing data */
+  if (offset_file < size_max) return TREXIO_CORRUPTION_ATTEMPT;
 
   /* To be set by generator : number of unique dimensions
      (e.g. 1 for ERI in AO basis because only ao_num is present in the list of dimensions) */
@@ -56993,6 +58271,12 @@ trexio_exit_code trexio_write_safe_mo_2e_int_eri_lr(trexio_t* const file,
                                                 const int64_t size_value_write
                                                 )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 4;
+
+  if (size_index_write < rank * buffer_size) return TREXIO_INVALID_ARG_5;
+  if (size_value_write <        buffer_size) return TREXIO_INVALID_ARG_7;
+
   return trexio_write_mo_2e_int_eri_lr(file, offset_file, buffer_size, index_sparse_write, value_sparse_write);
 }
 
@@ -57014,12 +58298,14 @@ trexio_write_mo_2e_int_eri_lr(trexio_t* const file,
   const uint32_t rank = 4;
 
   int64_t size_max = 0L; // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_mo_2e_int_eri_lr_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_mo_2e_int_eri_lr_size(file, &size_max);
   if (rc != TREXIO_SUCCESS && rc != TREXIO_DSET_MISSING) return rc;
   if (rc == TREXIO_DSET_MISSING) size_max = 0L;
+
+  /* Dummy check to avoid overwriting existing data */
+  if (offset_file < size_max) return TREXIO_CORRUPTION_ATTEMPT;
 
   /* To be set by generator : number of unique dimensions
      (e.g. 1 for ERI in AO basis because only ao_num is present in the list of dimensions) */
@@ -57121,6 +58407,12 @@ trexio_exit_code trexio_write_safe_mo_2e_int_eri_cholesky(trexio_t* const file,
                                                 const int64_t size_value_write
                                                 )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 3;
+
+  if (size_index_write < rank * buffer_size) return TREXIO_INVALID_ARG_5;
+  if (size_value_write <        buffer_size) return TREXIO_INVALID_ARG_7;
+
   return trexio_write_mo_2e_int_eri_cholesky(file, offset_file, buffer_size, index_sparse_write, value_sparse_write);
 }
 
@@ -57142,12 +58434,14 @@ trexio_write_mo_2e_int_eri_cholesky(trexio_t* const file,
   const uint32_t rank = 3;
 
   int64_t size_max = 0L; // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_mo_2e_int_eri_cholesky_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_mo_2e_int_eri_cholesky_size(file, &size_max);
   if (rc != TREXIO_SUCCESS && rc != TREXIO_DSET_MISSING) return rc;
   if (rc == TREXIO_DSET_MISSING) size_max = 0L;
+
+  /* Dummy check to avoid overwriting existing data */
+  if (offset_file < size_max) return TREXIO_CORRUPTION_ATTEMPT;
 
   /* To be set by generator : number of unique dimensions
      (e.g. 1 for ERI in AO basis because only ao_num is present in the list of dimensions) */
@@ -57250,6 +58544,12 @@ trexio_exit_code trexio_write_safe_mo_2e_int_eri_lr_cholesky(trexio_t* const fil
                                                 const int64_t size_value_write
                                                 )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 3;
+
+  if (size_index_write < rank * buffer_size) return TREXIO_INVALID_ARG_5;
+  if (size_value_write <        buffer_size) return TREXIO_INVALID_ARG_7;
+
   return trexio_write_mo_2e_int_eri_lr_cholesky(file, offset_file, buffer_size, index_sparse_write, value_sparse_write);
 }
 
@@ -57271,12 +58571,14 @@ trexio_write_mo_2e_int_eri_lr_cholesky(trexio_t* const file,
   const uint32_t rank = 3;
 
   int64_t size_max = 0L; // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_mo_2e_int_eri_lr_cholesky_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_mo_2e_int_eri_lr_cholesky_size(file, &size_max);
   if (rc != TREXIO_SUCCESS && rc != TREXIO_DSET_MISSING) return rc;
   if (rc == TREXIO_DSET_MISSING) size_max = 0L;
+
+  /* Dummy check to avoid overwriting existing data */
+  if (offset_file < size_max) return TREXIO_CORRUPTION_ATTEMPT;
 
   /* To be set by generator : number of unique dimensions
      (e.g. 1 for ERI in AO basis because only ao_num is present in the list of dimensions) */
@@ -57284,8 +58586,8 @@ trexio_write_mo_2e_int_eri_lr_cholesky(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_mo_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_mo_2e_int_eri_lr_cholesky_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_2e_int_eri_lr_cholesky_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -57379,6 +58681,12 @@ trexio_exit_code trexio_write_safe_csf_det_coefficient(trexio_t* const file,
                                                 const int64_t size_value_write
                                                 )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 2;
+
+  if (size_index_write < rank * buffer_size) return TREXIO_INVALID_ARG_5;
+  if (size_value_write <        buffer_size) return TREXIO_INVALID_ARG_7;
+
   return trexio_write_csf_det_coefficient(file, offset_file, buffer_size, index_sparse_write, value_sparse_write);
 }
 
@@ -57400,12 +58708,14 @@ trexio_write_csf_det_coefficient(trexio_t* const file,
   const uint32_t rank = 2;
 
   int64_t size_max = 0L; // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_csf_det_coefficient_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_csf_det_coefficient_size(file, &size_max);
   if (rc != TREXIO_SUCCESS && rc != TREXIO_DSET_MISSING) return rc;
   if (rc == TREXIO_DSET_MISSING) size_max = 0L;
+
+  /* Dummy check to avoid overwriting existing data */
+  if (offset_file < size_max) return TREXIO_CORRUPTION_ATTEMPT;
 
   /* To be set by generator : number of unique dimensions
      (e.g. 1 for ERI in AO basis because only ao_num is present in the list of dimensions) */
@@ -57413,8 +58723,8 @@ trexio_write_csf_det_coefficient(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_csf_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_determinant_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_determinant_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_csf_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -57508,6 +58818,12 @@ trexio_exit_code trexio_write_safe_amplitude_single(trexio_t* const file,
                                                 const int64_t size_value_write
                                                 )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 2;
+
+  if (size_index_write < rank * buffer_size) return TREXIO_INVALID_ARG_5;
+  if (size_value_write <        buffer_size) return TREXIO_INVALID_ARG_7;
+
   return trexio_write_amplitude_single(file, offset_file, buffer_size, index_sparse_write, value_sparse_write);
 }
 
@@ -57529,12 +58845,14 @@ trexio_write_amplitude_single(trexio_t* const file,
   const uint32_t rank = 2;
 
   int64_t size_max = 0L; // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_amplitude_single_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_amplitude_single_size(file, &size_max);
   if (rc != TREXIO_SUCCESS && rc != TREXIO_DSET_MISSING) return rc;
   if (rc == TREXIO_DSET_MISSING) size_max = 0L;
+
+  /* Dummy check to avoid overwriting existing data */
+  if (offset_file < size_max) return TREXIO_CORRUPTION_ATTEMPT;
 
   /* To be set by generator : number of unique dimensions
      (e.g. 1 for ERI in AO basis because only ao_num is present in the list of dimensions) */
@@ -57636,6 +58954,12 @@ trexio_exit_code trexio_write_safe_amplitude_single_exp(trexio_t* const file,
                                                 const int64_t size_value_write
                                                 )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 2;
+
+  if (size_index_write < rank * buffer_size) return TREXIO_INVALID_ARG_5;
+  if (size_value_write <        buffer_size) return TREXIO_INVALID_ARG_7;
+
   return trexio_write_amplitude_single_exp(file, offset_file, buffer_size, index_sparse_write, value_sparse_write);
 }
 
@@ -57657,12 +58981,14 @@ trexio_write_amplitude_single_exp(trexio_t* const file,
   const uint32_t rank = 2;
 
   int64_t size_max = 0L; // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_amplitude_single_exp_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_amplitude_single_exp_size(file, &size_max);
   if (rc != TREXIO_SUCCESS && rc != TREXIO_DSET_MISSING) return rc;
   if (rc == TREXIO_DSET_MISSING) size_max = 0L;
+
+  /* Dummy check to avoid overwriting existing data */
+  if (offset_file < size_max) return TREXIO_CORRUPTION_ATTEMPT;
 
   /* To be set by generator : number of unique dimensions
      (e.g. 1 for ERI in AO basis because only ao_num is present in the list of dimensions) */
@@ -57764,6 +59090,12 @@ trexio_exit_code trexio_write_safe_amplitude_double(trexio_t* const file,
                                                 const int64_t size_value_write
                                                 )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 4;
+
+  if (size_index_write < rank * buffer_size) return TREXIO_INVALID_ARG_5;
+  if (size_value_write <        buffer_size) return TREXIO_INVALID_ARG_7;
+
   return trexio_write_amplitude_double(file, offset_file, buffer_size, index_sparse_write, value_sparse_write);
 }
 
@@ -57785,12 +59117,14 @@ trexio_write_amplitude_double(trexio_t* const file,
   const uint32_t rank = 4;
 
   int64_t size_max = 0L; // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_amplitude_double_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_amplitude_double_size(file, &size_max);
   if (rc != TREXIO_SUCCESS && rc != TREXIO_DSET_MISSING) return rc;
   if (rc == TREXIO_DSET_MISSING) size_max = 0L;
+
+  /* Dummy check to avoid overwriting existing data */
+  if (offset_file < size_max) return TREXIO_CORRUPTION_ATTEMPT;
 
   /* To be set by generator : number of unique dimensions
      (e.g. 1 for ERI in AO basis because only ao_num is present in the list of dimensions) */
@@ -57892,6 +59226,12 @@ trexio_exit_code trexio_write_safe_amplitude_double_exp(trexio_t* const file,
                                                 const int64_t size_value_write
                                                 )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 4;
+
+  if (size_index_write < rank * buffer_size) return TREXIO_INVALID_ARG_5;
+  if (size_value_write <        buffer_size) return TREXIO_INVALID_ARG_7;
+
   return trexio_write_amplitude_double_exp(file, offset_file, buffer_size, index_sparse_write, value_sparse_write);
 }
 
@@ -57913,12 +59253,14 @@ trexio_write_amplitude_double_exp(trexio_t* const file,
   const uint32_t rank = 4;
 
   int64_t size_max = 0L; // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_amplitude_double_exp_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_amplitude_double_exp_size(file, &size_max);
   if (rc != TREXIO_SUCCESS && rc != TREXIO_DSET_MISSING) return rc;
   if (rc == TREXIO_DSET_MISSING) size_max = 0L;
+
+  /* Dummy check to avoid overwriting existing data */
+  if (offset_file < size_max) return TREXIO_CORRUPTION_ATTEMPT;
 
   /* To be set by generator : number of unique dimensions
      (e.g. 1 for ERI in AO basis because only ao_num is present in the list of dimensions) */
@@ -58020,6 +59362,12 @@ trexio_exit_code trexio_write_safe_amplitude_triple(trexio_t* const file,
                                                 const int64_t size_value_write
                                                 )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 6;
+
+  if (size_index_write < rank * buffer_size) return TREXIO_INVALID_ARG_5;
+  if (size_value_write <        buffer_size) return TREXIO_INVALID_ARG_7;
+
   return trexio_write_amplitude_triple(file, offset_file, buffer_size, index_sparse_write, value_sparse_write);
 }
 
@@ -58041,12 +59389,14 @@ trexio_write_amplitude_triple(trexio_t* const file,
   const uint32_t rank = 6;
 
   int64_t size_max = 0L; // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_amplitude_triple_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_amplitude_triple_size(file, &size_max);
   if (rc != TREXIO_SUCCESS && rc != TREXIO_DSET_MISSING) return rc;
   if (rc == TREXIO_DSET_MISSING) size_max = 0L;
+
+  /* Dummy check to avoid overwriting existing data */
+  if (offset_file < size_max) return TREXIO_CORRUPTION_ATTEMPT;
 
   /* To be set by generator : number of unique dimensions
      (e.g. 1 for ERI in AO basis because only ao_num is present in the list of dimensions) */
@@ -58148,6 +59498,12 @@ trexio_exit_code trexio_write_safe_amplitude_triple_exp(trexio_t* const file,
                                                 const int64_t size_value_write
                                                 )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 6;
+
+  if (size_index_write < rank * buffer_size) return TREXIO_INVALID_ARG_5;
+  if (size_value_write <        buffer_size) return TREXIO_INVALID_ARG_7;
+
   return trexio_write_amplitude_triple_exp(file, offset_file, buffer_size, index_sparse_write, value_sparse_write);
 }
 
@@ -58169,12 +59525,14 @@ trexio_write_amplitude_triple_exp(trexio_t* const file,
   const uint32_t rank = 6;
 
   int64_t size_max = 0L; // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_amplitude_triple_exp_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_amplitude_triple_exp_size(file, &size_max);
   if (rc != TREXIO_SUCCESS && rc != TREXIO_DSET_MISSING) return rc;
   if (rc == TREXIO_DSET_MISSING) size_max = 0L;
+
+  /* Dummy check to avoid overwriting existing data */
+  if (offset_file < size_max) return TREXIO_CORRUPTION_ATTEMPT;
 
   /* To be set by generator : number of unique dimensions
      (e.g. 1 for ERI in AO basis because only ao_num is present in the list of dimensions) */
@@ -58276,6 +59634,12 @@ trexio_exit_code trexio_write_safe_amplitude_quadruple(trexio_t* const file,
                                                 const int64_t size_value_write
                                                 )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 8;
+
+  if (size_index_write < rank * buffer_size) return TREXIO_INVALID_ARG_5;
+  if (size_value_write <        buffer_size) return TREXIO_INVALID_ARG_7;
+
   return trexio_write_amplitude_quadruple(file, offset_file, buffer_size, index_sparse_write, value_sparse_write);
 }
 
@@ -58297,12 +59661,14 @@ trexio_write_amplitude_quadruple(trexio_t* const file,
   const uint32_t rank = 8;
 
   int64_t size_max = 0L; // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_amplitude_quadruple_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_amplitude_quadruple_size(file, &size_max);
   if (rc != TREXIO_SUCCESS && rc != TREXIO_DSET_MISSING) return rc;
   if (rc == TREXIO_DSET_MISSING) size_max = 0L;
+
+  /* Dummy check to avoid overwriting existing data */
+  if (offset_file < size_max) return TREXIO_CORRUPTION_ATTEMPT;
 
   /* To be set by generator : number of unique dimensions
      (e.g. 1 for ERI in AO basis because only ao_num is present in the list of dimensions) */
@@ -58404,6 +59770,12 @@ trexio_exit_code trexio_write_safe_amplitude_quadruple_exp(trexio_t* const file,
                                                 const int64_t size_value_write
                                                 )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 8;
+
+  if (size_index_write < rank * buffer_size) return TREXIO_INVALID_ARG_5;
+  if (size_value_write <        buffer_size) return TREXIO_INVALID_ARG_7;
+
   return trexio_write_amplitude_quadruple_exp(file, offset_file, buffer_size, index_sparse_write, value_sparse_write);
 }
 
@@ -58425,12 +59797,14 @@ trexio_write_amplitude_quadruple_exp(trexio_t* const file,
   const uint32_t rank = 8;
 
   int64_t size_max = 0L; // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_amplitude_quadruple_exp_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_amplitude_quadruple_exp_size(file, &size_max);
   if (rc != TREXIO_SUCCESS && rc != TREXIO_DSET_MISSING) return rc;
   if (rc == TREXIO_DSET_MISSING) size_max = 0L;
+
+  /* Dummy check to avoid overwriting existing data */
+  if (offset_file < size_max) return TREXIO_CORRUPTION_ATTEMPT;
 
   /* To be set by generator : number of unique dimensions
      (e.g. 1 for ERI in AO basis because only ao_num is present in the list of dimensions) */
@@ -58532,6 +59906,12 @@ trexio_exit_code trexio_write_safe_rdm_2e(trexio_t* const file,
                                                 const int64_t size_value_write
                                                 )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 4;
+
+  if (size_index_write < rank * buffer_size) return TREXIO_INVALID_ARG_5;
+  if (size_value_write <        buffer_size) return TREXIO_INVALID_ARG_7;
+
   return trexio_write_rdm_2e(file, offset_file, buffer_size, index_sparse_write, value_sparse_write);
 }
 
@@ -58553,12 +59933,14 @@ trexio_write_rdm_2e(trexio_t* const file,
   const uint32_t rank = 4;
 
   int64_t size_max = 0L; // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_rdm_2e_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_rdm_2e_size(file, &size_max);
   if (rc != TREXIO_SUCCESS && rc != TREXIO_DSET_MISSING) return rc;
   if (rc == TREXIO_DSET_MISSING) size_max = 0L;
+
+  /* Dummy check to avoid overwriting existing data */
+  if (offset_file < size_max) return TREXIO_CORRUPTION_ATTEMPT;
 
   /* To be set by generator : number of unique dimensions
      (e.g. 1 for ERI in AO basis because only ao_num is present in the list of dimensions) */
@@ -58660,6 +60042,12 @@ trexio_exit_code trexio_write_safe_rdm_2e_upup(trexio_t* const file,
                                                 const int64_t size_value_write
                                                 )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 4;
+
+  if (size_index_write < rank * buffer_size) return TREXIO_INVALID_ARG_5;
+  if (size_value_write <        buffer_size) return TREXIO_INVALID_ARG_7;
+
   return trexio_write_rdm_2e_upup(file, offset_file, buffer_size, index_sparse_write, value_sparse_write);
 }
 
@@ -58681,12 +60069,14 @@ trexio_write_rdm_2e_upup(trexio_t* const file,
   const uint32_t rank = 4;
 
   int64_t size_max = 0L; // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_rdm_2e_upup_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_rdm_2e_upup_size(file, &size_max);
   if (rc != TREXIO_SUCCESS && rc != TREXIO_DSET_MISSING) return rc;
   if (rc == TREXIO_DSET_MISSING) size_max = 0L;
+
+  /* Dummy check to avoid overwriting existing data */
+  if (offset_file < size_max) return TREXIO_CORRUPTION_ATTEMPT;
 
   /* To be set by generator : number of unique dimensions
      (e.g. 1 for ERI in AO basis because only ao_num is present in the list of dimensions) */
@@ -58788,6 +60178,12 @@ trexio_exit_code trexio_write_safe_rdm_2e_dndn(trexio_t* const file,
                                                 const int64_t size_value_write
                                                 )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 4;
+
+  if (size_index_write < rank * buffer_size) return TREXIO_INVALID_ARG_5;
+  if (size_value_write <        buffer_size) return TREXIO_INVALID_ARG_7;
+
   return trexio_write_rdm_2e_dndn(file, offset_file, buffer_size, index_sparse_write, value_sparse_write);
 }
 
@@ -58809,12 +60205,14 @@ trexio_write_rdm_2e_dndn(trexio_t* const file,
   const uint32_t rank = 4;
 
   int64_t size_max = 0L; // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_rdm_2e_dndn_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_rdm_2e_dndn_size(file, &size_max);
   if (rc != TREXIO_SUCCESS && rc != TREXIO_DSET_MISSING) return rc;
   if (rc == TREXIO_DSET_MISSING) size_max = 0L;
+
+  /* Dummy check to avoid overwriting existing data */
+  if (offset_file < size_max) return TREXIO_CORRUPTION_ATTEMPT;
 
   /* To be set by generator : number of unique dimensions
      (e.g. 1 for ERI in AO basis because only ao_num is present in the list of dimensions) */
@@ -58916,6 +60314,12 @@ trexio_exit_code trexio_write_safe_rdm_2e_updn(trexio_t* const file,
                                                 const int64_t size_value_write
                                                 )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 4;
+
+  if (size_index_write < rank * buffer_size) return TREXIO_INVALID_ARG_5;
+  if (size_value_write <        buffer_size) return TREXIO_INVALID_ARG_7;
+
   return trexio_write_rdm_2e_updn(file, offset_file, buffer_size, index_sparse_write, value_sparse_write);
 }
 
@@ -58937,12 +60341,14 @@ trexio_write_rdm_2e_updn(trexio_t* const file,
   const uint32_t rank = 4;
 
   int64_t size_max = 0L; // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_rdm_2e_updn_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_rdm_2e_updn_size(file, &size_max);
   if (rc != TREXIO_SUCCESS && rc != TREXIO_DSET_MISSING) return rc;
   if (rc == TREXIO_DSET_MISSING) size_max = 0L;
+
+  /* Dummy check to avoid overwriting existing data */
+  if (offset_file < size_max) return TREXIO_CORRUPTION_ATTEMPT;
 
   /* To be set by generator : number of unique dimensions
      (e.g. 1 for ERI in AO basis because only ao_num is present in the list of dimensions) */
@@ -59044,6 +60450,12 @@ trexio_exit_code trexio_write_safe_rdm_2e_transition(trexio_t* const file,
                                                 const int64_t size_value_write
                                                 )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 6;
+
+  if (size_index_write < rank * buffer_size) return TREXIO_INVALID_ARG_5;
+  if (size_value_write <        buffer_size) return TREXIO_INVALID_ARG_7;
+
   return trexio_write_rdm_2e_transition(file, offset_file, buffer_size, index_sparse_write, value_sparse_write);
 }
 
@@ -59065,12 +60477,14 @@ trexio_write_rdm_2e_transition(trexio_t* const file,
   const uint32_t rank = 6;
 
   int64_t size_max = 0L; // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_rdm_2e_transition_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_rdm_2e_transition_size(file, &size_max);
   if (rc != TREXIO_SUCCESS && rc != TREXIO_DSET_MISSING) return rc;
   if (rc == TREXIO_DSET_MISSING) size_max = 0L;
+
+  /* Dummy check to avoid overwriting existing data */
+  if (offset_file < size_max) return TREXIO_CORRUPTION_ATTEMPT;
 
   /* To be set by generator : number of unique dimensions
      (e.g. 1 for ERI in AO basis because only ao_num is present in the list of dimensions) */
@@ -59078,8 +60492,8 @@ trexio_write_rdm_2e_transition(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_mo_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_state_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_state_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -59173,6 +60587,12 @@ trexio_exit_code trexio_write_safe_rdm_2e_cholesky(trexio_t* const file,
                                                 const int64_t size_value_write
                                                 )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 3;
+
+  if (size_index_write < rank * buffer_size) return TREXIO_INVALID_ARG_5;
+  if (size_value_write <        buffer_size) return TREXIO_INVALID_ARG_7;
+
   return trexio_write_rdm_2e_cholesky(file, offset_file, buffer_size, index_sparse_write, value_sparse_write);
 }
 
@@ -59194,12 +60614,14 @@ trexio_write_rdm_2e_cholesky(trexio_t* const file,
   const uint32_t rank = 3;
 
   int64_t size_max = 0L; // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_rdm_2e_cholesky_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_rdm_2e_cholesky_size(file, &size_max);
   if (rc != TREXIO_SUCCESS && rc != TREXIO_DSET_MISSING) return rc;
   if (rc == TREXIO_DSET_MISSING) size_max = 0L;
+
+  /* Dummy check to avoid overwriting existing data */
+  if (offset_file < size_max) return TREXIO_CORRUPTION_ATTEMPT;
 
   /* To be set by generator : number of unique dimensions
      (e.g. 1 for ERI in AO basis because only ao_num is present in the list of dimensions) */
@@ -59207,8 +60629,8 @@ trexio_write_rdm_2e_cholesky(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_mo_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_rdm_2e_cholesky_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_rdm_2e_cholesky_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -59302,6 +60724,12 @@ trexio_exit_code trexio_write_safe_rdm_2e_upup_cholesky(trexio_t* const file,
                                                 const int64_t size_value_write
                                                 )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 3;
+
+  if (size_index_write < rank * buffer_size) return TREXIO_INVALID_ARG_5;
+  if (size_value_write <        buffer_size) return TREXIO_INVALID_ARG_7;
+
   return trexio_write_rdm_2e_upup_cholesky(file, offset_file, buffer_size, index_sparse_write, value_sparse_write);
 }
 
@@ -59323,12 +60751,14 @@ trexio_write_rdm_2e_upup_cholesky(trexio_t* const file,
   const uint32_t rank = 3;
 
   int64_t size_max = 0L; // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_rdm_2e_upup_cholesky_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_rdm_2e_upup_cholesky_size(file, &size_max);
   if (rc != TREXIO_SUCCESS && rc != TREXIO_DSET_MISSING) return rc;
   if (rc == TREXIO_DSET_MISSING) size_max = 0L;
+
+  /* Dummy check to avoid overwriting existing data */
+  if (offset_file < size_max) return TREXIO_CORRUPTION_ATTEMPT;
 
   /* To be set by generator : number of unique dimensions
      (e.g. 1 for ERI in AO basis because only ao_num is present in the list of dimensions) */
@@ -59431,6 +60861,12 @@ trexio_exit_code trexio_write_safe_rdm_2e_dndn_cholesky(trexio_t* const file,
                                                 const int64_t size_value_write
                                                 )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 3;
+
+  if (size_index_write < rank * buffer_size) return TREXIO_INVALID_ARG_5;
+  if (size_value_write <        buffer_size) return TREXIO_INVALID_ARG_7;
+
   return trexio_write_rdm_2e_dndn_cholesky(file, offset_file, buffer_size, index_sparse_write, value_sparse_write);
 }
 
@@ -59452,12 +60888,14 @@ trexio_write_rdm_2e_dndn_cholesky(trexio_t* const file,
   const uint32_t rank = 3;
 
   int64_t size_max = 0L; // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_rdm_2e_dndn_cholesky_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_rdm_2e_dndn_cholesky_size(file, &size_max);
   if (rc != TREXIO_SUCCESS && rc != TREXIO_DSET_MISSING) return rc;
   if (rc == TREXIO_DSET_MISSING) size_max = 0L;
+
+  /* Dummy check to avoid overwriting existing data */
+  if (offset_file < size_max) return TREXIO_CORRUPTION_ATTEMPT;
 
   /* To be set by generator : number of unique dimensions
      (e.g. 1 for ERI in AO basis because only ao_num is present in the list of dimensions) */
@@ -59465,8 +60903,8 @@ trexio_write_rdm_2e_dndn_cholesky(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_mo_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_rdm_2e_dndn_cholesky_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_rdm_2e_dndn_cholesky_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -59560,6 +60998,12 @@ trexio_exit_code trexio_write_safe_rdm_2e_updn_cholesky(trexio_t* const file,
                                                 const int64_t size_value_write
                                                 )
 {
+  /* To be set by generator : number of indices */
+  const uint32_t rank = 3;
+
+  if (size_index_write < rank * buffer_size) return TREXIO_INVALID_ARG_5;
+  if (size_value_write <        buffer_size) return TREXIO_INVALID_ARG_7;
+
   return trexio_write_rdm_2e_updn_cholesky(file, offset_file, buffer_size, index_sparse_write, value_sparse_write);
 }
 
@@ -59581,12 +61025,14 @@ trexio_write_rdm_2e_updn_cholesky(trexio_t* const file,
   const uint32_t rank = 3;
 
   int64_t size_max = 0L; // Max number of integrals (already in the file)
-  trexio_exit_code rc;
 
   /* Read the max number of integrals stored in the file */
-  rc = trexio_read_rdm_2e_updn_cholesky_size(file, &size_max);
+  trexio_exit_code rc = trexio_read_rdm_2e_updn_cholesky_size(file, &size_max);
   if (rc != TREXIO_SUCCESS && rc != TREXIO_DSET_MISSING) return rc;
   if (rc == TREXIO_DSET_MISSING) size_max = 0L;
+
+  /* Dummy check to avoid overwriting existing data */
+  if (offset_file < size_max) return TREXIO_CORRUPTION_ATTEMPT;
 
   /* To be set by generator : number of unique dimensions
      (e.g. 1 for ERI in AO basis because only ao_num is present in the list of dimensions) */
@@ -59594,8 +61040,8 @@ trexio_write_rdm_2e_updn_cholesky(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_mo_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_rdm_2e_updn_cholesky_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_rdm_2e_updn_cholesky_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -59689,11 +61135,10 @@ trexio_write_metadata_code_low (trexio_t* const file, char* dset_in, const int32
   if (max_str_len <= 0) return TREXIO_INVALID_ARG_3;
   if (trexio_has_metadata_code(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t metadata_code_num = 0;
 
   /* Error handling for this call is added by the generator */
-  rc = trexio_read_metadata_code_num_64(file, &(metadata_code_num));
+  trexio_exit_code rc = trexio_read_metadata_code_num_64(file, &(metadata_code_num));
   if (rc != TREXIO_SUCCESS) return rc;
 
   if (metadata_code_num == 0L) return TREXIO_INVALID_NUM;
@@ -59776,11 +61221,10 @@ trexio_write_metadata_code (trexio_t* const file, const char** dset_in, const in
 
   assert(file->back_end < TREXIO_INVALID_BACK_END);
 
-  trexio_exit_code rc;
   int64_t dset_dim = 0;
 
   /* Error handling for this call is added by the generator */
-  rc = trexio_read_metadata_code_num_64(file, &(dset_dim));
+  trexio_exit_code rc = trexio_read_metadata_code_num_64(file, &(dset_dim));
   if (rc != TREXIO_SUCCESS) return rc;
 
   if (dset_dim == 0L) return TREXIO_INVALID_NUM;
@@ -59810,11 +61254,10 @@ trexio_write_metadata_author_low (trexio_t* const file, char* dset_in, const int
   if (max_str_len <= 0) return TREXIO_INVALID_ARG_3;
   if (trexio_has_metadata_author(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t metadata_author_num = 0;
 
   /* Error handling for this call is added by the generator */
-  rc = trexio_read_metadata_author_num_64(file, &(metadata_author_num));
+  trexio_exit_code rc = trexio_read_metadata_author_num_64(file, &(metadata_author_num));
   if (rc != TREXIO_SUCCESS) return rc;
 
   if (metadata_author_num == 0L) return TREXIO_INVALID_NUM;
@@ -59897,11 +61340,10 @@ trexio_write_metadata_author (trexio_t* const file, const char** dset_in, const 
 
   assert(file->back_end < TREXIO_INVALID_BACK_END);
 
-  trexio_exit_code rc;
   int64_t dset_dim = 0;
 
   /* Error handling for this call is added by the generator */
-  rc = trexio_read_metadata_author_num_64(file, &(dset_dim));
+  trexio_exit_code rc = trexio_read_metadata_author_num_64(file, &(dset_dim));
   if (rc != TREXIO_SUCCESS) return rc;
 
   if (dset_dim == 0L) return TREXIO_INVALID_NUM;
@@ -59931,11 +61373,10 @@ trexio_write_nucleus_label_low (trexio_t* const file, char* dset_in, const int32
   if (max_str_len <= 0) return TREXIO_INVALID_ARG_3;
   if (trexio_has_nucleus_label(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t nucleus_num = 0;
 
   /* Error handling for this call is added by the generator */
-  rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
+  trexio_exit_code rc = trexio_read_nucleus_num_64(file, &(nucleus_num));
   if (rc != TREXIO_SUCCESS) return rc;
 
   if (nucleus_num == 0L) return TREXIO_INVALID_NUM;
@@ -60018,11 +61459,10 @@ trexio_write_nucleus_label (trexio_t* const file, const char** dset_in, const in
 
   assert(file->back_end < TREXIO_INVALID_BACK_END);
 
-  trexio_exit_code rc;
   int64_t dset_dim = 0;
 
   /* Error handling for this call is added by the generator */
-  rc = trexio_read_nucleus_num_64(file, &(dset_dim));
+  trexio_exit_code rc = trexio_read_nucleus_num_64(file, &(dset_dim));
   if (rc != TREXIO_SUCCESS) return rc;
 
   if (dset_dim == 0L) return TREXIO_INVALID_NUM;
@@ -60052,11 +61492,10 @@ trexio_write_state_label_low (trexio_t* const file, char* dset_in, const int32_t
   if (max_str_len <= 0) return TREXIO_INVALID_ARG_3;
   if (trexio_has_state_label(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t state_num = 0;
 
   /* Error handling for this call is added by the generator */
-  rc = trexio_read_state_num_64(file, &(state_num));
+  trexio_exit_code rc = trexio_read_state_num_64(file, &(state_num));
   if (rc != TREXIO_SUCCESS) return rc;
 
   if (state_num == 0L) return TREXIO_INVALID_NUM;
@@ -60139,11 +61578,10 @@ trexio_write_state_label (trexio_t* const file, const char** dset_in, const int3
 
   assert(file->back_end < TREXIO_INVALID_BACK_END);
 
-  trexio_exit_code rc;
   int64_t dset_dim = 0;
 
   /* Error handling for this call is added by the generator */
-  rc = trexio_read_state_num_64(file, &(dset_dim));
+  trexio_exit_code rc = trexio_read_state_num_64(file, &(dset_dim));
   if (rc != TREXIO_SUCCESS) return rc;
 
   if (dset_dim == 0L) return TREXIO_INVALID_NUM;
@@ -60173,11 +61611,10 @@ trexio_write_state_file_name_low (trexio_t* const file, char* dset_in, const int
   if (max_str_len <= 0) return TREXIO_INVALID_ARG_3;
   if (trexio_has_state_file_name(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t state_num = 0;
 
   /* Error handling for this call is added by the generator */
-  rc = trexio_read_state_num_64(file, &(state_num));
+  trexio_exit_code rc = trexio_read_state_num_64(file, &(state_num));
   if (rc != TREXIO_SUCCESS) return rc;
 
   if (state_num == 0L) return TREXIO_INVALID_NUM;
@@ -60260,11 +61697,10 @@ trexio_write_state_file_name (trexio_t* const file, const char** dset_in, const 
 
   assert(file->back_end < TREXIO_INVALID_BACK_END);
 
-  trexio_exit_code rc;
   int64_t dset_dim = 0;
 
   /* Error handling for this call is added by the generator */
-  rc = trexio_read_state_num_64(file, &(dset_dim));
+  trexio_exit_code rc = trexio_read_state_num_64(file, &(dset_dim));
   if (rc != TREXIO_SUCCESS) return rc;
 
   if (dset_dim == 0L) return TREXIO_INVALID_NUM;
@@ -60294,11 +61730,10 @@ trexio_write_mo_class_low (trexio_t* const file, char* dset_in, const int32_t ma
   if (max_str_len <= 0) return TREXIO_INVALID_ARG_3;
   if (trexio_has_mo_class(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
 
   /* Error handling for this call is added by the generator */
-  rc = trexio_read_mo_num_64(file, &(mo_num));
+  trexio_exit_code rc = trexio_read_mo_num_64(file, &(mo_num));
   if (rc != TREXIO_SUCCESS) return rc;
 
   if (mo_num == 0L) return TREXIO_INVALID_NUM;
@@ -60381,11 +61816,10 @@ trexio_write_mo_class (trexio_t* const file, const char** dset_in, const int32_t
 
   assert(file->back_end < TREXIO_INVALID_BACK_END);
 
-  trexio_exit_code rc;
   int64_t dset_dim = 0;
 
   /* Error handling for this call is added by the generator */
-  rc = trexio_read_mo_num_64(file, &(dset_dim));
+  trexio_exit_code rc = trexio_read_mo_num_64(file, &(dset_dim));
   if (rc != TREXIO_SUCCESS) return rc;
 
   if (dset_dim == 0L) return TREXIO_INVALID_NUM;
@@ -60415,11 +61849,10 @@ trexio_write_mo_symmetry_low (trexio_t* const file, char* dset_in, const int32_t
   if (max_str_len <= 0) return TREXIO_INVALID_ARG_3;
   if (trexio_has_mo_symmetry(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
-  trexio_exit_code rc;
   int64_t mo_num = 0;
 
   /* Error handling for this call is added by the generator */
-  rc = trexio_read_mo_num_64(file, &(mo_num));
+  trexio_exit_code rc = trexio_read_mo_num_64(file, &(mo_num));
   if (rc != TREXIO_SUCCESS) return rc;
 
   if (mo_num == 0L) return TREXIO_INVALID_NUM;
@@ -60502,11 +61935,10 @@ trexio_write_mo_symmetry (trexio_t* const file, const char** dset_in, const int3
 
   assert(file->back_end < TREXIO_INVALID_BACK_END);
 
-  trexio_exit_code rc;
   int64_t dset_dim = 0;
 
   /* Error handling for this call is added by the generator */
-  rc = trexio_read_mo_num_64(file, &(dset_dim));
+  trexio_exit_code rc = trexio_read_mo_num_64(file, &(dset_dim));
   if (rc != TREXIO_SUCCESS) return rc;
 
   if (dset_dim == 0L) return TREXIO_INVALID_NUM;
@@ -60570,7 +62002,7 @@ trexio_get_int64_num(trexio_t* const file, int32_t* const num)
 
   /* Compute how many integer numbers is needed to represent a determinant */
   int32_t int_num = 0;
-  int_num = (mo_num - 1L)/64 + 1;
+  int_num = (int32_t) (mo_num - 1L)/64 + 1;
 
   *num = int_num;
 
@@ -60582,7 +62014,10 @@ trexio_read_determinant_list (trexio_t* const file, const int64_t offset_file, i
 {
 
   if (file  == NULL) return TREXIO_INVALID_ARG_1;
-  if (dset  == NULL) return TREXIO_INVALID_ARG_2;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (buffer_size_read == NULL) return TREXIO_INVALID_ARG_3;
+  if (*buffer_size_read < 0) return TREXIO_INVALID_ARG_3;
+  if (dset  == NULL) return TREXIO_INVALID_ARG_4;
   if (trexio_has_determinant_list(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
   /* Get the number of int bit fields per determinant */
@@ -60631,6 +62066,14 @@ trexio_read_determinant_list (trexio_t* const file, const int64_t offset_file, i
 trexio_exit_code
 trexio_read_safe_determinant_list (trexio_t* const file, const int64_t offset_file, int64_t* const buffer_size_read, int64_t* const dset_out, const int64_t dim_out)
 {
+  /* Get the number of int bit fields per determinant */
+  int32_t int_num = 0;
+  trexio_exit_code rc = trexio_get_int64_num(file, &int_num);
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  /* Check that dset_out is large enough */
+  if (dim_out < (*buffer_size_read) * int_num * 2) return TREXIO_INVALID_ARG_5;
+
   return trexio_read_determinant_list(file, offset_file, buffer_size_read, dset_out);
 }
 trexio_exit_code
@@ -60638,7 +62081,20 @@ trexio_write_determinant_list (trexio_t* const file, const int64_t offset_file, 
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (dset == NULL) return TREXIO_INVALID_ARG_2;
+  if (offset_file < 0) return TREXIO_INVALID_ARG_2;
+  if (buffer_size <= 0) return TREXIO_INVALID_ARG_3;
+  if (dset == NULL) return TREXIO_INVALID_ARG_4;
+
+  // Update the determinant_num value with the number of determinants written
+  int64_t det_num_current = 0L;
+  // Read the determinant_num if it exists already
+  if (trexio_has_determinant_num(file) == TREXIO_SUCCESS) {
+     trexio_exit_code rc = trexio_read_determinant_num_64(file, &det_num_current);
+     if (rc != TREXIO_SUCCESS) return rc;
+  }
+
+  /* Dummy check to avoid overwriting existing data */
+  if (offset_file < det_num_current) return TREXIO_CORRUPTION_ATTEMPT;
 
   /* Get the number of int bit fields per determinant */
   int32_t int_num = 0;
@@ -60649,6 +62105,59 @@ trexio_write_determinant_list (trexio_t* const file, const int64_t offset_file, 
   uint64_t dims[2] = {buffer_size, int_num*2UL};
 
   assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  /* Read the number of mos */
+  int64_t mo_num = 0L;
+  rc = trexio_read_mo_num_64(file, &mo_num);
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  // Read up/dn num
+  int32_t nup = 0;
+  rc = trexio_read_electron_up_num(file, &nup);
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  int32_t ndn = 0;
+  rc = trexio_read_electron_dn_num(file, &ndn);
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  /* Check all determinants */
+  int32_t occ_num_up = 0;
+  int32_t occ_num_dn = 0;
+
+  /*   list_up contains first the up-spin orbitals, then the down-spin */
+  int32_t* list_up = (int32_t*) calloc(nup+ndn,sizeof(int32_t));
+
+  if (list_up == NULL) {
+    return TREXIO_ALLOCATION_FAILED;
+  }
+
+  int32_t* list_dn = &(list_up[nup]);
+
+  for (int64_t i=0 ; i<buffer_size ; i+= 2*int_num) {
+    rc = trexio_to_orbital_list_up_dn(int_num, &dset[i],
+                                      list_up, list_dn,
+                                      &occ_num_up, &occ_num_dn);
+    if (rc != TREXIO_SUCCESS) {
+        free(list_up);
+        return rc;
+    }
+    if (occ_num_up != nup || occ_num_dn != ndn) {
+        free(list_up);
+        return TREXIO_INVALID_ELECTRON_NUM;
+    }
+    for (int32_t j=0 ; j<nup+ndn ; ++j) {
+      if (list_up[j] < 0 || list_up[j] >= mo_num) {
+        free(list_up);
+        return TREXIO_INVALID_MO_INDEX;
+      }
+    }
+
+  }
+  free(list_up);
+
+  /* Up to this point, all the determinants have been checked to
+     have the correct sizes (number of electrons), and MOs in the
+     correct range */
 
   switch (file->back_end) {
 
@@ -60700,5 +62209,13 @@ trexio_write_determinant_list (trexio_t* const file, const int64_t offset_file, 
 trexio_exit_code
 trexio_write_safe_determinant_list (trexio_t* const file, const int64_t offset_file, const int64_t buffer_size, const int64_t* dset_in, const int64_t dim_in)
 {
+  /* Get the number of int bit fields per determinant */
+  int32_t int_num = 0;
+  trexio_exit_code rc = trexio_get_int64_num(file, &int_num);
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  /* Check that dim_in is large enough */
+  if (dim_in < buffer_size * int_num * 2) return TREXIO_INVALID_ARG_5;
+
   return trexio_write_determinant_list(file, offset_file, buffer_size, dset_in);
 }

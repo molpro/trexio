@@ -3,13 +3,13 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2024-06-27 jeu. 16:45 -->
+<!-- 2025-07-16 Wed 20:52 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Examples</title>
 <meta name="author" content="TREX-CoE" />
 <meta name="generator" content="Org Mode" />
-<style>
+<style type="text/css">
   #content { max-width: 60em; margin: auto; }
   .title  { text-align: center;
              margin-bottom: .2em; }
@@ -258,61 +258,67 @@ org_html_manager.setup();  // activate after the parameters are set
 <h2>Table of Contents</h2>
 <div id="text-table-of-contents" role="doc-toc">
 <ul>
-<li><a href="#orgc04655c">1. Writing nuclear coordinates</a>
+<li><a href="#orge9c8685">1. Writing nuclear coordinates</a>
 <ul>
-<li><a href="#orgb1bcdfb">1.1. C</a></li>
-<li><a href="#org72c3015">1.2. Python</a></li>
-<li><a href="#org2ac6cf7">1.3. Fortran</a></li>
+<li><a href="#org037b8ca">1.1. C</a></li>
+<li><a href="#org7f6b9ac">1.2. Python</a></li>
+<li><a href="#orga5e1ff4">1.3. Fortran</a></li>
 </ul>
 </li>
-<li><a href="#org7aa0db8">2. Accessing sparse quantities (integrals)</a>
+<li><a href="#org6941c34">2. Accessing sparse quantities (integrals)</a>
 <ul>
-<li><a href="#orgba34ce6">2.1. Fortran</a>
+<li><a href="#orgcc6c91e">2.1. Fortran</a>
 <ul>
-<li><a href="#org4901f6d">2.1.1. Declare Temporary variables</a></li>
-<li><a href="#orgd0517cc">2.1.2. Obtain the name of the TREXIO file from the command line, and open it for reading</a></li>
-<li><a href="#orgf92b1d4">2.1.3. Read the nuclear repulsion energy</a></li>
-<li><a href="#org78d1ae0">2.1.4. Read the number of molecular orbitals</a></li>
-<li><a href="#orga2a838a">2.1.5. Allocate memory</a></li>
-<li><a href="#orgb1e7a62">2.1.6. Read one-electron quantities</a></li>
-<li><a href="#org43e2a8d">2.1.7. Read two-electron quantities</a>
+<li><a href="#org46abfa3">2.1.1. Declare Temporary variables</a></li>
+<li><a href="#org7533bfc">2.1.2. Obtain the name of the TREXIO file from the command line, and open it for reading</a></li>
+<li><a href="#orgd2d31b7">2.1.3. Read the nuclear repulsion energy</a></li>
+<li><a href="#org4d43a64">2.1.4. Read the number of molecular orbitals</a></li>
+<li><a href="#org9388baf">2.1.5. Allocate memory</a></li>
+<li><a href="#orge1ae78d">2.1.6. Read one-electron quantities</a></li>
+<li><a href="#orgcb158ab">2.1.7. Read two-electron quantities</a>
 <ul>
-<li><a href="#orgf3f1593">2.1.7.1. Electron repulsion integrals</a></li>
-<li><a href="#orge54f9f2">2.1.7.2. Reduced density matrix</a></li>
+<li><a href="#orgaca36d3">2.1.7.1. Electron repulsion integrals</a></li>
+<li><a href="#org639fdd2">2.1.7.2. Reduced density matrix</a></li>
 </ul>
 </li>
-<li><a href="#orgbb6f6e0">2.1.8. Compute the energy</a></li>
-<li><a href="#org44360cc">2.1.9. Terminate</a></li>
+<li><a href="#orgb9dfa83">2.1.8. Compute the energy</a></li>
+<li><a href="#orgc8d8149">2.1.9. Terminate</a></li>
 </ul>
 </li>
-<li><a href="#orgb7c99cd">2.2. Python</a>
+<li><a href="#org4d6839f">2.2. Python</a>
 <ul>
-<li><a href="#org7bcd261">2.2.1. Obtain the name of the TREXIO file from the command line, and open it for reading</a></li>
-<li><a href="#org2e8c374">2.2.2. Read the nuclear repulsion energy</a></li>
-<li><a href="#orgf713ebc">2.2.3. Read the number of molecular orbitals</a></li>
-<li><a href="#org8f9a328">2.2.4. Read one-electron quantities</a></li>
-<li><a href="#org24d7801">2.2.5. Read two-electron quantities</a>
+<li><a href="#orgbc94726">2.2.1. Obtain the name of the TREXIO file from the command line, and open it for reading</a></li>
+<li><a href="#org9f1d0d2">2.2.2. Read the nuclear repulsion energy</a></li>
+<li><a href="#org8298480">2.2.3. Read the number of molecular orbitals</a></li>
+<li><a href="#org5dc7942">2.2.4. Read one-electron quantities</a></li>
+<li><a href="#orga05c6d9">2.2.5. Read two-electron quantities</a>
 <ul>
-<li><a href="#orgdefa02d">2.2.5.1. Electron repulsion integrals</a></li>
-<li><a href="#orgaa44a3a">2.2.5.2. Reduced density matrix</a></li>
+<li><a href="#org0c16b47">2.2.5.1. Electron repulsion integrals</a></li>
+<li><a href="#orgd3255e8">2.2.5.2. Reduced density matrix</a></li>
 </ul>
 </li>
-<li><a href="#orgfd37cbf">2.2.6. Compute the energy</a></li>
+<li><a href="#org9a24776">2.2.6. Compute the energy</a></li>
 </ul>
 </li>
 </ul>
 </li>
-<li><a href="#orgec68653">3. Reading determinants</a>
+<li><a href="#org4a4f440">3. Reading determinants</a>
 <ul>
-<li><a href="#org242ce33">3.1. Fortran</a></li>
+<li><a href="#org0624bbf">3.1. Fortran</a></li>
+</ul>
+</li>
+<li><a href="#org164062e">4. Reordering basis functions</a>
+<ul>
+<li><a href="#org261563a">4.1. Cartesian AOs</a></li>
+<li><a href="#org99c0f8c">4.2. Spherical AOs</a></li>
+<li><a href="#org828c77f">4.3. Reordering the MOs</a></li>
 </ul>
 </li>
 </ul>
 </div>
 </div>
-
-<div id="outline-container-orgc04655c" class="outline-2">
-<h2 id="orgc04655c"><span class="section-number-2">1.</span> Writing nuclear coordinates</h2>
+<div id="outline-container-orge9c8685" class="outline-2">
+<h2 id="orge9c8685"><span class="section-number-2">1.</span> Writing nuclear coordinates</h2>
 <div class="outline-text-2" id="text-1">
 <p>
 Here is a demonstration of how to use TREXIO to write the nuclear
@@ -321,47 +327,46 @@ involved in opening a file, writing the data, and closing the file,
 as well as the necessary TREXIO functions to perform these actions.
 </p>
 </div>
-
-<div id="outline-container-orgb1bcdfb" class="outline-3">
-<h3 id="orgb1bcdfb"><span class="section-number-3">1.1.</span> C</h3>
+<div id="outline-container-org037b8ca" class="outline-3">
+<h3 id="org037b8ca"><span class="section-number-3">1.1.</span> C</h3>
 <div class="outline-text-3" id="text-1-1">
 <div class="org-src-container">
 <pre class="src src-c"><span style="color: #483d8b;">#include</span> <span style="color: #8b2252;">&lt;stdio.h&gt;</span>
 <span style="color: #483d8b;">#include</span> <span style="color: #8b2252;">&lt;trexio.h&gt;</span>
 
 <span style="color: #228b22;">int</span> <span style="color: #0000ff;">main</span>() {
-  <span style="color: #228b22;">int</span> <span style="color: #a0522d;">num</span> = 3;  // <span style="color: #b22222;">Number of atoms</span>
-  <span style="color: #228b22;">double</span> <span style="color: #a0522d;">coord</span>[][3] = {
-    // <span style="color: #b22222;">xyz coordinates in atomic units</span>
-    0.  ,  0.        , -0.24962655,
+  <span style="color: #228b22;">int</span> <span style="color: #a0522d;">num</span> = 3;  // <span style="color: #b22222;">Number of atoms
+</span>  <span style="color: #228b22;">double</span> <span style="color: #a0522d;">coord</span>[][3] = {
+    // <span style="color: #b22222;">xyz coordinates in atomic units
+</span>    0.  ,  0.        , -0.24962655,
     0.  ,  2.70519714,  1.85136466,
     0.  , -2.70519714,  1.85136466 };
 
   <span style="color: #228b22;">trexio_exit_code</span> <span style="color: #a0522d;">rc</span>;
 
-  // <span style="color: #b22222;">Open the TREXIO file</span>
-  <span style="color: #228b22;">trexio_t</span>* <span style="color: #a0522d;">f</span> = trexio_open(<span style="color: #8b2252;">"water.trexio"</span>, <span style="color: #8b2252;">'w'</span>, TREXIO_HDF5, &amp;rc);
+  // <span style="color: #b22222;">Open the TREXIO file
+</span>  <span style="color: #228b22;">trexio_t</span>* <span style="color: #a0522d;">f</span> = trexio_open(<span style="color: #8b2252;">"water.trexio"</span>, <span style="color: #8b2252;">'w'</span>, TREXIO_HDF5, &amp;rc);
   <span style="color: #a020f0;">if</span> (rc != TREXIO_SUCCESS) {
     fprintf(stderr, <span style="color: #8b2252;">"Error: %s\n"</span>, trexio_string_of_error(rc));
     <span style="color: #a020f0;">return</span> -1;
   }
 
-  // <span style="color: #b22222;">Write the number of nuclei</span>
-  rc = trexio_write_nucleus_num (f, num);
+  // <span style="color: #b22222;">Write the number of nuclei
+</span>  rc = trexio_write_nucleus_num (f, num);
   <span style="color: #a020f0;">if</span> (rc != TREXIO_SUCCESS) {
     fprintf(stderr, <span style="color: #8b2252;">"Error: %s\n"</span>, trexio_string_of_error(rc));
     <span style="color: #a020f0;">return</span> -1;
   }
 
-  // <span style="color: #b22222;">Write the nuclear coordinates</span>
-  rc = trexio_write_nucleus_coord (f, &amp;coord[0][0]);
+  // <span style="color: #b22222;">Write the nuclear coordinates
+</span>  rc = trexio_write_nucleus_coord (f, &amp;coord[0][0]);
   <span style="color: #a020f0;">if</span> (rc != TREXIO_SUCCESS) {
     fprintf(stderr, <span style="color: #8b2252;">"Error: %s\n"</span>, trexio_string_of_error(rc));
     <span style="color: #a020f0;">return</span> -1;
   }
 
-  // <span style="color: #b22222;">Close the TREXIO file</span>
-  rc = trexio_close(f);
+  // <span style="color: #b22222;">Close the TREXIO file
+</span>  rc = trexio_close(f);
   <span style="color: #a020f0;">if</span> (rc != TREXIO_SUCCESS) {
     fprintf(stderr, <span style="color: #8b2252;">"Error: %s\n"</span>, trexio_string_of_error(rc));
     <span style="color: #a020f0;">return</span> -1;
@@ -372,9 +377,8 @@ as well as the necessary TREXIO functions to perform these actions.
 </div>
 </div>
 </div>
-
-<div id="outline-container-org72c3015" class="outline-3">
-<h3 id="org72c3015"><span class="section-number-3">1.2.</span> Python</h3>
+<div id="outline-container-org7f6b9ac" class="outline-3">
+<h3 id="org7f6b9ac"><span class="section-number-3">1.2.</span> Python</h3>
 <div class="outline-text-3" id="text-1-2">
 <p>
 This code uses the TREXIO Python binding to create a new TREXIO file named
@@ -403,15 +407,15 @@ coordinates of the system.
 
 <div class="org-src-container">
 <pre class="src src-python"><span style="color: #a020f0;">import</span> trexio
-<span style="color: #a0522d;">coord</span> = [    # <span style="color: #b22222;">xyz coordinates in atomic units</span>
-    [0. , 0., -0.24962655],
+<span style="color: #a0522d;">coord</span> = [    # <span style="color: #b22222;">xyz coordinates in atomic units
+</span>    [0. , 0., -0.24962655],
     [0. , 2.70519714, 1.85136466],
     [0. , -2.70519714, 1.85136466]
 ]
-# <span style="color: #b22222;">The Python API calls can raise `trexio.Error`</span>
-# <span style="color: #b22222;">exceptions to be handled via try/except clauses</span>
-# <span style="color: #b22222;">in the user application</span>
-<span style="color: #a020f0;">with</span> trexio.File(<span style="color: #8b2252;">"water.trexio"</span>, <span style="color: #8b2252;">'w'</span>,
+# <span style="color: #b22222;">The Python API calls can raise `trexio.Error`
+</span># <span style="color: #b22222;">exceptions to be handled via try/except clauses
+</span># <span style="color: #b22222;">in the user application
+</span><span style="color: #a020f0;">with</span> trexio.File(<span style="color: #8b2252;">"water.trexio"</span>, <span style="color: #8b2252;">'w'</span>,
                  back_end=trexio.TREXIO_HDF5) <span style="color: #a020f0;">as</span> f:
     trexio.write_nucleus_num(f, <span style="color: #483d8b;">len</span>(coord))
     trexio.write_nucleus_coord(f, coord)
@@ -420,52 +424,51 @@ coordinates of the system.
 </div>
 </div>
 </div>
-
-<div id="outline-container-org2ac6cf7" class="outline-3">
-<h3 id="org2ac6cf7"><span class="section-number-3">1.3.</span> Fortran</h3>
+<div id="outline-container-orga5e1ff4" class="outline-3">
+<h3 id="orga5e1ff4"><span class="section-number-3">1.3.</span> Fortran</h3>
 <div class="outline-text-3" id="text-1-3">
 <div class="org-src-container">
 <pre class="src src-f90"><span style="color: #a020f0;">program</span> <span style="color: #0000ff;">trexio_water</span>
   <span style="color: #a020f0;">use</span> <span style="color: #0000ff;">trexio</span>
 
-  <span style="color: #228b22;">integer</span>, <span style="color: #a020f0;">parameter</span>        ::<span style="color: #a0522d;"> num=3       </span>! <span style="color: #b22222;">Number of nuclei</span>
-  <span style="color: #228b22;">double precision</span>          ::<span style="color: #a0522d;"> coord(3,3)  </span>! <span style="color: #b22222;">Array of atom coordinates</span>
-
-  <span style="color: #228b22;">integer</span>(trexio_t)         ::<span style="color: #a0522d;"> f        </span>! <span style="color: #b22222;">The TREXIO file handle</span>
-  <span style="color: #228b22;">integer</span>(trexio_exit_code) ::<span style="color: #a0522d;"> rc       </span>! <span style="color: #b22222;">TREXIO return code</span>
-  <span style="color: #228b22;">character</span>*(128)           ::<span style="color: #a0522d;"> err_msg  </span>! <span style="color: #b22222;">String holding the error message</span>
-
+  <span style="color: #228b22;">integer</span>, <span style="color: #a020f0;">parameter</span>        ::<span style="color: #a0522d;"> num=3       </span>! <span style="color: #b22222;">Number of nuclei
+</span>  <span style="color: #228b22;">double precision</span>          ::<span style="color: #a0522d;"> coord(3,3)  </span>! <span style="color: #b22222;">Array of atom coordinates
+</span>
+  <span style="color: #228b22;">integer</span>(trexio_t)         ::<span style="color: #a0522d;"> f        </span>! <span style="color: #b22222;">The TREXIO file handle
+</span>  <span style="color: #228b22;">integer</span>(trexio_exit_code) ::<span style="color: #a0522d;"> rc       </span>! <span style="color: #b22222;">TREXIO return code
+</span>  <span style="color: #228b22;">character</span>*(128)           ::<span style="color: #a0522d;"> err_msg  </span>! <span style="color: #b22222;">String holding the error message
+</span>
   coord(:,:) = <span style="color: #a020f0;">reshape</span>( (/ 0.d0  ,  0.d0        , -0.24962655d0, <span style="color: #a020f0;">&amp;</span>
                            0.d0  ,  2.70519714d0,  1.85136466d0, <span style="color: #a020f0;">&amp;</span>
                            0.d0  , -2.70519714d0,  1.85136466d0  /), <span style="color: #a020f0;">&amp;</span>
                          <span style="color: #a020f0;">shape</span>(coord) )
 
-  ! <span style="color: #b22222;">Open the TREXIO file</span>
-  f = trexio_open (<span style="color: #8b2252;">'water.trexio'</span>, <span style="color: #8b2252;">'w'</span>, TREXIO_HDF5, rc)
+  ! <span style="color: #b22222;">Open the TREXIO file
+</span>  f = trexio_open (<span style="color: #8b2252;">'water.trexio'</span>, <span style="color: #8b2252;">'w'</span>, TREXIO_HDF5, rc)
   <span style="color: #a020f0;">if</span> (rc /= TREXIO_SUCCESS) <span style="color: #a020f0;">then</span>
      <span style="color: #a020f0;">call</span> <span style="color: #0000ff;">trexio_string_of_error</span>(rc, err_msg)
      <span style="color: #a020f0;">print</span> *, <span style="color: #8b2252;">'Error: '</span>//<span style="color: #a020f0;">trim</span>(err_msg)
      <span style="color: #a020f0;">call</span> <span style="color: #0000ff;">exit</span>(-1)
   <span style="color: #a020f0;">end if</span>
 
-  ! <span style="color: #b22222;">Write the number of nuclei</span>
-  rc = trexio_write_nucleus_num (f, num)
+  ! <span style="color: #b22222;">Write the number of nuclei
+</span>  rc = trexio_write_nucleus_num (f, num)
   <span style="color: #a020f0;">if</span> (rc /= TREXIO_SUCCESS) <span style="color: #a020f0;">then</span>
      <span style="color: #a020f0;">call</span> <span style="color: #0000ff;">trexio_string_of_error</span>(rc, err_msg)
      <span style="color: #a020f0;">print</span> *, <span style="color: #8b2252;">'Error: '</span>//<span style="color: #a020f0;">trim</span>(err_msg)
      <span style="color: #a020f0;">call</span> <span style="color: #0000ff;">exit</span>(-1)
   <span style="color: #a020f0;">end if</span>
 
-  ! <span style="color: #b22222;">Write the nuclear coordinates</span>
-  rc = trexio_write_nucleus_coord (f, coord)
+  ! <span style="color: #b22222;">Write the nuclear coordinates
+</span>  rc = trexio_write_nucleus_coord (f, coord)
   <span style="color: #a020f0;">if</span> (rc /= TREXIO_SUCCESS) <span style="color: #a020f0;">then</span>
      <span style="color: #a020f0;">call</span> <span style="color: #0000ff;">trexio_string_of_error</span>(rc, err_msg)
      <span style="color: #a020f0;">print</span> *, <span style="color: #8b2252;">'Error: '</span>//<span style="color: #a020f0;">trim</span>(err_msg)
      <span style="color: #a020f0;">call</span> <span style="color: #0000ff;">exit</span>(-1)
   <span style="color: #a020f0;">end if</span>
 
-  ! <span style="color: #b22222;">Close the TREXIO file</span>
-  rc = trexio_close(f)
+  ! <span style="color: #b22222;">Close the TREXIO file
+</span>  rc = trexio_close(f)
   <span style="color: #a020f0;">if</span> (rc /= TREXIO_SUCCESS) <span style="color: #a020f0;">then</span>
      <span style="color: #a020f0;">call</span> <span style="color: #0000ff;">trexio_string_of_error</span>(rc, err_msg)
      <span style="color: #a020f0;">print</span> *, <span style="color: #8b2252;">'Error: '</span>//<span style="color: #a020f0;">trim</span>(err_msg)
@@ -478,23 +481,22 @@ coordinates of the system.
 </div>
 </div>
 </div>
-
-<div id="outline-container-org7aa0db8" class="outline-2">
-<h2 id="org7aa0db8"><span class="section-number-2">2.</span> Accessing sparse quantities (integrals)</h2>
+<div id="outline-container-org6941c34" class="outline-2">
+<h2 id="org6941c34"><span class="section-number-2">2.</span> Accessing sparse quantities (integrals)</h2>
 <div class="outline-text-2" id="text-2">
 </div>
-<div id="outline-container-orgba34ce6" class="outline-3">
-<h3 id="orgba34ce6"><span class="section-number-3">2.1.</span> Fortran</h3>
+<div id="outline-container-orgcc6c91e" class="outline-3">
+<h3 id="orgcc6c91e"><span class="section-number-3">2.1.</span> Fortran</h3>
 <div class="outline-text-3" id="text-2-1">
 <div class="org-src-container">
 <pre class="src src-f90"><span style="color: #a020f0;">program</span> <span style="color: #0000ff;">print_energy</span>
   <span style="color: #a020f0;">use</span> <span style="color: #0000ff;">trexio</span>
   <span style="color: #a020f0;">implicit</span> <span style="color: #228b22;">none</span>
 
-  <span style="color: #228b22;">character</span>*(128)  ::<span style="color: #a0522d;"> filename   </span>! <span style="color: #b22222;">Name of the input file</span>
-  <span style="color: #228b22;">integer</span>          ::<span style="color: #a0522d;"> rc         </span>! <span style="color: #b22222;">Return code for error checking</span>
-  <span style="color: #228b22;">integer</span>(8)       ::<span style="color: #a0522d;"> f          </span>! <span style="color: #b22222;">TREXIO file handle</span>
-  <span style="color: #228b22;">character</span>*(128)  ::<span style="color: #a0522d;"> err_msg    </span>! <span style="color: #b22222;">Error message</span>
+  <span style="color: #228b22;">character</span>*(128)  ::<span style="color: #a0522d;"> filename   </span>! <span style="color: #b22222;">Name of the input file
+</span>  <span style="color: #228b22;">integer</span>          ::<span style="color: #a0522d;"> rc         </span>! <span style="color: #b22222;">Return code for error checking
+</span>  <span style="color: #228b22;">integer</span>(8)       ::<span style="color: #a0522d;"> f          </span>! <span style="color: #b22222;">TREXIO file handle
+</span>  <span style="color: #228b22;">character</span>*(128)  ::<span style="color: #a0522d;"> err_msg    </span>! <span style="color: #b22222;">Error message</span>
 </pre>
 </div>
 
@@ -529,9 +531,8 @@ One needs to read from the TREXIO file:
 </pre>
 </div>
 </div>
-
-<div id="outline-container-org4901f6d" class="outline-4">
-<h4 id="org4901f6d"><span class="section-number-4">2.1.1.</span> Declare Temporary variables</h4>
+<div id="outline-container-org46abfa3" class="outline-4">
+<h4 id="org46abfa3"><span class="section-number-4">2.1.1.</span> Declare Temporary variables</h4>
 <div class="outline-text-4" id="text-2-1-1">
 <div class="org-src-container">
 <pre class="src src-f90"><span style="color: #228b22;">integer</span>                       ::<span style="color: #a0522d;"> i, j, k, l, m</span>
@@ -545,9 +546,8 @@ One needs to read from the TREXIO file:
 </div>
 </div>
 </div>
-
-<div id="outline-container-orgd0517cc" class="outline-4">
-<h4 id="orgd0517cc"><span class="section-number-4">2.1.2.</span> Obtain the name of the TREXIO file from the command line, and open it for reading</h4>
+<div id="outline-container-org7533bfc" class="outline-4">
+<h4 id="org7533bfc"><span class="section-number-4">2.1.2.</span> Obtain the name of the TREXIO file from the command line, and open it for reading</h4>
 <div class="outline-text-4" id="text-2-1-2">
 <div class="org-src-container">
 <pre class="src src-f90"><span style="color: #a020f0;">call</span> <span style="color: #0000ff;">getarg</span>(1, filename)
@@ -562,9 +562,8 @@ f = trexio_open (filename, <span style="color: #8b2252;">'r'</span>, TREXIO_AUTO
 </div>
 </div>
 </div>
-
-<div id="outline-container-orgf92b1d4" class="outline-4">
-<h4 id="orgf92b1d4"><span class="section-number-4">2.1.3.</span> Read the nuclear repulsion energy</h4>
+<div id="outline-container-orgd2d31b7" class="outline-4">
+<h4 id="orgd2d31b7"><span class="section-number-4">2.1.3.</span> Read the nuclear repulsion energy</h4>
 <div class="outline-text-4" id="text-2-1-3">
 <div class="org-src-container">
 <pre class="src src-f90">rc = trexio_read_nucleus_repulsion(f, E_nn)
@@ -577,9 +576,8 @@ f = trexio_open (filename, <span style="color: #8b2252;">'r'</span>, TREXIO_AUTO
 </div>
 </div>
 </div>
-
-<div id="outline-container-org78d1ae0" class="outline-4">
-<h4 id="org78d1ae0"><span class="section-number-4">2.1.4.</span> Read the number of molecular orbitals</h4>
+<div id="outline-container-org4d43a64" class="outline-4">
+<h4 id="org4d43a64"><span class="section-number-4">2.1.4.</span> Read the number of molecular orbitals</h4>
 <div class="outline-text-4" id="text-2-1-4">
 <div class="org-src-container">
 <pre class="src src-f90">rc = trexio_read_mo_num(f, n)
@@ -592,9 +590,8 @@ f = trexio_open (filename, <span style="color: #8b2252;">'r'</span>, TREXIO_AUTO
 </div>
 </div>
 </div>
-
-<div id="outline-container-orga2a838a" class="outline-4">
-<h4 id="orga2a838a"><span class="section-number-4">2.1.5.</span> Allocate memory</h4>
+<div id="outline-container-org9388baf" class="outline-4">
+<h4 id="org9388baf"><span class="section-number-4">2.1.5.</span> Allocate memory</h4>
 <div class="outline-text-4" id="text-2-1-5">
 <div class="org-src-container">
 <pre class="src src-f90"><span style="color: #a020f0;">allocate</span>( D(n,n), h0(n,n) )
@@ -605,9 +602,8 @@ W(:,:,:,:) = 0.d0
 </div>
 </div>
 </div>
-
-<div id="outline-container-orgb1e7a62" class="outline-4">
-<h4 id="orgb1e7a62"><span class="section-number-4">2.1.6.</span> Read one-electron quantities</h4>
+<div id="outline-container-orge1ae78d" class="outline-4">
+<h4 id="orge1ae78d"><span class="section-number-4">2.1.6.</span> Read one-electron quantities</h4>
 <div class="outline-text-4" id="text-2-1-6">
 <div class="org-src-container">
 <pre class="src src-f90">rc = trexio_has_mo_1e_int_core_hamiltonian(f)
@@ -638,9 +634,8 @@ rc = trexio_read_rdm_1e(f, D)
 </div>
 </div>
 </div>
-
-<div id="outline-container-org43e2a8d" class="outline-4">
-<h4 id="org43e2a8d"><span class="section-number-4">2.1.7.</span> Read two-electron quantities</h4>
+<div id="outline-container-orgcb158ab" class="outline-4">
+<h4 id="orgcb158ab"><span class="section-number-4">2.1.7.</span> Read two-electron quantities</h4>
 <div class="outline-text-4" id="text-2-1-7">
 <p>
 Reading is done with OpenMP. Each thread reads its own buffer, and
@@ -655,9 +650,8 @@ the critical section. For each read, the function returns in
 to be protected in the critical section when modified.
 </p>
 </div>
-
-<div id="outline-container-orgf3f1593" class="outline-5">
-<h5 id="orgf3f1593"><span class="section-number-5">2.1.7.1.</span> Electron repulsion integrals</h5>
+<div id="outline-container-orgaca36d3" class="outline-5">
+<h5 id="orgaca36d3"><span class="section-number-5">2.1.7.1.</span> Electron repulsion integrals</h5>
 <div class="outline-text-5" id="text-2-1-7-1">
 <div class="org-src-container">
 <pre class="src src-f90">rc = trexio_has_mo_2e_int_eri(f)
@@ -673,19 +667,19 @@ rc = trexio_read_mo_2e_int_eri_size (f, size_max)
 <span style="color: #a020f0;">end if</span>
 
 offset = 0_8
-!<span style="color: #b22222;">$OMP PARALLEL DEFAULT(SHARED) PRIVATE(icount, i, j, k, l, &amp;</span>
-!<span style="color: #b22222;">$OMP   buffer_index, buffer_values, m)</span>
-icount = BUFSIZE
+!<span style="color: #b22222;">$OMP PARALLEL DEFAULT(SHARED) PRIVATE(icount, i, j, k, l, &amp;
+</span>!<span style="color: #b22222;">$OMP   buffer_index, buffer_values, m)
+</span>icount = BUFSIZE
 <span style="color: #a020f0;">do while</span> (icount == BUFSIZE)
-  !<span style="color: #b22222;">$OMP CRITICAL</span>
-  <span style="color: #a020f0;">if</span> (offset &lt; size_max) <span style="color: #a020f0;">then</span>
+  !<span style="color: #b22222;">$OMP CRITICAL
+</span>  <span style="color: #a020f0;">if</span> (offset &lt; size_max) <span style="color: #a020f0;">then</span>
     rc = trexio_read_mo_2e_int_eri(f, offset, icount, buffer_index, buffer_values)
     offset = offset + icount
   <span style="color: #a020f0;">else</span>
     icount = 0
   <span style="color: #a020f0;">end if</span>
-  !<span style="color: #b22222;">$OMP END CRITICAL</span>
-  <span style="color: #a020f0;">do</span> m=1,icount
+  !<span style="color: #b22222;">$OMP END CRITICAL
+</span>  <span style="color: #a020f0;">do</span> m=1,icount
     i = buffer_index(1,m)
     j = buffer_index(2,m)
     k = buffer_index(3,m)
@@ -705,9 +699,8 @@ icount = BUFSIZE
 </div>
 </div>
 </div>
-
-<div id="outline-container-orge54f9f2" class="outline-5">
-<h5 id="orge54f9f2"><span class="section-number-5">2.1.7.2.</span> Reduced density matrix</h5>
+<div id="outline-container-org639fdd2" class="outline-5">
+<h5 id="org639fdd2"><span class="section-number-5">2.1.7.2.</span> Reduced density matrix</h5>
 <div class="outline-text-5" id="text-2-1-7-2">
 <div class="org-src-container">
 <pre class="src src-f90">rc = trexio_has_rdm_2e(f)
@@ -723,19 +716,19 @@ rc = trexio_read_rdm_2e_size (f, size_max)
 <span style="color: #a020f0;">end if</span>
 
 offset = 0_8
-!<span style="color: #b22222;">$OMP PARALLEL DEFAULT(SHARED) PRIVATE(icount, i, j, k, l, &amp;</span>
-!<span style="color: #b22222;">$OMP   buffer_index, buffer_values, m)</span>
-icount = bufsize
+!<span style="color: #b22222;">$OMP PARALLEL DEFAULT(SHARED) PRIVATE(icount, i, j, k, l, &amp;
+</span>!<span style="color: #b22222;">$OMP   buffer_index, buffer_values, m)
+</span>icount = bufsize
 <span style="color: #a020f0;">do while</span> (offset &lt; size_max)
-  !<span style="color: #b22222;">$OMP CRITICAL</span>
-  <span style="color: #a020f0;">if</span> (offset &lt; size_max) <span style="color: #a020f0;">then</span>
+  !<span style="color: #b22222;">$OMP CRITICAL
+</span>  <span style="color: #a020f0;">if</span> (offset &lt; size_max) <span style="color: #a020f0;">then</span>
     rc = trexio_read_rdm_2e(f, offset, icount, buffer_index, buffer_values)
     offset = offset + icount
   <span style="color: #a020f0;">else</span>
     icount = 0
   <span style="color: #a020f0;">end if</span>
-  !<span style="color: #b22222;">$OMP END CRITICAL</span>
-  <span style="color: #a020f0;">do</span> m=1,icount
+  !<span style="color: #b22222;">$OMP END CRITICAL
+</span>  <span style="color: #a020f0;">do</span> m=1,icount
     i = buffer_index(1,m)
     j = buffer_index(2,m)
     k = buffer_index(3,m)
@@ -743,16 +736,15 @@ icount = bufsize
     G(i,j,k,l) = buffer_values(m)
   <span style="color: #a020f0;">end do</span>
 <span style="color: #a020f0;">end do</span>
-!<span style="color: #b22222;">$OMP END PARALLEL</span>
-
+!<span style="color: #b22222;">$OMP END PARALLEL
+</span>
 </pre>
 </div>
 </div>
 </div>
 </div>
-
-<div id="outline-container-orgbb6f6e0" class="outline-4">
-<h4 id="orgbb6f6e0"><span class="section-number-4">2.1.8.</span> Compute the energy</h4>
+<div id="outline-container-orgb9dfa83" class="outline-4">
+<h4 id="orgb9dfa83"><span class="section-number-4">2.1.8.</span> Compute the energy</h4>
 <div class="outline-text-4" id="text-2-1-8">
 <p>
 When the orbitals are real, we can use
@@ -797,9 +789,8 @@ E = E + E_nn
 </div>
 </div>
 </div>
-
-<div id="outline-container-org44360cc" class="outline-4">
-<h4 id="org44360cc"><span class="section-number-4">2.1.9.</span> Terminate</h4>
+<div id="outline-container-orgc8d8149" class="outline-4">
+<h4 id="orgc8d8149"><span class="section-number-4">2.1.9.</span> Terminate</h4>
 <div class="outline-text-4" id="text-2-1-9">
 <div class="org-src-container">
 <pre class="src src-f90">  <span style="color: #a020f0;">deallocate</span>( D, h0, G, W )
@@ -810,9 +801,8 @@ E = E + E_nn
 </div>
 </div>
 </div>
-
-<div id="outline-container-orgb7c99cd" class="outline-3">
-<h3 id="orgb7c99cd"><span class="section-number-3">2.2.</span> Python</h3>
+<div id="outline-container-org4d6839f" class="outline-3">
+<h3 id="org4d6839f"><span class="section-number-3">2.2.</span> Python</h3>
 <div class="outline-text-3" id="text-2-2">
 <div class="org-src-container">
 <pre class="src src-python"><span style="color: #a020f0;">import</span> sys
@@ -845,9 +835,8 @@ One needs to read from the TREXIO file:
 <dt>\(\langle k l  | i j \rangle\)</dt><dd>The electron repulsion integrals</dd>
 </dl>
 </div>
-
-<div id="outline-container-org7bcd261" class="outline-4">
-<h4 id="org7bcd261"><span class="section-number-4">2.2.1.</span> Obtain the name of the TREXIO file from the command line, and open it for reading</h4>
+<div id="outline-container-orgbc94726" class="outline-4">
+<h4 id="orgbc94726"><span class="section-number-4">2.2.1.</span> Obtain the name of the TREXIO file from the command line, and open it for reading</h4>
 <div class="outline-text-4" id="text-2-2-1">
 <div class="org-src-container">
 <pre class="src src-python"><span style="color: #a0522d;">filename</span> = sys.argv[1]
@@ -856,9 +845,8 @@ One needs to read from the TREXIO file:
 </div>
 </div>
 </div>
-
-<div id="outline-container-org2e8c374" class="outline-4">
-<h4 id="org2e8c374"><span class="section-number-4">2.2.2.</span> Read the nuclear repulsion energy</h4>
+<div id="outline-container-org9f1d0d2" class="outline-4">
+<h4 id="org9f1d0d2"><span class="section-number-4">2.2.2.</span> Read the nuclear repulsion energy</h4>
 <div class="outline-text-4" id="text-2-2-2">
 <div class="org-src-container">
 <pre class="src src-python"><span style="color: #a0522d;">E_nn</span> = trexio.read_nucleus_repulsion(f)
@@ -866,9 +854,8 @@ One needs to read from the TREXIO file:
 </div>
 </div>
 </div>
-
-<div id="outline-container-orgf713ebc" class="outline-4">
-<h4 id="orgf713ebc"><span class="section-number-4">2.2.3.</span> Read the number of molecular orbitals</h4>
+<div id="outline-container-org8298480" class="outline-4">
+<h4 id="org8298480"><span class="section-number-4">2.2.3.</span> Read the number of molecular orbitals</h4>
 <div class="outline-text-4" id="text-2-2-3">
 <div class="org-src-container">
 <pre class="src src-python"><span style="color: #a0522d;">n</span> = trexio.read_mo_num(f)
@@ -876,19 +863,18 @@ One needs to read from the TREXIO file:
 </div>
 </div>
 </div>
-
-<div id="outline-container-org8f9a328" class="outline-4">
-<h4 id="org8f9a328"><span class="section-number-4">2.2.4.</span> Read one-electron quantities</h4>
+<div id="outline-container-org5dc7942" class="outline-4">
+<h4 id="org5dc7942"><span class="section-number-4">2.2.4.</span> Read one-electron quantities</h4>
 <div class="outline-text-4" id="text-2-2-4">
 <div class="org-src-container">
 <pre class="src src-python"><span style="color: #a020f0;">if</span> <span style="color: #a020f0;">not</span> trexio.has_mo_1e_int_core_hamiltonian(f):
-  <span style="color: #a020f0;">print</span>(<span style="color: #8b2252;">"No core hamiltonian in file"</span>)
+  <span style="color: #483d8b;">print</span>(<span style="color: #8b2252;">"No core hamiltonian in file"</span>)
   sys.<span style="color: #008b8b;">exit</span>(-1)
 
 <span style="color: #a0522d;">h0</span> = trexio.read_mo_1e_int_core_hamiltonian(f)
 
 <span style="color: #a020f0;">if</span> <span style="color: #a020f0;">not</span> trexio.has_rdm_1e(f):
-  <span style="color: #a020f0;">print</span>(<span style="color: #8b2252;">"No 1e RDM in file"</span>)
+  <span style="color: #483d8b;">print</span>(<span style="color: #8b2252;">"No 1e RDM in file"</span>)
   sys.<span style="color: #008b8b;">exit</span>(-1)
 
 <span style="color: #a0522d;">D</span> = trexio.read_rdm_1e(f)
@@ -896,17 +882,16 @@ One needs to read from the TREXIO file:
 </div>
 </div>
 </div>
-
-<div id="outline-container-org24d7801" class="outline-4">
-<h4 id="org24d7801"><span class="section-number-4">2.2.5.</span> Read two-electron quantities</h4>
+<div id="outline-container-orga05c6d9" class="outline-4">
+<h4 id="orga05c6d9"><span class="section-number-4">2.2.5.</span> Read two-electron quantities</h4>
 <div class="outline-text-4" id="text-2-2-5">
 </div>
-<div id="outline-container-orgdefa02d" class="outline-5">
-<h5 id="orgdefa02d"><span class="section-number-5">2.2.5.1.</span> Electron repulsion integrals</h5>
+<div id="outline-container-org0c16b47" class="outline-5">
+<h5 id="org0c16b47"><span class="section-number-5">2.2.5.1.</span> Electron repulsion integrals</h5>
 <div class="outline-text-5" id="text-2-2-5-1">
 <div class="org-src-container">
 <pre class="src src-python"><span style="color: #a020f0;">if</span> <span style="color: #a020f0;">not</span> trexio.has_mo_2e_int_eri(f):
-  <span style="color: #a020f0;">print</span>(<span style="color: #8b2252;">"No electron repulsion integrals in file"</span>)
+  <span style="color: #483d8b;">print</span>(<span style="color: #8b2252;">"No electron repulsion integrals in file"</span>)
   sys.<span style="color: #008b8b;">exit</span>(-1)
 
 <span style="color: #a0522d;">size_max</span> = trexio.read_mo_2e_int_eri_size(f)
@@ -917,27 +902,27 @@ One needs to read from the TREXIO file:
 <span style="color: #a0522d;">W</span> = np.zeros( (n,n,n,n) )
 <span style="color: #a020f0;">while</span> <span style="color: #a020f0;">not</span> feof:
   <span style="color: #a0522d;">buffer_index</span>, <span style="color: #a0522d;">buffer_values</span>, <span style="color: #a0522d;">icount</span>, <span style="color: #a0522d;">feof</span> = trexio.read_mo_2e_int_eri(f, offset, icount)
+  <span style="color: #a0522d;">offset</span> += icount
   <span style="color: #a020f0;">for</span> m <span style="color: #a020f0;">in</span> <span style="color: #483d8b;">range</span>(icount):
     <span style="color: #a0522d;">i</span>, <span style="color: #a0522d;">j</span>, <span style="color: #a0522d;">k</span>, <span style="color: #a0522d;">l</span> = buffer_index[m]
-    <span style="color: #a0522d;">W</span>[i,j,k,l] = buffer_values[m]
-    <span style="color: #a0522d;">W</span>[k,j,i,l] = buffer_values[m]
-    <span style="color: #a0522d;">W</span>[i,l,k,j] = buffer_values[m]
-    <span style="color: #a0522d;">W</span>[k,l,i,j] = buffer_values[m]
-    <span style="color: #a0522d;">W</span>[j,i,l,k] = buffer_values[m]
-    <span style="color: #a0522d;">W</span>[j,k,l,i] = buffer_values[m]
-    <span style="color: #a0522d;">W</span>[l,i,j,k] = buffer_values[m]
-    <span style="color: #a0522d;">W</span>[l,k,j,i] = buffer_values[m]
+    <span style="color: #a0522d;">W</span>[<span style="color: #a0522d;">i</span>,<span style="color: #a0522d;">j</span>,<span style="color: #a0522d;">k</span>,<span style="color: #a0522d;">l</span>] = buffer_values[m]
+    <span style="color: #a0522d;">W</span>[<span style="color: #a0522d;">k</span>,<span style="color: #a0522d;">j</span>,<span style="color: #a0522d;">i</span>,<span style="color: #a0522d;">l</span>] = buffer_values[m]
+    <span style="color: #a0522d;">W</span>[<span style="color: #a0522d;">i</span>,<span style="color: #a0522d;">l</span>,<span style="color: #a0522d;">k</span>,<span style="color: #a0522d;">j</span>] = buffer_values[m]
+    <span style="color: #a0522d;">W</span>[<span style="color: #a0522d;">k</span>,<span style="color: #a0522d;">l</span>,<span style="color: #a0522d;">i</span>,<span style="color: #a0522d;">j</span>] = buffer_values[m]
+    <span style="color: #a0522d;">W</span>[<span style="color: #a0522d;">j</span>,<span style="color: #a0522d;">i</span>,<span style="color: #a0522d;">l</span>,<span style="color: #a0522d;">k</span>] = buffer_values[m]
+    <span style="color: #a0522d;">W</span>[<span style="color: #a0522d;">j</span>,<span style="color: #a0522d;">k</span>,<span style="color: #a0522d;">l</span>,<span style="color: #a0522d;">i</span>] = buffer_values[m]
+    <span style="color: #a0522d;">W</span>[<span style="color: #a0522d;">l</span>,<span style="color: #a0522d;">i</span>,<span style="color: #a0522d;">j</span>,<span style="color: #a0522d;">k</span>] = buffer_values[m]
+    <span style="color: #a0522d;">W</span>[<span style="color: #a0522d;">l</span>,<span style="color: #a0522d;">k</span>,<span style="color: #a0522d;">j</span>,<span style="color: #a0522d;">i</span>] = buffer_values[m]
 </pre>
 </div>
 </div>
 </div>
-
-<div id="outline-container-orgaa44a3a" class="outline-5">
-<h5 id="orgaa44a3a"><span class="section-number-5">2.2.5.2.</span> Reduced density matrix</h5>
+<div id="outline-container-orgd3255e8" class="outline-5">
+<h5 id="orgd3255e8"><span class="section-number-5">2.2.5.2.</span> Reduced density matrix</h5>
 <div class="outline-text-5" id="text-2-2-5-2">
 <div class="org-src-container">
 <pre class="src src-python"><span style="color: #a020f0;">if</span> <span style="color: #a020f0;">not</span> trexio.has_rdm_2e(f):
-  <span style="color: #a020f0;">print</span>(<span style="color: #8b2252;">"No two-body density matrix in file"</span>)
+  <span style="color: #483d8b;">print</span>(<span style="color: #8b2252;">"No two-body density matrix in file"</span>)
 
 <span style="color: #a0522d;">offset</span> = 0
 <span style="color: #a0522d;">icount</span> = BUFSIZE
@@ -945,18 +930,18 @@ One needs to read from the TREXIO file:
 <span style="color: #a0522d;">G</span> = np.zeros( (n,n,n,n) )
 <span style="color: #a020f0;">while</span> <span style="color: #a020f0;">not</span> feof:
   <span style="color: #a0522d;">buffer_index</span>, <span style="color: #a0522d;">buffer_values</span>, <span style="color: #a0522d;">icount</span>, <span style="color: #a0522d;">feof</span> = trexio.read_rdm_2e(f, offset, icount)
+  <span style="color: #a0522d;">offset</span> += icount
   <span style="color: #a020f0;">for</span> m <span style="color: #a020f0;">in</span> <span style="color: #483d8b;">range</span>(icount):
     <span style="color: #a0522d;">i</span>, <span style="color: #a0522d;">j</span>, <span style="color: #a0522d;">k</span>, <span style="color: #a0522d;">l</span> = buffer_index[m]
-    <span style="color: #a0522d;">G</span>[i,j,k,l] = buffer_values[m]
+    <span style="color: #a0522d;">G</span>[<span style="color: #a0522d;">i</span>,<span style="color: #a0522d;">j</span>,<span style="color: #a0522d;">k</span>,<span style="color: #a0522d;">l</span>] = buffer_values[m]
 
 </pre>
 </div>
 </div>
 </div>
 </div>
-
-<div id="outline-container-orgfd37cbf" class="outline-4">
-<h4 id="orgfd37cbf"><span class="section-number-4">2.2.6.</span> Compute the energy</h4>
+<div id="outline-container-org9a24776" class="outline-4">
+<h4 id="org9a24776"><span class="section-number-4">2.2.6.</span> Compute the energy</h4>
 <div class="outline-text-4" id="text-2-2-6">
 <p>
 When the orbitals are real, we can use
@@ -977,20 +962,19 @@ E &=& E_{\text{NN}} + \sum_{ij} \gamma_{ij}\, \langle j | h | i \rangle\,
 <span style="color: #a0522d;">E</span> += 0.5*<span style="color: #483d8b;">sum</span>( [ np.dot(G[:,l], W[:,l]) <span style="color: #a020f0;">for</span> l <span style="color: #a020f0;">in</span> <span style="color: #483d8b;">range</span>(n*n) ] )
 <span style="color: #a0522d;">E</span> += <span style="color: #483d8b;">sum</span>( [ np.dot(D[:,l], h0[:,l]) <span style="color: #a020f0;">for</span> l <span style="color: #a020f0;">in</span> <span style="color: #483d8b;">range</span>(n) ] )
 
-<span style="color: #a020f0;">print</span> (f<span style="color: #8b2252;">"Energy: {E}"</span>)
+<span style="color: #483d8b;">print</span> (f<span style="color: #8b2252;">"Energy: </span>{E}<span style="color: #8b2252;">"</span>)
 </pre>
 </div>
 </div>
 </div>
 </div>
 </div>
-
-<div id="outline-container-orgec68653" class="outline-2">
-<h2 id="orgec68653"><span class="section-number-2">3.</span> Reading determinants</h2>
+<div id="outline-container-org4a4f440" class="outline-2">
+<h2 id="org4a4f440"><span class="section-number-2">3.</span> Reading determinants</h2>
 <div class="outline-text-2" id="text-3">
 </div>
-<div id="outline-container-org242ce33" class="outline-3">
-<h3 id="org242ce33"><span class="section-number-3">3.1.</span> Fortran</h3>
+<div id="outline-container-org0624bbf" class="outline-3">
+<h3 id="org0624bbf"><span class="section-number-3">3.1.</span> Fortran</h3>
 <div class="outline-text-3" id="text-3-1">
 <div class="org-src-container">
 <pre class="src src-f90"><span style="color: #a020f0;">program</span> <span style="color: #0000ff;">test</span>
@@ -998,11 +982,11 @@ E &=& E_{\text{NN}} + \sum_{ij} \gamma_{ij}\, \langle j | h | i \rangle\,
   <span style="color: #a020f0;">use</span> <span style="color: #0000ff;">trexio</span>
   <span style="color: #a020f0;">implicit</span> <span style="color: #228b22;">none</span>
 
-  <span style="color: #228b22;">character</span>*(128)           ::<span style="color: #a0522d;"> filename               </span>! <span style="color: #b22222;">Name of the input file</span>
-  <span style="color: #228b22;">integer</span>(trexio_exit_code) ::<span style="color: #a0522d;"> rc                     </span>! <span style="color: #b22222;">Return code for error checking</span>
-  <span style="color: #228b22;">integer</span>(trexio_t)         ::<span style="color: #a0522d;"> trex_determinant_file  </span>! <span style="color: #b22222;">TREXIO file handle</span>
-  <span style="color: #228b22;">character</span>*(128)           ::<span style="color: #a0522d;"> err_msg                </span>! <span style="color: #b22222;">Error message</span>
-
+  <span style="color: #228b22;">character</span>*(128)           ::<span style="color: #a0522d;"> filename               </span>! <span style="color: #b22222;">Name of the input file
+</span>  <span style="color: #228b22;">integer</span>(trexio_exit_code) ::<span style="color: #a0522d;"> rc                     </span>! <span style="color: #b22222;">Return code for error checking
+</span>  <span style="color: #228b22;">integer</span>(trexio_t)         ::<span style="color: #a0522d;"> trex_determinant_file  </span>! <span style="color: #b22222;">TREXIO file handle
+</span>  <span style="color: #228b22;">character</span>*(128)           ::<span style="color: #a0522d;"> err_msg                </span>! <span style="color: #b22222;">Error message
+</span>
 
   <span style="color: #228b22;">integer</span>*8, <span style="color: #a020f0;">allocatable</span> ::<span style="color: #a0522d;"> buffer(:,:,:)</span>
   <span style="color: #228b22;">integer</span>(8) ::<span style="color: #a0522d;"> offset, icount, BUFSIZE</span>
@@ -1066,10 +1050,163 @@ end
 </div>
 </div>
 </div>
+<div id="outline-container-org164062e" class="outline-2">
+<h2 id="org164062e"><span class="section-number-2">4.</span> Reordering basis functions</h2>
+<div class="outline-text-2" id="text-4">
+<p>
+Here is a simple recipe to reorder your atomic orbitals in TREXIO
+ordering, and to apply this re-ordering to your MOs.
+</p>
+</div>
+<div id="outline-container-org261563a" class="outline-3">
+<h3 id="org261563a"><span class="section-number-3">4.1.</span> Cartesian AOs</h3>
+<div class="outline-text-3" id="text-4-1">
+<ol class="org-ol">
+<li><p>
+Specify the ordering used by your software in a list, for each angular momentum.
+Here is a simple example for Molden ordering.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #a0522d;">conv</span> = [ [ <span style="color: #8b2252;">'s'</span> ],
+         [<span style="color: #8b2252;">'x'</span>, <span style="color: #8b2252;">'y'</span>, <span style="color: #8b2252;">'z'</span>],
+         [<span style="color: #8b2252;">'xx'</span>, <span style="color: #8b2252;">'yy'</span>, <span style="color: #8b2252;">'zz'</span>, <span style="color: #8b2252;">'xy'</span>, <span style="color: #8b2252;">'xz'</span>, <span style="color: #8b2252;">'yz'</span>],
+         [<span style="color: #8b2252;">'xxx'</span>, <span style="color: #8b2252;">'yyy'</span>, <span style="color: #8b2252;">'zzz'</span>, <span style="color: #8b2252;">'xyy'</span>, <span style="color: #8b2252;">'xxy'</span>, <span style="color: #8b2252;">'xxz'</span>, <span style="color: #8b2252;">'xzz'</span>, <span style="color: #8b2252;">'yzz'</span>, <span style="color: #8b2252;">'yyz'</span>, <span style="color: #8b2252;">'xyz'</span>],
+         [<span style="color: #8b2252;">'xxxx'</span>, <span style="color: #8b2252;">'yyyy'</span>, <span style="color: #8b2252;">'zzzz'</span>, <span style="color: #8b2252;">'xxxy'</span>, <span style="color: #8b2252;">'xxxz'</span>, <span style="color: #8b2252;">'xyyy'</span>, <span style="color: #8b2252;">'yyyz'</span>, <span style="color: #8b2252;">'xzzz'</span>, <span style="color: #8b2252;">'yzzz'</span>, <span style="color: #8b2252;">'xxyy'</span>, <span style="color: #8b2252;">'xxzz'</span>, <span style="color: #8b2252;">'yyzz'</span>, <span style="color: #8b2252;">'xxyz'</span>, <span style="color: #8b2252;">'xyyz'</span>, <span style="color: #8b2252;">'xyzz'</span>] ]
+</pre>
+</div>
+
+<p>
+<code>conv[l]</code> returns the ordering for angular momentum <code>l</code>.
+</p></li>
+
+<li><p>
+Iterate over the shells, and append the corresponding predefined lists
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #a0522d;">ao</span> = []
+<span style="color: #a020f0;">for</span> l <span style="color: #a020f0;">in</span> shell_ang_mom:
+       ao.append(conv[l])
+</pre>
+</div></li>
+
+<li><p>
+For each shell, assign a numerical index to each AO, then reorder them lexicographically
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #a0522d;">ao_ordering</span> = []
+<span style="color: #a0522d;">j</span> = 0
+<span style="color: #a020f0;">for</span> k,l <span style="color: #a020f0;">in</span> <span style="color: #483d8b;">enumerate</span>(ao):
+      <span style="color: #a0522d;">accu</span> = [ x, i+j, <span style="color: #a020f0;">for</span> i,x <span style="color: #a020f0;">in</span> <span style="color: #483d8b;">enumerate</span>(l) ]
+      accu.sort()
+      <span style="color: #a0522d;">ao_ordering</span> += accu
+      <span style="color: #a0522d;">j</span> += <span style="color: #483d8b;">len</span>(l)
+<span style="color: #a0522d;">ao_ordering</span> = [ i <span style="color: #a020f0;">for</span> (_,i) <span style="color: #a020f0;">in</span> ao_ordering ]
+</pre>
+</div></li>
+</ol>
+</div>
+</div>
+<div id="outline-container-org99c0f8c" class="outline-3">
+<h3 id="org99c0f8c"><span class="section-number-3">4.2.</span> Spherical AOs</h3>
+<div class="outline-text-3" id="text-4-2">
+<p>
+For spherical AOs, you can adopt a similar approach as for Cartesian AOs,
+but you will need to define a function that generates a string to
+ensure lexicographic sorting functions correctly.
+</p>
+
+<ol class="org-ol">
+<li><p>
+Specify the ordering used by your software in a list, for each angular momentum.
+Here is a simple example for Molden ordering.
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #a0522d;">conv</span> = [ [<span style="color: #8b2252;">'s'</span>],
+         [<span style="color: #8b2252;">'p+1'</span>, <span style="color: #8b2252;">'p-1'</span>, <span style="color: #8b2252;">'p+0'</span>],
+         [<span style="color: #8b2252;">'d+0'</span>, <span style="color: #8b2252;">'d+1'</span>, <span style="color: #8b2252;">'d-1'</span>, <span style="color: #8b2252;">'d+2'</span>, <span style="color: #8b2252;">'d-2'</span>],
+         [<span style="color: #8b2252;">'f+0'</span>, <span style="color: #8b2252;">'f+1'</span>, <span style="color: #8b2252;">'f-1'</span>, <span style="color: #8b2252;">'f+2'</span>, <span style="color: #8b2252;">'f-2'</span>, <span style="color: #8b2252;">'f+3'</span>, <span style="color: #8b2252;">'f-3'</span>],
+         [<span style="color: #8b2252;">'g+0'</span>, <span style="color: #8b2252;">'g+1'</span>, <span style="color: #8b2252;">'g-1'</span>, <span style="color: #8b2252;">'g+2'</span>, <span style="color: #8b2252;">'g-2'</span>, <span style="color: #8b2252;">'g+3'</span>, <span style="color: #8b2252;">'g-3'</span>, <span style="color: #8b2252;">'g+4'</span>, <span style="color: #8b2252;">'g-4'</span>] ]
+</pre>
+</div></li>
+
+<li><p>
+Iterate over the shells, and append the corresponding predefined lists
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #a0522d;">ao</span> = []
+<span style="color: #a020f0;">for</span> l <span style="color: #a020f0;">in</span> shell_ang_mom:
+       ao.append(conv[l])
+</pre>
+</div></li>
+
+<li><p>
+Create a sorting function
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #a020f0;">def</span> <span style="color: #0000ff;">f_sort</span>(x):
+    <span style="color: #a0522d;">m</span> = <span style="color: #483d8b;">int</span>(x[1:])
+    <span style="color: #a020f0;">if</span> m&gt;=0:
+        <span style="color: #a020f0;">return</span> 2*m
+    <span style="color: #a020f0;">else</span>:
+        <span style="color: #a020f0;">return</span> -2*m+1
+</pre>
+</div></li>
+</ol>
+
+<ol class="org-ol">
+<li><p>
+For each shell, assign a numerical index to each AO, then reorder them lexicographically
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #a0522d;">ao_ordering</span> = []
+<span style="color: #a0522d;">j</span> = 0
+<span style="color: #a020f0;">for</span> k,l <span style="color: #a020f0;">in</span> <span style="color: #483d8b;">enumerate</span>(ao):
+      <span style="color: #a0522d;">accu</span> = [ f_sort(x), i+j, <span style="color: #a020f0;">for</span> i,x <span style="color: #a020f0;">in</span> <span style="color: #483d8b;">enumerate</span>(l) ]
+      accu.sort()
+      <span style="color: #a0522d;">ao_ordering</span> += accu
+      <span style="color: #a0522d;">j</span> += <span style="color: #483d8b;">len</span>(l)
+
+<span style="color: #a0522d;">ao_ordering</span> = [ i <span style="color: #a020f0;">for</span> (_,i) <span style="color: #a020f0;">in</span> ao_ordering ]
+</pre>
+</div></li>
+</ol>
+</div>
+</div>
+<div id="outline-container-org828c77f" class="outline-3">
+<h3 id="org828c77f"><span class="section-number-3">4.3.</span> Reordering the MOs</h3>
+<div class="outline-text-3" id="text-4-3">
+<p>
+Apply the ordering to each MO, and concatenate them in a 1D array
+to pass it to trexio:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-python"><span style="color: #a0522d;">MoMatrix</span> = []
+<span style="color: #a020f0;">for</span> mo <span style="color: #a020f0;">in</span> mo_coef:
+      <span style="color: #a0522d;">vector</span> = np.zeros(ao_num)
+      <span style="color: #a020f0;">for</span> i, x <span style="color: #a020f0;">in</span> mo:
+         <span style="color: #a0522d;">vector</span>[i] = x
+      <span style="color: #a020f0;">for</span> i <span style="color: #a020f0;">in</span> ao_ordering:
+         MoMatrix.append(vector[i])
+
+trexio.write_mo_coefficient(trexio_file, MoMatrix)
+
+</pre>
+</div>
+</div>
+</div>
+</div>
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: TREX-CoE</p>
-<p class="date">Created: 2024-06-27 jeu. 16:45</p>
+<p class="date">Created: 2025-07-16 Wed 20:52</p>
 <p class="validation"><a href="https://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
 </body>

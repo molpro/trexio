@@ -50,7 +50,4 @@ trexio_exit_code trexio_pre_close(trexio_t* file);
 trexio_exit_code trexio_write_determinant_num(trexio_t* const file, const int32_t num);
 trexio_exit_code trexio_write_determinant_num_32(trexio_t* const file, const int32_t num);
 trexio_exit_code trexio_write_determinant_num_64(trexio_t* const file, const int64_t num);
-trexio_exit_code trexio_write_csf_num(trexio_t* const file, const int32_t num);
-trexio_exit_code trexio_write_csf_num_32(trexio_t* const file, const int32_t num);
-trexio_exit_code trexio_write_csf_num_64(trexio_t* const file, const int64_t num);
 #endif
