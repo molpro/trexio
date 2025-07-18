@@ -276,7 +276,7 @@ character(len = 12) :: TREXIO_PACKAGE_VERSION = "2.5.2"
 integer :: TREXIO_VERSION_MAJOR = 2
 integer :: TREXIO_VERSION_MINOR = 5
 integer :: TREXIO_VERSION_PATCH = 2
-character(len = 64) :: TREXIO_GIT_HASH = "aa24a53c700babd3239a4427f95cead08dd98b5d"
+character(len = 64) :: TREXIO_GIT_HASH = "9dd005a73dd7780c67eefa03ee263659990a99a1"
 
 interface
    integer(trexio_exit_code) function &

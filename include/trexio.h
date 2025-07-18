@@ -17,55 +17,55 @@ extern "C" {
 {
 
 "metadata": {
-		 "code_num" : [ "dim", []                        ]
-	,            "code" : [ "str", [ "metadata.code_num" ]   ]
-	,      "author_num" : [ "dim", []                        ]
-	,          "author" : [ "str", [ "metadata.author_num" ] ]
-	, "package_version" : [ "str", []                        ]
-	,     "description" : [ "str", []                        ]
-	,          "unsafe" : [ "int", []                        ]
+	   "code_num" : [ "dim", []                        ]
+  ,            "code" : [ "str", [ "metadata.code_num" ]   ]
+  ,      "author_num" : [ "dim", []                        ]
+  ,          "author" : [ "str", [ "metadata.author_num" ] ]
+  , "package_version" : [ "str", []                        ]
+  ,     "description" : [ "str", []                        ]
+  ,          "unsafe" : [ "int", []                        ]
 } ,
 
 "nucleus": {
-		   "num" : [ "dim"  , []                     ]
-	 ,      "charge" : [ "float", [ "nucleus.num" ]      ]
-	 ,       "coord" : [ "float", [ "nucleus.num", "3" ] ]
-	 ,       "label" : [ "str"  , [ "nucleus.num" ]      ]
-	 , "point_group" : [ "str"  , []                     ]
-	 ,   "repulsion" : [ "float", []                     ]
+	    "num" : [ "dim"  , []                     ]
+  ,      "charge" : [ "float", [ "nucleus.num" ]      ]
+  ,       "coord" : [ "float", [ "nucleus.num", "3" ] ]
+  ,       "label" : [ "str"  , [ "nucleus.num" ]      ]
+  , "point_group" : [ "str"  , []                     ]
+  ,   "repulsion" : [ "float", []                     ]
 } ,
 
 "cell": {
-		"a" : [ "float", [ "3" ] ]
-	 ,      "b" : [ "float", [ "3" ] ]
-	 ,      "c" : [ "float", [ "3" ] ]
-	 ,    "g_a" : [ "float", [ "3" ] ]
-	 ,    "g_b" : [ "float", [ "3" ] ]
-	 ,    "g_c" : [ "float", [ "3" ] ]
-	 , "two_pi" : [ "int"  , []      ]
+	 "a" : [ "float", [ "3" ] ]
+  ,      "b" : [ "float", [ "3" ] ]
+  ,      "c" : [ "float", [ "3" ] ]
+  ,    "g_a" : [ "float", [ "3" ] ]
+  ,    "g_b" : [ "float", [ "3" ] ]
+  ,    "g_c" : [ "float", [ "3" ] ]
+  , "two_pi" : [ "int"  , []      ]
 } ,
 
 "pbc": {
-		 "periodic" : [ "int"  , []                    ]
-	 ,    "k_point_num" : [ "dim"  , []                    ]
-	 ,        "k_point" : [ "float", [ "3" ]               ]
-	 , "k_point_weight" : [ "float", [ "pbc.k_point_num" ] ]
-	 ,       "madelung" : [ "float", []                    ]
+	  "periodic" : [ "int"  , []                    ]
+  ,    "k_point_num" : [ "dim"  , []                    ]
+  ,        "k_point" : [ "float", [ "3" ]               ]
+  , "k_point_weight" : [ "float", [ "pbc.k_point_num" ] ]
+  ,       "madelung" : [ "float", []                    ]
 } ,
 
 "electron": {
-	      "num" : [ "dim", []  ]
-	 , "up_num" : [ "int", []  ]
-	 , "dn_num" : [ "int", []  ]
+       "num" : [ "dim", []  ]
+  , "up_num" : [ "int", []  ]
+  , "dn_num" : [ "int", []  ]
 } ,
 
 "state": {
-		     "num" : [ "dim"  , []              ]
-	 ,            "id" : [ "index", []              ]
-	 ,        "energy" : [ "float", []              ]
-	 , "current_label" : [ "str"  , []              ]
-	 ,         "label" : [ "str"  , [ "state.num" ] ]
-	 ,     "file_name" : [ "str"  , [ "state.num" ] ]
+	      "num" : [ "dim"  , []              ]
+  ,            "id" : [ "index", []              ]
+  ,        "energy" : [ "float", []              ]
+  , "current_label" : [ "str"  , []              ]
+  ,         "label" : [ "str"  , [ "state.num" ] ]
+  ,     "file_name" : [ "str"  , [ "state.num" ] ]
 } ,
 
 "basis": {
@@ -100,14 +100,14 @@ extern "C" {
 } ,
 
 "ecp": {
-	   "max_ang_mom_plus_1" : [ "int"  , [ "nucleus.num" ] ]
-	 ,             "z_core" : [ "int"  , [ "nucleus.num" ] ]
-	 ,                "num" : [ "dim"  , []                ]
-	 ,            "ang_mom" : [ "int"  , [ "ecp.num" ]     ]
-	 ,      "nucleus_index" : [ "index", [ "ecp.num" ]     ]
-	 ,           "exponent" : [ "float", [ "ecp.num" ]     ]
-	 ,        "coefficient" : [ "float", [ "ecp.num" ]     ]
-	 ,              "power" : [ "int"  , [ "ecp.num" ]     ]
+    "max_ang_mom_plus_1" : [ "int"  , [ "nucleus.num" ] ]
+  ,             "z_core" : [ "int"  , [ "nucleus.num" ] ]
+  ,                "num" : [ "dim"  , []                ]
+  ,            "ang_mom" : [ "int"  , [ "ecp.num" ]     ]
+  ,      "nucleus_index" : [ "index", [ "ecp.num" ]     ]
+  ,           "exponent" : [ "float", [ "ecp.num" ]     ]
+  ,        "coefficient" : [ "float", [ "ecp.num" ]     ]
+  ,              "power" : [ "int"  , [ "ecp.num" ]     ]
 } ,
 
 "grid": {
@@ -127,10 +127,10 @@ extern "C" {
 } ,
 
 "ao": {
-	       "cartesian" : [ "int"  , []           ]
-	 ,           "num" : [ "dim"  , []           ]
-	 ,         "shell" : [ "index", [ "ao.num" ] ]
-	 , "normalization" : [ "float", [ "ao.num" ] ]
+	"cartesian" : [ "int"  , []           ]
+  ,           "num" : [ "dim"  , []           ]
+  ,         "shell" : [ "index", [ "ao.num" ] ]
+  , "normalization" : [ "float", [ "ao.num" ] ]
 } ,
 
 "ao_1e_int": {
@@ -156,16 +156,16 @@ extern "C" {
 } ,
 
 "mo": {
-		     "type" : [ "str"  , []                     ]
-	 ,            "num" : [ "dim"  , []                     ]
-	 ,    "coefficient" : [ "float", [ "mo.num", "ao.num" ] ]
-	 , "coefficient_im" : [ "float", [ "mo.num", "ao.num" ] ]
-	 ,          "class" : [ "str"  , [ "mo.num" ]           ]
-	 ,       "symmetry" : [ "str"  , [ "mo.num" ]           ]
-	 ,     "occupation" : [ "float", [ "mo.num" ]           ]
-	 ,         "energy" : [ "float", [ "mo.num" ]           ]
-	 ,           "spin" : [ "int"  , [ "mo.num" ]           ]
-	 ,        "k_point" : [ "index", [ "mo.num" ]           ]
+	      "type" : [ "str"  , []                     ]
+  ,            "num" : [ "dim"  , []                     ]
+  ,    "coefficient" : [ "float", [ "mo.num", "ao.num" ] ]
+  , "coefficient_im" : [ "float", [ "mo.num", "ao.num" ] ]
+  ,          "class" : [ "str"  , [ "mo.num" ]           ]
+  ,       "symmetry" : [ "str"  , [ "mo.num" ]           ]
+  ,     "occupation" : [ "float", [ "mo.num" ]           ]
+  ,         "energy" : [ "float", [ "mo.num" ]           ]
+  ,           "spin" : [ "int"  , [ "mo.num" ]           ]
+  ,        "k_point" : [ "index", [ "mo.num" ]           ]
 } ,
 
 "mo_1e_int": {
@@ -191,67 +191,67 @@ extern "C" {
 } ,
 
 "determinant": {
-		   "num" : [ "dim readonly"  , []                    ]
-	 ,        "list" : [ "int special"   , [ "determinant.num" ] ]
-	 , "coefficient" : [ "float buffered", [ "determinant.num" ] ]
+	    "num" : [ "dim readonly"  , []                    ]
+  ,        "list" : [ "int special"   , [ "determinant.num" ] ]
+  , "coefficient" : [ "float buffered", [ "determinant.num" ] ]
 } ,
 
 "csf": {
-		       "num" : [ "dim"           , []                               ]
-	 ,     "coefficient" : [ "float buffered", [ "csf.num" ]                    ]
-	 , "det_coefficient" : [ "float sparse"  , [ "csf.num", "determinant.num" ] ]
+		"num" : [ "dim"           , []                               ]
+  ,     "coefficient" : [ "float buffered", [ "csf.num" ]                    ]
+  , "det_coefficient" : [ "float sparse"  , [ "csf.num", "determinant.num" ] ]
 } ,
 
 "amplitude": {
-		  "single" : [ "float sparse", [ "mo.num", "mo.num" ]                                                             ]
-	 ,    "single_exp" : [ "float sparse", [ "mo.num", "mo.num" ]                                                             ]
-	 ,        "double" : [ "float sparse", [ "mo.num", "mo.num", "mo.num", "mo.num" ]                                         ]
-	 ,    "double_exp" : [ "float sparse", [ "mo.num", "mo.num", "mo.num", "mo.num" ]                                         ]
-	 ,        "triple" : [ "float sparse", [ "mo.num", "mo.num", "mo.num", "mo.num", "mo.num", "mo.num" ]                     ]
-	 ,    "triple_exp" : [ "float sparse", [ "mo.num", "mo.num", "mo.num", "mo.num", "mo.num", "mo.num" ]                     ]
-	 ,     "quadruple" : [ "float sparse", [ "mo.num", "mo.num", "mo.num", "mo.num", "mo.num", "mo.num", "mo.num", "mo.num" ] ]
-	 , "quadruple_exp" : [ "float sparse", [ "mo.num", "mo.num", "mo.num", "mo.num", "mo.num", "mo.num", "mo.num", "mo.num" ] ]
+	   "single" : [ "float sparse", [ "mo.num", "mo.num" ]                                                             ]
+  ,    "single_exp" : [ "float sparse", [ "mo.num", "mo.num" ]                                                             ]
+  ,        "double" : [ "float sparse", [ "mo.num", "mo.num", "mo.num", "mo.num" ]                                         ]
+  ,    "double_exp" : [ "float sparse", [ "mo.num", "mo.num", "mo.num", "mo.num" ]                                         ]
+  ,        "triple" : [ "float sparse", [ "mo.num", "mo.num", "mo.num", "mo.num", "mo.num", "mo.num" ]                     ]
+  ,    "triple_exp" : [ "float sparse", [ "mo.num", "mo.num", "mo.num", "mo.num", "mo.num", "mo.num" ]                     ]
+  ,     "quadruple" : [ "float sparse", [ "mo.num", "mo.num", "mo.num", "mo.num", "mo.num", "mo.num", "mo.num", "mo.num" ] ]
+  , "quadruple_exp" : [ "float sparse", [ "mo.num", "mo.num", "mo.num", "mo.num", "mo.num", "mo.num", "mo.num", "mo.num" ] ]
 } ,
 
 "rdm": {
-			     "1e" : [ "float"       , [ "mo.num", "mo.num" ]                                               ]
-	 ,                "1e_up" : [ "float"       , [ "mo.num", "mo.num" ]                                               ]
-	 ,                "1e_dn" : [ "float"       , [ "mo.num", "mo.num" ]                                               ]
-	 ,        "1e_transition" : [ "float"       , [ "state.num", "state.num", "mo.num", "mo.num" ]                     ]
-	 ,                   "2e" : [ "float sparse", [ "mo.num", "mo.num", "mo.num", "mo.num" ]                           ]
-	 ,              "2e_upup" : [ "float sparse", [ "mo.num", "mo.num", "mo.num", "mo.num" ]                           ]
-	 ,              "2e_dndn" : [ "float sparse", [ "mo.num", "mo.num", "mo.num", "mo.num" ]                           ]
-	 ,              "2e_updn" : [ "float sparse", [ "mo.num", "mo.num", "mo.num", "mo.num" ]                           ]
-	 ,        "2e_transition" : [ "float sparse", [ "state.num", "state.num", "mo.num", "mo.num", "mo.num", "mo.num" ] ]
-	 ,      "2e_cholesky_num" : [ "dim"         , []                                                                   ]
-	 ,          "2e_cholesky" : [ "float sparse", [ "rdm.2e_cholesky_num", "mo.num", "mo.num" ]                        ]
-	 , "2e_upup_cholesky_num" : [ "dim"         , []                                                                   ]
-	 ,     "2e_upup_cholesky" : [ "float sparse", [ "rdm.2e_upup_cholesky_num", "mo.num", "mo.num" ]                   ]
-	 , "2e_dndn_cholesky_num" : [ "dim"         , []                                                                   ]
-	 ,     "2e_dndn_cholesky" : [ "float sparse", [ "rdm.2e_dndn_cholesky_num", "mo.num", "mo.num" ]                   ]
-	 , "2e_updn_cholesky_num" : [ "dim"         , []                                                                   ]
-	 ,     "2e_updn_cholesky" : [ "float sparse", [ "rdm.2e_updn_cholesky_num", "mo.num", "mo.num" ]                   ]
+		      "1e" : [ "float"       , [ "mo.num", "mo.num" ]                                               ]
+  ,                "1e_up" : [ "float"       , [ "mo.num", "mo.num" ]                                               ]
+  ,                "1e_dn" : [ "float"       , [ "mo.num", "mo.num" ]                                               ]
+  ,        "1e_transition" : [ "float"       , [ "state.num", "state.num", "mo.num", "mo.num" ]                     ]
+  ,                   "2e" : [ "float sparse", [ "mo.num", "mo.num", "mo.num", "mo.num" ]                           ]
+  ,              "2e_upup" : [ "float sparse", [ "mo.num", "mo.num", "mo.num", "mo.num" ]                           ]
+  ,              "2e_dndn" : [ "float sparse", [ "mo.num", "mo.num", "mo.num", "mo.num" ]                           ]
+  ,              "2e_updn" : [ "float sparse", [ "mo.num", "mo.num", "mo.num", "mo.num" ]                           ]
+  ,        "2e_transition" : [ "float sparse", [ "state.num", "state.num", "mo.num", "mo.num", "mo.num", "mo.num" ] ]
+  ,      "2e_cholesky_num" : [ "dim"         , []                                                                   ]
+  ,          "2e_cholesky" : [ "float sparse", [ "rdm.2e_cholesky_num", "mo.num", "mo.num" ]                        ]
+  , "2e_upup_cholesky_num" : [ "dim"         , []                                                                   ]
+  ,     "2e_upup_cholesky" : [ "float sparse", [ "rdm.2e_upup_cholesky_num", "mo.num", "mo.num" ]                   ]
+  , "2e_dndn_cholesky_num" : [ "dim"         , []                                                                   ]
+  ,     "2e_dndn_cholesky" : [ "float sparse", [ "rdm.2e_dndn_cholesky_num", "mo.num", "mo.num" ]                   ]
+  , "2e_updn_cholesky_num" : [ "dim"         , []                                                                   ]
+  ,     "2e_updn_cholesky" : [ "float sparse", [ "rdm.2e_updn_cholesky_num", "mo.num", "mo.num" ]                   ]
 } ,
 
 "jastrow": {
-		  "type" : [ "str"  , []                    ]
-	 ,      "en_num" : [ "dim"  , []                    ]
-	 ,      "ee_num" : [ "dim"  , []                    ]
-	 ,     "een_num" : [ "dim"  , []                    ]
-	 ,          "en" : [ "float", [ "jastrow.en_num" ]  ]
-	 ,          "ee" : [ "float", [ "jastrow.ee_num" ]  ]
-	 ,         "een" : [ "float", [ "jastrow.een_num" ] ]
-	 ,  "en_nucleus" : [ "index", [ "jastrow.en_num" ]  ]
-	 , "een_nucleus" : [ "index", [ "jastrow.een_num" ] ]
-	 ,  "ee_scaling" : [ "float", []                    ]
-	 ,  "en_scaling" : [ "float", [ "nucleus.num" ]     ]
+	   "type" : [ "str"  , []                    ]
+  ,      "en_num" : [ "dim"  , []                    ]
+  ,      "ee_num" : [ "dim"  , []                    ]
+  ,     "een_num" : [ "dim"  , []                    ]
+  ,          "en" : [ "float", [ "jastrow.en_num" ]  ]
+  ,          "ee" : [ "float", [ "jastrow.ee_num" ]  ]
+  ,         "een" : [ "float", [ "jastrow.een_num" ] ]
+  ,  "en_nucleus" : [ "index", [ "jastrow.en_num" ]  ]
+  , "een_nucleus" : [ "index", [ "jastrow.een_num" ] ]
+  ,  "ee_scaling" : [ "float", []                    ]
+  ,  "en_scaling" : [ "float", [ "nucleus.num" ]     ]
 } ,
 
 "qmc": {
-	     "num" : [ "dim"  , []                                 ]
-	 , "point" : [ "float", [ "qmc.num", "electron.num", "3" ] ]
-	 ,   "psi" : [ "float", [ "qmc.num" ]                      ]
-	 , "e_loc" : [ "float", [ "qmc.num" ]                      ]
+      "num" : [ "dim"  , []                                 ]
+  , "point" : [ "float", [ "qmc.num", "electron.num", "3" ] ]
+  ,   "psi" : [ "float", [ "qmc.num" ]                      ]
+  , "e_loc" : [ "float", [ "qmc.num" ]                      ]
 }
 
 }
@@ -388,7 +388,7 @@ trexio_exit_code trexio_evaluate_nao_radial_all_py (const int32_t shell_num,
 #define TREXIO_VERSION_MAJOR 2
 #define TREXIO_VERSION_MINOR 5
 #define TREXIO_VERSION_PATCH 2
-#define TREXIO_GIT_HASH "aa24a53c700babd3239a4427f95cead08dd98b5d"
+#define TREXIO_GIT_HASH "9dd005a73dd7780c67eefa03ee263659990a99a1"
 
 trexio_exit_code trexio_delete_metadata(trexio_t* const file);
 
