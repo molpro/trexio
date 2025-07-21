@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2025-07-18 Fri 19:48 -->
+<!-- 2025-07-21 Mon 20:03 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Data stored in TREXIO</title>
@@ -272,72 +272,78 @@ org_html_manager.setup();  // activate after the parameters are set
 <h2>Table of Contents</h2>
 <div id="text-table-of-contents">
 <ul>
-<li><a href="#org6e29d7e">1. Metadata (metadata group)</a></li>
-<li><a href="#orgfe96a70">2. System</a>
+<li><a href="#org8e99a7b">1. Metadata (metadata group)</a></li>
+<li><a href="#orgf090251">2. System</a>
 <ul>
-<li><a href="#org8f9816b">2.1. Nucleus (nucleus group)</a></li>
-<li><a href="#org8e47efa">2.2. Cell (cell group)</a></li>
-<li><a href="#orga55e584">2.3. Periodic boundary calculations (pbc group)</a></li>
-<li><a href="#org05cc0e1">2.4. Electron (electron group)</a></li>
-<li><a href="#org4c50b39">2.5. Ground or excited states (state group)</a></li>
+<li><a href="#org72cc057">2.1. Nucleus (nucleus group)</a></li>
+<li><a href="#org4d5065e">2.2. Cell (cell group)</a></li>
+<li><a href="#org6d86207">2.3. Periodic boundary calculations (pbc group)</a></li>
+<li><a href="#org94effb4">2.4. Electron (electron group)</a></li>
+<li><a href="#org93faf62">2.5. Ground or excited states (state group)</a></li>
 </ul>
 </li>
-<li><a href="#orgcc5d806">3. Basis functions</a>
+<li><a href="#org18c8b20">3. Basis functions</a>
 <ul>
-<li><a href="#orgc039987">3.1. Basis set (basis group)</a>
+<li><a href="#org2f3672c">3.1. Basis set (basis group)</a>
 <ul>
-<li><a href="#orgdb0091f">3.1.1. Gaussian and Slater-type orbitals</a></li>
-<li><a href="#org9bd3f28">3.1.2. Numerical orbitals</a></li>
-<li><a href="#org3aa1873">3.1.3. Plane waves</a></li>
-<li><a href="#orga784d54">3.1.4. Oscillating orbitals</a></li>
-<li><a href="#org1883db6">3.1.5. Data definitions</a></li>
-<li><a href="#orgcfb7cbe">3.1.6. Example</a></li>
+<li><a href="#org6029151">3.1.1. Gaussian-type orbitals</a>
+<ul>
+<li><a href="#orgbf83eb1">3.1.1.1. Basis Functions</a></li>
+<li><a href="#org20108ab">3.1.1.2. Normalization Conventions</a></li>
 </ul>
 </li>
-<li><a href="#org8f56092">3.2. Effective core potentials (ecp group)</a>
-<ul>
-<li><a href="#org5785c23">3.2.1. Example</a></li>
+<li><a href="#org8b880c1">3.1.2. Gaussian and Slater-type orbitals</a></li>
+<li><a href="#org25fb004">3.1.3. Numerical orbitals</a></li>
+<li><a href="#org103132e">3.1.4. Plane waves</a></li>
+<li><a href="#org0d7cbaa">3.1.5. Oscillating orbitals</a></li>
+<li><a href="#orga518838">3.1.6. Data definitions</a></li>
+<li><a href="#org2edfedf">3.1.7. Example</a></li>
 </ul>
 </li>
-<li><a href="#org71f2233">3.3. Numerical integration grid (grid group)</a></li>
+<li><a href="#org7534058">3.2. Effective core potentials (ecp group)</a>
+<ul>
+<li><a href="#orgbe3c204">3.2.1. Example</a></li>
 </ul>
 </li>
-<li><a href="#org5281c02">4. Orbitals</a>
+<li><a href="#org44c4a8e">3.3. Numerical integration grid (grid group)</a></li>
+</ul>
+</li>
+<li><a href="#org3960476">4. Orbitals</a>
 <ul>
-<li><a href="#org97cbe89">4.1. Atomic orbitals (ao group)</a>
+<li><a href="#org834ff1f">4.1. Atomic orbitals (ao group)</a>
 <ul>
 <li><a href="#ao_one_e">4.1.1. One-electron integrals (<code>ao_1e_int</code> group)</a></li>
 <li><a href="#ao_two_e">4.1.2. Two-electron integrals (<code>ao_2e_int</code> group)</a></li>
 </ul>
 </li>
-<li><a href="#org124c00a">4.2. Molecular orbitals (mo group)</a>
+<li><a href="#org3521b70">4.2. Molecular orbitals (mo group)</a>
 <ul>
-<li><a href="#orgcf75e08">4.2.1. One-electron integrals (<code>mo_1e_int</code> group)</a></li>
-<li><a href="#orga47f1b6">4.2.2. Two-electron integrals (<code>mo_2e_int</code> group)</a></li>
+<li><a href="#org03886d2">4.2.1. One-electron integrals (<code>mo_1e_int</code> group)</a></li>
+<li><a href="#orge4ca9df">4.2.2. Two-electron integrals (<code>mo_2e_int</code> group)</a></li>
 </ul>
 </li>
 </ul>
 </li>
-<li><a href="#orga611772">5. Multi-determinant information</a>
+<li><a href="#org015683c">5. Multi-determinant information</a>
 <ul>
-<li><a href="#org2c4c66d">5.1. Slater determinants (determinant group)</a></li>
-<li><a href="#org901c8b6">5.2. Configuration state functions (csf group)</a></li>
-<li><a href="#org1d7e343">5.3. Amplitudes (amplitude group)</a></li>
-<li><a href="#orge64e2fa">5.4. Reduced density matrices (rdm group)</a></li>
+<li><a href="#org2943a6b">5.1. Slater determinants (determinant group)</a></li>
+<li><a href="#orgc042140">5.2. Configuration state functions (csf group)</a></li>
+<li><a href="#org7e6795e">5.3. Amplitudes (amplitude group)</a></li>
+<li><a href="#orgfb37e34">5.4. Reduced density matrices (rdm group)</a></li>
 </ul>
 </li>
-<li><a href="#org0ea366b">6. Correlation factors</a>
+<li><a href="#orgee8c27d">6. Correlation factors</a>
 <ul>
-<li><a href="#org077cee4">6.1. Jastrow factor (jastrow group)</a>
+<li><a href="#orgb26283d">6.1. Jastrow factor (jastrow group)</a>
 <ul>
-<li><a href="#orgb5fa7f1">6.1.1. CHAMP</a></li>
-<li><a href="#org75af40c">6.1.2. Mu</a></li>
-<li><a href="#orge22204f">6.1.3. Table of values</a></li>
+<li><a href="#org8d7be38">6.1.1. CHAMP</a></li>
+<li><a href="#org6269db3">6.1.2. Mu</a></li>
+<li><a href="#orga1428c5">6.1.3. Table of values</a></li>
 </ul>
 </li>
 </ul>
 </li>
-<li><a href="#org739ce3c">7. Quantum Monte Carlo data (qmc group)</a></li>
+<li><a href="#org4e120e1">7. Quantum Monte Carlo data (qmc group)</a></li>
 </ul>
 </div>
 </div>
@@ -359,8 +365,8 @@ contiguous in memory. In the row-major representation, <code>A[i,j]</code> and
 <code>A[i,j+1]</code> are contiguous.
 </p>
 
-<div id="outline-container-org6e29d7e" class="outline-2">
-<h2 id="org6e29d7e"><span class="section-number-2">1</span> Metadata (metadata group)</h2>
+<div id="outline-container-org8e99a7b" class="outline-2">
+<h2 id="org8e99a7b"><span class="section-number-2">1</span> Metadata (metadata group)</h2>
 <div class="outline-text-2" id="text-1">
 <p>
 As we expect TREXIO files to be archived in open-data repositories,
@@ -370,7 +376,7 @@ have participated to the creation of the file, a list of authors of
 the file, and a textual description.
 </p>
 
-<table id="org4815fdc" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<table id="org9e37d23" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
 
 
 <colgroup>
@@ -463,19 +469,19 @@ value can be manually overwritten (in unsafe mode) from <code>1</code> to <code>
 </div>
 </div>
 
-<div id="outline-container-orgfe96a70" class="outline-2">
-<h2 id="orgfe96a70"><span class="section-number-2">2</span> System</h2>
+<div id="outline-container-orgf090251" class="outline-2">
+<h2 id="orgf090251"><span class="section-number-2">2</span> System</h2>
 <div class="outline-text-2" id="text-2">
 </div>
-<div id="outline-container-org8f9816b" class="outline-3">
-<h3 id="org8f9816b"><span class="section-number-3">2.1</span> Nucleus (nucleus group)</h3>
+<div id="outline-container-org72cc057" class="outline-3">
+<h3 id="org72cc057"><span class="section-number-3">2.1</span> Nucleus (nucleus group)</h3>
 <div class="outline-text-3" id="text-2-1">
 <p>
 The nuclei are considered as fixed point charges. Coordinates are
 given in Cartesian \((x,y,z)\) format.
 </p>
 
-<table id="org762d17d" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<table id="org7c8cb89" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
 
 
 <colgroup>
@@ -551,15 +557,15 @@ given in Cartesian \((x,y,z)\) format.
 </div>
 </div>
 
-<div id="outline-container-org8e47efa" class="outline-3">
-<h3 id="org8e47efa"><span class="section-number-3">2.2</span> Cell (cell group)</h3>
+<div id="outline-container-org4d5065e" class="outline-3">
+<h3 id="org4d5065e"><span class="section-number-3">2.2</span> Cell (cell group)</h3>
 <div class="outline-text-3" id="text-2-2">
 <p>
 3 Lattice vectors to define a box containing the system, for example
 used in periodic calculations.
 </p>
 
-<table id="orgfcd477b" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<table id="org44a8b63" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
 
 
 <colgroup>
@@ -643,10 +649,10 @@ used in periodic calculations.
 </div>
 </div>
 
-<div id="outline-container-orga55e584" class="outline-3">
-<h3 id="orga55e584"><span class="section-number-3">2.3</span> Periodic boundary calculations (pbc group)</h3>
+<div id="outline-container-org6d86207" class="outline-3">
+<h3 id="org6d86207"><span class="section-number-3">2.3</span> Periodic boundary calculations (pbc group)</h3>
 <div class="outline-text-3" id="text-2-3">
-<table id="orgffa1451" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<table id="orgc4209e8" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
 
 
 <colgroup>
@@ -714,8 +720,8 @@ used in periodic calculations.
 </div>
 </div>
 
-<div id="outline-container-org05cc0e1" class="outline-3">
-<h3 id="org05cc0e1"><span class="section-number-3">2.4</span> Electron (electron group)</h3>
+<div id="outline-container-org94effb4" class="outline-3">
+<h3 id="org94effb4"><span class="section-number-3">2.4</span> Electron (electron group)</h3>
 <div class="outline-text-3" id="text-2-4">
 <p>
 The chemical system consists of nuclei and electrons, where the
@@ -734,7 +740,7 @@ the number of &uarr; and &darr; electrons is fixed.
 </p>
 
 
-<table id="org6d56598" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<table id="org4abe007" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
 
 
 <colgroup>
@@ -786,8 +792,8 @@ the number of &uarr; and &darr; electrons is fixed.
 </div>
 </div>
 
-<div id="outline-container-org4c50b39" class="outline-3">
-<h3 id="org4c50b39"><span class="section-number-3">2.5</span> Ground or excited states (state group)</h3>
+<div id="outline-container-org93faf62" class="outline-3">
+<h3 id="org93faf62"><span class="section-number-3">2.5</span> Ground or excited states (state group)</h3>
 <div class="outline-text-3" id="text-2-5">
 <p>
 This group contains information about excited states. Since only a
@@ -804,7 +810,7 @@ integrals, etc.
 The <code>id</code> and <code>current_label</code> attributes need to be specified for each file.
 </p>
 
-<table id="org82e9852" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<table id="org4364d3b" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
 
 
 <colgroup>
@@ -881,17 +887,118 @@ The <code>id</code> and <code>current_label</code> attributes need to be specifi
 </div>
 </div>
 
-<div id="outline-container-orgcc5d806" class="outline-2">
-<h2 id="orgcc5d806"><span class="section-number-2">3</span> Basis functions</h2>
+<div id="outline-container-org18c8b20" class="outline-2">
+<h2 id="org18c8b20"><span class="section-number-2">3</span> Basis functions</h2>
 <div class="outline-text-2" id="text-3">
 </div>
-<div id="outline-container-orgc039987" class="outline-3">
-<h3 id="orgc039987"><span class="section-number-3">3.1</span> Basis set (basis group)</h3>
+<div id="outline-container-org2f3672c" class="outline-3">
+<h3 id="org2f3672c"><span class="section-number-3">3.1</span> Basis set (basis group)</h3>
 <div class="outline-text-3" id="text-3-1">
 </div>
-<div id="outline-container-orgdb0091f" class="outline-4">
-<h4 id="orgdb0091f"><span class="section-number-4">3.1.1</span> Gaussian and Slater-type orbitals</h4>
+<div id="outline-container-org6029151" class="outline-4">
+<h4 id="org6029151"><span class="section-number-4">3.1.1</span> Gaussian-type orbitals</h4>
 <div class="outline-text-4" id="text-3-1-1">
+</div>
+<div id="outline-container-orgbf83eb1" class="outline-5">
+<h5 id="orgbf83eb1"><span class="section-number-5">3.1.1.1</span> Basis Functions</h5>
+<div class="outline-text-5" id="text-3-1-1-1">
+<p>
+We consider here basis functions centered on nuclei. It is
+therefore possible to introduce <b>dummy atoms</b> (artificial centers
+with no physical meaning) solely for the purpose of placing basis
+functions at arbitrary locations in space.
+</p>
+
+<p>
+The atomic basis set is defined as a list of shells. Each shell \(s\)
+is centered on a point \(\mathbf{R}_A\), associated with a given
+angular momentum \(\ell_s\), and characterized by a radial function
+\(R_s(\mathbf{r})\). The radial function is a linear combination of
+\(N_{\text{prim}}\) <b>primitive</b> functions. These primitives may be
+of Slater-type or Gaussian-type, and are parameterized by
+exponents \(\gamma_{ks}\) and contraction coefficients \(a_{ks}\).
+</p>
+
+<p>
+<b><b>Slater-type orbitals (STO):</b></b>
+</p>
+
+<p>
+Slater orbitals are typically written as:
+</p>
+
+<p>
+\[
+    R_s^{\text{STO}}(\mathbf{r}) = \mathcal{N}_s \left| \mathbf{r} - \mathbf{R}_A \right|^{n_s} 
+    \sum_{k=1}^{N_{\text{prim}}} f_{ks}^{\text{STO}}(\gamma_{ks})\,a_{ks}\,
+    \exp\left( -\gamma_{ks} \left| \mathbf{r} - \mathbf{R}_A \right| \right)
+    \]
+</p>
+
+<p>
+For STOs, the prefactor exponent \(n_s\) is usually set to 
+\(n_s = n-1\), where \(n\) is the principal quantum number.
+</p>
+
+<p>
+<b><b>Gaussian-type orbitals (GTO):</b></b>
+</p>
+
+<p>
+Gaussian orbitals are usually defined as:
+</p>
+
+<p>
+\[
+    R_s^{\text{GTO}}(\mathbf{r}) = \mathcal{N}_s \left| \mathbf{r} - \mathbf{R}_A \right|^{n_s} 
+    \sum_{k=1}^{N_{\text{prim}}} f_{ks}^{\text{GTO}}(\gamma_{ks})\, a_{ks}\, 
+    \exp\left( -\gamma_{ks} \left| \mathbf{r} - \mathbf{R}_A \right|^2 \right)
+    \]
+</p>
+
+<p>
+In conventional GTO-based codes, the radial prefactor exponent is
+typically set to \( n_s = 0 \), resulting in a so-called
+<b>cartesian Gaussian</b> formulation. However, it is also possible to
+define <b>spherically pure</b> Gaussian-type orbitals (GTOs) by setting
+\( n_s = \ell_s \).
+</p>
+</div>
+</div>
+
+<div id="outline-container-org20108ab" class="outline-5">
+<h5 id="org20108ab"><span class="section-number-5">3.1.1.2</span> Normalization Conventions</h5>
+<div class="outline-text-5" id="text-3-1-1-2">
+<p>
+Different computational chemistry codes apply normalization at
+various levels. The normalization of basis functions requires the
+evaluation of overlap integrals, which might not always be
+supported by the client software. For this reason, normalization
+constants should be explicitly provided in the data files to
+ensure portability and completeness.
+</p>
+
+<p>
+Some codes assume that the primitive functions are individually
+normalized. In that case, a normalization constant \(f_{ks}\)
+must be computed and applied to each primitive. If this
+normalization is not required, then \(f_{ks} = 1\).
+</p>
+
+<p>
+Similarly, some codes expect the contracted basis functions 
+\(R_s(\mathbf{r})\) to be normalized. In this case, an additional
+normalization factor \(\mathcal{N}_s\) must be computed. If the
+full basis function is not normalized, then \(\mathcal{N}_s = 1\).
+</p>
+</div>
+</div>
+</div>
+
+
+<div id="outline-container-org8b880c1" class="outline-4">
+<h4 id="org8b880c1"><span class="section-number-4">3.1.2</span> Gaussian and Slater-type orbitals</h4>
+<div class="outline-text-4" id="text-3-1-2">
 <p>
 We consider here basis functions centered on nuclei. Hence, it is
 possibile to define <i>dummy atoms</i> to place basis functions in
@@ -944,11 +1051,11 @@ All the basis set parameters are stored in one-dimensional arrays.
 </div>
 </div>
 
-<div id="outline-container-org9bd3f28" class="outline-4">
-<h4 id="org9bd3f28"><span class="section-number-4">3.1.2</span> Numerical orbitals</h4>
-<div class="outline-text-4" id="text-3-1-2">
+<div id="outline-container-org25fb004" class="outline-4">
+<h4 id="org25fb004"><span class="section-number-4">3.1.3</span> Numerical orbitals</h4>
+<div class="outline-text-4" id="text-3-1-3">
 <p>
-Trexio supports numerical atom centered orbitals. The implementation is
+TREXIO supports numerical atom centered orbitals. The implementation is
 based on the approach of FHI-aims [Blum, V. et al; Ab initio molecular
 simulations with numeric atom-centered orbitals; Computer Physics
 Communications 2009]. These orbitals are
@@ -1009,9 +1116,9 @@ reimplement them with consideration for its specific needs.
 </div>
 </div>
 
-<div id="outline-container-org3aa1873" class="outline-4">
-<h4 id="org3aa1873"><span class="section-number-4">3.1.3</span> Plane waves</h4>
-<div class="outline-text-4" id="text-3-1-3">
+<div id="outline-container-org103132e" class="outline-4">
+<h4 id="org103132e"><span class="section-number-4">3.1.4</span> Plane waves</h4>
+<div class="outline-text-4" id="text-3-1-4">
 <p>
 A plane wave is defined as
 </p>
@@ -1031,9 +1138,9 @@ plane waves.
 </div>
 </div>
 
-<div id="outline-container-orga784d54" class="outline-4">
-<h4 id="orga784d54"><span class="section-number-4">3.1.4</span> Oscillating orbitals</h4>
-<div class="outline-text-4" id="text-3-1-4">
+<div id="outline-container-org0d7cbaa" class="outline-4">
+<h4 id="org0d7cbaa"><span class="section-number-4">3.1.5</span> Oscillating orbitals</h4>
+<div class="outline-text-4" id="text-3-1-5">
 <p>
 Basis functions can be made oscillating as
 \[
@@ -1054,10 +1161,10 @@ Oscillation kind can be:
 </div>
 </div>
 
-<div id="outline-container-org1883db6" class="outline-4">
-<h4 id="org1883db6"><span class="section-number-4">3.1.5</span> Data definitions</h4>
-<div class="outline-text-4" id="text-3-1-5">
-<table id="org13c81ee" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<div id="outline-container-orga518838" class="outline-4">
+<h4 id="orga518838"><span class="section-number-4">3.1.6</span> Data definitions</h4>
+<div class="outline-text-4" id="text-3-1-6">
+<table id="org4bf7541" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
 
 
 <colgroup>
@@ -1309,15 +1416,15 @@ Oscillation kind can be:
 </div>
 </div>
 
-<div id="outline-container-orgcfb7cbe" class="outline-4">
-<h4 id="orgcfb7cbe"><span class="section-number-4">3.1.6</span> Example</h4>
-<div class="outline-text-4" id="text-3-1-6">
+<div id="outline-container-org2edfedf" class="outline-4">
+<h4 id="org2edfedf"><span class="section-number-4">3.1.7</span> Example</h4>
+<div class="outline-text-4" id="text-3-1-7">
 <p>
 For example, consider H<sub>2</sub> with the following basis set (in GAMESS
 format), where both the AOs and primitives are considered normalized:
 </p>
 
-<pre class="example" id="org19d399c">
+<pre class="example" id="orgc471610">
 HYDROGEN
 S   5
 1         3.387000E+01           6.068000E-03
@@ -1341,7 +1448,7 @@ D   1
 In TREXIO representaion we have:
 </p>
 
-<pre class="example" id="orgec4fbd3">
+<pre class="example" id="org0ab433a">
 type  = "Gaussian"
 prim_num   = 20
 shell_num   = 12
@@ -1388,8 +1495,8 @@ prim_factor =
 </div>
 </div>
 
-<div id="outline-container-org8f56092" class="outline-3">
-<h3 id="org8f56092"><span class="section-number-3">3.2</span> Effective core potentials (ecp group)</h3>
+<div id="outline-container-org7534058" class="outline-3">
+<h3 id="org7534058"><span class="section-number-3">3.2</span> Effective core potentials (ecp group)</h3>
 <div class="outline-text-3" id="text-3-2">
 <p>
 An effective core potential (ECP) \(V_A^{\text{ECP}}\) replacing the
@@ -1423,7 +1530,7 @@ where \(Z_\text{eff}\) is the effective nuclear charge of the center.
 See <a href="http://dx.doi.org/10.1063/1.4984046">http://dx.doi.org/10.1063/1.4984046</a> or <a href="https://doi.org/10.1063/1.5121006">https://doi.org/10.1063/1.5121006</a> for more info.
 </p>
 
-<table id="org65f5928" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<table id="orge0a7c9a" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
 
 
 <colgroup>
@@ -1538,8 +1645,8 @@ If you encounter the aforementioned issue, please report it to our
 </p>
 </div>
 
-<div id="outline-container-org5785c23" class="outline-4">
-<h4 id="org5785c23"><span class="section-number-4">3.2.1</span> Example</h4>
+<div id="outline-container-orgbe3c204" class="outline-4">
+<h4 id="orgbe3c204"><span class="section-number-4">3.2.1</span> Example</h4>
 <div class="outline-text-4" id="text-3-2-1">
 <p>
 For example, consider H<sub>2</sub> molecule with the following
@@ -1547,7 +1654,7 @@ For example, consider H<sub>2</sub> molecule with the following
 (in GAMESS input format for the H atom):
 </p>
 
-<pre class="example" id="orgb04f3e8">
+<pre class="example" id="orgf43f8d7">
 H-ccECP GEN 0 1
 3
 1.00000000000000    1 21.24359508259891
@@ -1561,7 +1668,7 @@ H-ccECP GEN 0 1
 In TREXIO representation this would be:
 </p>
 
-<pre class="example" id="org0cad1e6">
+<pre class="example" id="org0f08673">
 num = 8
 
 # lmax+1 per atom
@@ -1602,8 +1709,8 @@ power = [
 </div>
 </div>
 
-<div id="outline-container-org71f2233" class="outline-3">
-<h3 id="org71f2233"><span class="section-number-3">3.3</span> Numerical integration grid (grid group)</h3>
+<div id="outline-container-org44c4a8e" class="outline-3">
+<h3 id="org44c4a8e"><span class="section-number-3">3.3</span> Numerical integration grid (grid group)</h3>
 <div class="outline-text-3" id="text-3-3">
 <p>
 In some applications, such as DFT calculations, integrals have to
@@ -1618,7 +1725,7 @@ The structure of this group is adapted for the <a href="https://github.com/dftli
 Feel free to submit a PR if you find missing options/functionalities.
 </p>
 
-<table id="org40d5d10" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<table id="orgcf193e6" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
 
 
 <colgroup>
@@ -1751,12 +1858,12 @@ Feel free to submit a PR if you find missing options/functionalities.
 </div>
 </div>
 
-<div id="outline-container-org5281c02" class="outline-2">
-<h2 id="org5281c02"><span class="section-number-2">4</span> Orbitals</h2>
+<div id="outline-container-org3960476" class="outline-2">
+<h2 id="org3960476"><span class="section-number-2">4</span> Orbitals</h2>
 <div class="outline-text-2" id="text-4">
 </div>
-<div id="outline-container-org97cbe89" class="outline-3">
-<h3 id="org97cbe89"><span class="section-number-3">4.1</span> Atomic orbitals (ao group)</h3>
+<div id="outline-container-org834ff1f" class="outline-3">
+<h3 id="org834ff1f"><span class="section-number-3">4.1</span> Atomic orbitals (ao group)</h3>
 <div class="outline-text-3" id="text-4-1">
 <p>
 AOs are defined as
@@ -1843,7 +1950,7 @@ AO, so the correction factor \(\mathcal{N}_i'\) for \(d_{xy}\) in the
 </p>
 
 
-<table id="org7fc3f1d" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<table id="org4795ee7" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
 
 
 <colgroup>
@@ -1920,7 +2027,7 @@ The one-electron integrals for a one-electron operator \(\hat{O}\) are
 over atomic orbitals.
 </p>
 
-<table id="org5ecd925" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<table id="orga946e01" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
 
 
 <colgroup>
@@ -2054,7 +2161,7 @@ The Cholesky decomposition of the integrals can also be stored:
     \]
 </p>
 
-<table id="orgeb346b5" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<table id="org4f13dbf" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
 
 
 <colgroup>
@@ -2131,10 +2238,10 @@ The Cholesky decomposition of the integrals can also be stored:
 </div>
 </div>
 
-<div id="outline-container-org124c00a" class="outline-3">
-<h3 id="org124c00a"><span class="section-number-3">4.2</span> Molecular orbitals (mo group)</h3>
+<div id="outline-container-org3521b70" class="outline-3">
+<h3 id="org3521b70"><span class="section-number-3">4.2</span> Molecular orbitals (mo group)</h3>
 <div class="outline-text-3" id="text-4-2">
-<table id="org871b518" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<table id="org1a9ec11" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
 
 
 <colgroup>
@@ -2250,8 +2357,8 @@ is the number of spin-orbitals, twice the number of spatial orbitals.
 </div>
 
 
-<div id="outline-container-orgcf75e08" class="outline-4">
-<h4 id="orgcf75e08"><span class="section-number-4">4.2.1</span> One-electron integrals (<code>mo_1e_int</code> group)</h4>
+<div id="outline-container-org03886d2" class="outline-4">
+<h4 id="org03886d2"><span class="section-number-4">4.2.1</span> One-electron integrals (<code>mo_1e_int</code> group)</h4>
 <div class="outline-text-4" id="text-4-2-1">
 <p>
 The operators as the same as those defined in the
@@ -2259,7 +2366,7 @@ The operators as the same as those defined in the
 the basis of molecular orbitals.
 </p>
 
-<table id="orgc954415" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<table id="org881409f" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
 
 
 <colgroup>
@@ -2367,8 +2474,8 @@ the basis of molecular orbitals.
 </div>
 </div>
 
-<div id="outline-container-orga47f1b6" class="outline-4">
-<h4 id="orga47f1b6"><span class="section-number-4">4.2.2</span> Two-electron integrals (<code>mo_2e_int</code> group)</h4>
+<div id="outline-container-orge4ca9df" class="outline-4">
+<h4 id="orge4ca9df"><span class="section-number-4">4.2.2</span> Two-electron integrals (<code>mo_2e_int</code> group)</h4>
 <div class="outline-text-4" id="text-4-2-2">
 <p>
 The operators are the same as those defined in the
@@ -2376,7 +2483,7 @@ The operators are the same as those defined in the
 the basis of molecular orbitals.
 </p>
 
-<table id="orgb3cc080" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<table id="org1453e66" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
 
 
 <colgroup>
@@ -2454,12 +2561,12 @@ the basis of molecular orbitals.
 </div>
 </div>
 
-<div id="outline-container-orga611772" class="outline-2">
-<h2 id="orga611772"><span class="section-number-2">5</span> Multi-determinant information</h2>
+<div id="outline-container-org015683c" class="outline-2">
+<h2 id="org015683c"><span class="section-number-2">5</span> Multi-determinant information</h2>
 <div class="outline-text-2" id="text-5">
 </div>
-<div id="outline-container-org2c4c66d" class="outline-3">
-<h3 id="org2c4c66d"><span class="section-number-3">5.1</span> Slater determinants (determinant group)</h3>
+<div id="outline-container-org2943a6b" class="outline-3">
+<h3 id="org2943a6b"><span class="section-number-3">5.1</span> Slater determinants (determinant group)</h3>
 <div class="outline-text-3" id="text-5-1">
 <p>
 The configuration interaction (CI) wave function \(\Psi\)
@@ -2507,7 +2614,7 @@ by the user (<code>dim_readonly</code>). It is automatically set by the number
 of determinants written in the determinant list.
 </p>
 
-<table id="orgaacaf22" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<table id="orgdac9b98" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
 
 
 <colgroup>
@@ -2559,8 +2666,8 @@ of determinants written in the determinant list.
 </div>
 </div>
 
-<div id="outline-container-org901c8b6" class="outline-3">
-<h3 id="org901c8b6"><span class="section-number-3">5.2</span> Configuration state functions (csf group)</h3>
+<div id="outline-container-orgc042140" class="outline-3">
+<h3 id="orgc042140"><span class="section-number-3">5.2</span> Configuration state functions (csf group)</h3>
 <div class="outline-text-3" id="text-5-2">
 <p>
 The configuration interaction (CI) wave function \(\Psi\) can be
@@ -2587,7 +2694,7 @@ the basis of Slater determinants.
 (<code>csf.num</code>) has to be written by the user.
 </p>
 
-<table id="org0b1ea1a" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<table id="org988041f" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
 
 
 <colgroup>
@@ -2639,8 +2746,8 @@ the basis of Slater determinants.
 </div>
 </div>
 
-<div id="outline-container-org1d7e343" class="outline-3">
-<h3 id="org1d7e343"><span class="section-number-3">5.3</span> Amplitudes (amplitude group)</h3>
+<div id="outline-container-org7e6795e" class="outline-3">
+<h3 id="org7e6795e"><span class="section-number-3">5.3</span> Amplitudes (amplitude group)</h3>
 <div class="outline-text-3" id="text-5-3">
 <p>
 The wave function may be expressed in terms of action of the cluster
@@ -2711,7 +2818,7 @@ The order of the indices is chosen such that
 <li>\(\dots\)</li>
 </ul>
 
-<table id="orge1c7251" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<table id="orge3892e5" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
 
 
 <colgroup>
@@ -2803,8 +2910,8 @@ The order of the indices is chosen such that
 </div>
 </div>
 
-<div id="outline-container-orge64e2fa" class="outline-3">
-<h3 id="orge64e2fa"><span class="section-number-3">5.4</span> Reduced density matrices (rdm group)</h3>
+<div id="outline-container-orgfb37e34" class="outline-3">
+<h3 id="orgfb37e34"><span class="section-number-3">5.4</span> Reduced density matrices (rdm group)</h3>
 <div class="outline-text-3" id="text-5-4">
 <p>
 The reduced density matrices are defined in the basis of molecular
@@ -2876,7 +2983,7 @@ expressed in a basis of a one-electron function
 \(g_{ik}(\mathbf{r}_1) = \phi_i(\mathbf{r}_1) \phi_k(\mathbf{r}_1)\).
 </p>
 
-<table id="orgf659ef2" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<table id="org8ccf340" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
 
 
 <colgroup>
@@ -3041,12 +3148,12 @@ expressed in a basis of a one-electron function
 </div>
 </div>
 
-<div id="outline-container-org0ea366b" class="outline-2">
-<h2 id="org0ea366b"><span class="section-number-2">6</span> Correlation factors</h2>
+<div id="outline-container-orgee8c27d" class="outline-2">
+<h2 id="orgee8c27d"><span class="section-number-2">6</span> Correlation factors</h2>
 <div class="outline-text-2" id="text-6">
 </div>
-<div id="outline-container-org077cee4" class="outline-3">
-<h3 id="org077cee4"><span class="section-number-3">6.1</span> Jastrow factor (jastrow group)</h3>
+<div id="outline-container-orgb26283d" class="outline-3">
+<h3 id="orgb26283d"><span class="section-number-3">6.1</span> Jastrow factor (jastrow group)</h3>
 <div class="outline-text-3" id="text-6-1">
 <p>
 The Jastrow factor is an $N$-electron function which multiplies the CI
@@ -3071,8 +3178,8 @@ following:
 </ul>
 </div>
 
-<div id="outline-container-orgb5fa7f1" class="outline-4">
-<h4 id="orgb5fa7f1"><span class="section-number-4">6.1.1</span> CHAMP</h4>
+<div id="outline-container-org8d7be38" class="outline-4">
+<h4 id="org8d7be38"><span class="section-number-4">6.1.1</span> CHAMP</h4>
 <div class="outline-text-4" id="text-6-1-1">
 <p>
 The first form of Jastrow factor is the one used in
@@ -3173,8 +3280,8 @@ The terms \(J_{\text{ee},ij}^\infty\) and \(J_{\text{eN}}^\infty\) are shifts to
 </div>
 
 
-<div id="outline-container-org75af40c" class="outline-4">
-<h4 id="org75af40c"><span class="section-number-4">6.1.2</span> Mu</h4>
+<div id="outline-container-org6269db3" class="outline-4">
+<h4 id="org6269db3"><span class="section-number-4">6.1.2</span> Mu</h4>
 <div class="outline-text-4" id="text-6-1-2">
 <p>
 <a href="https://aip.scitation.org/doi/10.1063/5.0044683">Mu-Jastrow</a> is based on a one-parameter correlation factor that has
@@ -3271,10 +3378,10 @@ The parameter \(\mu\) is stored in the <code>ee</code> array, the parameters
 </div>
 </div>
 
-<div id="outline-container-orge22204f" class="outline-4">
-<h4 id="orge22204f"><span class="section-number-4">6.1.3</span> Table of values</h4>
+<div id="outline-container-orga1428c5" class="outline-4">
+<h4 id="orga1428c5"><span class="section-number-4">6.1.3</span> Table of values</h4>
 <div class="outline-text-4" id="text-6-1-3">
-<table id="org78e7eba" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<table id="org1409a31" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
 
 
 <colgroup>
@@ -3392,8 +3499,8 @@ The parameter \(\mu\) is stored in the <code>ee</code> array, the parameters
 </div>
 </div>
 
-<div id="outline-container-org739ce3c" class="outline-2">
-<h2 id="org739ce3c"><span class="section-number-2">7</span> Quantum Monte Carlo data (qmc group)</h2>
+<div id="outline-container-org4e120e1" class="outline-2">
+<h2 id="org4e120e1"><span class="section-number-2">7</span> Quantum Monte Carlo data (qmc group)</h2>
 <div class="outline-text-2" id="text-7">
 <p>
 In quantum Monte Carlo calculations, the wave function is evaluated
@@ -3407,7 +3514,7 @@ By convention, the electron coordinates contain first all the electrons
 of $&uarr;$-spin and then all the $&darr;$-spin.
 </p>
 
-<table id="org7458c3d" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<table id="orgc8eb4a0" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
 
 
 <colgroup>
@@ -3469,7 +3576,7 @@ of $&uarr;$-spin and then all the $&darr;$-spin.
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: TREX-CoE</p>
-<p class="date">Created: 2025-07-18 Fri 19:48</p>
+<p class="date">Created: 2025-07-21 Mon 20:03</p>
 <p class="validation"><a href="https://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
 </body>

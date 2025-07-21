@@ -276,7 +276,7 @@ character(len = 12) :: TREXIO_PACKAGE_VERSION = "2.5.2"
 integer :: TREXIO_VERSION_MAJOR = 2
 integer :: TREXIO_VERSION_MINOR = 5
 integer :: TREXIO_VERSION_PATCH = 2
-character(len = 64) :: TREXIO_GIT_HASH = "9dd005a73dd7780c67eefa03ee263659990a99a1"
+character(len = 64) :: TREXIO_GIT_HASH = "b99e53f32dc58e5abf535ff46b5cdbb5655df44b"
 
 interface
    integer(trexio_exit_code) function &
@@ -12509,7 +12509,7 @@ end function trexio_info
 subroutine trexio_string_of_error (error, string)
    implicit none
    integer(trexio_exit_code), intent(in) :: error
-   character*(*), intent(out)            :: string
+   character(len=*), intent(out)            :: string
    integer(c_int32_t)                    :: lenstring
    lenstring = len(string)
    call  trexio_string_of_error_f(error, lenstring, string)
@@ -12675,7 +12675,7 @@ subroutine trexio_assert(trexio_rc, check_rc, success_message)
   integer(trexio_exit_code), intent(in), value :: check_rc
   character(len=*), intent(in), optional  :: success_message
 
-  character*(128) :: str
+  character(len=128) :: str
 
   if (trexio_rc == check_rc) then
      if (present(success_message)) write(*,*) success_message

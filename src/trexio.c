@@ -29675,8 +29675,8 @@ trexio_read_ao_2e_int_eri_cholesky(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_ao_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_ao_2e_int_eri_cholesky_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_ao_2e_int_eri_cholesky_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_ao_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -30081,8 +30081,8 @@ trexio_read_mo_2e_int_eri_cholesky(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_mo_2e_int_eri_cholesky_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_mo_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_2e_int_eri_cholesky_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -31599,8 +31599,8 @@ trexio_read_rdm_2e_transition(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_state_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_mo_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_state_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -31701,8 +31701,8 @@ trexio_read_rdm_2e_cholesky(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_rdm_2e_cholesky_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_mo_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_rdm_2e_cholesky_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -31905,8 +31905,8 @@ trexio_read_rdm_2e_dndn_cholesky(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_mo_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_rdm_2e_dndn_cholesky_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_rdm_2e_dndn_cholesky_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -32007,8 +32007,8 @@ trexio_read_rdm_2e_updn_cholesky(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_rdm_2e_updn_cholesky_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_mo_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_rdm_2e_updn_cholesky_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -57903,8 +57903,8 @@ trexio_write_ao_2e_int_eri_cholesky(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_ao_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_ao_2e_int_eri_cholesky_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_ao_2e_int_eri_cholesky_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_ao_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -58449,8 +58449,8 @@ trexio_write_mo_2e_int_eri_cholesky(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_mo_2e_int_eri_cholesky_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_mo_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_2e_int_eri_cholesky_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -60492,8 +60492,8 @@ trexio_write_rdm_2e_transition(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_state_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_mo_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_state_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -60629,8 +60629,8 @@ trexio_write_rdm_2e_cholesky(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_rdm_2e_cholesky_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_mo_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_rdm_2e_cholesky_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -60903,8 +60903,8 @@ trexio_write_rdm_2e_dndn_cholesky(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_mo_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_rdm_2e_dndn_cholesky_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_rdm_2e_dndn_cholesky_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -61040,8 +61040,8 @@ trexio_write_rdm_2e_updn_cholesky(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_rdm_2e_updn_cholesky_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_mo_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_rdm_2e_updn_cholesky_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
