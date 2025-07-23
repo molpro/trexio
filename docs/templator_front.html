@@ -3,7 +3,7 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
-<!-- 2025-07-21 Mon 20:03 -->
+<!-- 2025-07-23 Wed 15:34 -->
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Front end API</title>
@@ -272,207 +272,207 @@ org_html_manager.setup();  // activate after the parameters are set
 <h2>Table of Contents</h2>
 <div id="text-table-of-contents">
 <ul>
-<li><a href="#org4610f77">1. Coding conventions</a>
+<li><a href="#org2d8cf7a">1. Coding conventions</a>
 <ul>
-<li><a href="#org70cb8ca">1.1. Memory allocation</a></li>
+<li><a href="#orgeee5978">1.1. Memory allocation</a></li>
 </ul>
 </li>
-<li><a href="#org866870e">2. Front end</a>
+<li><a href="#org265a8b7">2. Front end</a>
 <ul>
-<li><a href="#orgc0b8881">2.1. Error handling</a>
+<li><a href="#org1124a28">2.1. Error handling</a>
 <ul>
-<li><a href="#orgeb96f5a">2.1.1. Decoding errors</a>
+<li><a href="#org894fdb9">2.1.1. Decoding errors</a>
 <ul>
-<li><a href="#org1954543">2.1.1.1. C source code</a></li>
-<li><a href="#org9a02dd3">2.1.1.2. Fortran interface</a></li>
-<li><a href="#org4b5a2c1">2.1.1.3. Python interface</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li><a href="#orgf923afb">2.2. Back ends</a>
-<ul>
-<li><a href="#org6c37c1b">2.2.1. C</a></li>
-<li><a href="#org2c194af">2.2.2. Fortran</a></li>
-<li><a href="#orgd7cae1f">2.2.3. Python</a></li>
-</ul>
-</li>
-<li><a href="#orgef35369">2.3. Read/write behavior</a></li>
-<li><a href="#orgf304220">2.4. TREXIO file type</a></li>
-<li><a href="#orga101d40">2.5. File opening</a>
-<ul>
-<li><a href="#org2a0fa54">2.5.1. C</a></li>
-<li><a href="#orgd2fac5f">2.5.2. Fortran</a></li>
-<li><a href="#org4bcbc38">2.5.3. Python</a></li>
-<li><a href="#org7721df5">2.5.4. Zero-based versus one-based arrays of indices</a></li>
-</ul>
-</li>
-<li><a href="#org607620a">2.6. File closing</a>
-<ul>
-<li><a href="#orgb76bb6c">2.6.1. C</a></li>
-<li><a href="#org3341da1">2.6.2. Fortran</a></li>
-<li><a href="#orgde7f28b">2.6.3. Python</a></li>
-</ul>
-</li>
-<li><a href="#org4387f17">2.7. File flushing</a>
-<ul>
-<li><a href="#org4b4a734">2.7.1. C</a></li>
-<li><a href="#org8c9f2fa">2.7.2. Fortran</a></li>
-<li><a href="#org7255aca">2.7.3. Python</a></li>
-</ul>
-</li>
-<li><a href="#org3650a92">2.8. File existence</a>
-<ul>
-<li><a href="#org45b7663">2.8.1. C</a></li>
-<li><a href="#orgbcbbe04">2.8.2. Fortran</a></li>
-<li><a href="#org21c611b">2.8.3. Python</a></li>
-</ul>
-</li>
-<li><a href="#orga15e4c5">2.9. File copy</a>
-<ul>
-<li><a href="#org60503dd">2.9.1. C</a></li>
-<li><a href="#org0742212">2.9.2. Fortran</a></li>
-<li><a href="#orga439e7a">2.9.3. Python</a></li>
-</ul>
-</li>
-<li><a href="#orgb4f949e">2.10. File state</a>
-<ul>
-<li><a href="#org4ac3922">2.10.1. C</a></li>
-<li><a href="#org41e4aa2">2.10.2. Fortran</a></li>
-<li><a href="#org5cf4eb0">2.10.3. Python</a></li>
-</ul>
-</li>
-<li><a href="#orgecc6fd5">2.11. Tasks to be done before closing</a></li>
-</ul>
-</li>
-<li><a href="#orgd0b7037">3. Templates for front end</a>
-<ul>
-<li><a href="#org48b134b">3.1. Description</a></li>
-<li><a href="#org0994b01">3.2. Templates for front end has<sub>group</sub> functions</a>
-<ul>
-<li><a href="#org0e0e170">3.2.1. Introduction</a></li>
-<li><a href="#org6d159cf">3.2.2. C templates for front end</a>
-<ul>
-<li><a href="#org21882ad">3.2.2.1. Function declarations</a></li>
-<li><a href="#org22b82a1">3.2.2.2. Source code</a></li>
-</ul>
-</li>
-<li><a href="#orgb0ca435">3.2.3. Fortran templates for front end</a></li>
-<li><a href="#org88318c6">3.2.4. Python templates for front end</a></li>
-</ul>
-</li>
-<li><a href="#org9963cd8">3.3. Templates for front end has/read/write a single numerical attribute</a>
-<ul>
-<li><a href="#org1f4fd56">3.3.1. Introduction</a></li>
-<li><a href="#orgb75cdef">3.3.2. C templates for front end</a>
-<ul>
-<li><a href="#orgf6ca23a">3.3.2.1. Function declarations</a></li>
-<li><a href="#orgf8c0a59">3.3.2.2. Source code for double precision functions</a></li>
-<li><a href="#orge671280">3.3.2.3. Source code for single precision functions</a></li>
-<li><a href="#org54993d4">3.3.2.4. Source code for default functions</a></li>
-</ul>
-</li>
-<li><a href="#org966a6b7">3.3.3. Fortran templates for front end</a></li>
-<li><a href="#org4541fad">3.3.4. Python templates for front end</a></li>
-</ul>
-</li>
-<li><a href="#orgb12b667">3.4. Templates for front end has/read/write a dataset of numerical data</a>
-<ul>
-<li><a href="#orgf8bf584">3.4.1. Introduction</a></li>
-<li><a href="#org16f4c65">3.4.2. C templates for front end</a>
-<ul>
-<li><a href="#org55f21d2">3.4.2.1. Function declarations</a></li>
-<li><a href="#org64e89e7">3.4.2.2. Source code for double precision functions</a></li>
-<li><a href="#org8ad367e">3.4.2.3. Source code for single precision functions</a></li>
-<li><a href="#orgf911f9f">3.4.2.4. Source code for memory-safe functions</a></li>
-<li><a href="#org1628658">3.4.2.5. Source code for default functions</a></li>
-</ul>
-</li>
-<li><a href="#org0cc64e0">3.4.3. Fortran templates for front end</a></li>
-<li><a href="#orga4438b8">3.4.4. Python templates for front end</a></li>
-</ul>
-</li>
-<li><a href="#org88c8cff">3.5. Templates for front end has/read/write a dataset of sparse data</a>
-<ul>
-<li><a href="#org74d737f">3.5.1. Introduction</a></li>
-<li><a href="#org0a7b956">3.5.2. C templates for front end</a>
-<ul>
-<li><a href="#org11e8035">3.5.2.1. Function declarations</a></li>
-<li><a href="#org35fba57">3.5.2.2. Source code for default functions</a></li>
-</ul>
-</li>
-<li><a href="#orga059ca8">3.5.3. Fortran templates for front end</a></li>
-<li><a href="#org013db19">3.5.4. Python templates for front end</a></li>
-</ul>
-</li>
-<li><a href="#org843b42e">3.6. Templates for front end has/read/write a dataset of strings</a>
-<ul>
-<li><a href="#org613350f">3.6.1. Introduction</a></li>
-<li><a href="#org0ab7a4a">3.6.2. C templates for front end</a>
-<ul>
-<li><a href="#org6970ae0">3.6.2.1. Function declarations</a></li>
-<li><a href="#org24d4727">3.6.2.2. Source code for default functions</a></li>
-</ul>
-</li>
-<li><a href="#orgfc1b71d">3.6.3. Fortran templates for front end</a></li>
-<li><a href="#org9b3a33f">3.6.4. Python templates for front end</a></li>
-</ul>
-</li>
-<li><a href="#org6f0d7a4">3.7. Templates for front end has/read/write a buffered vector</a>
-<ul>
-<li><a href="#orgbfc975e">3.7.1. C source code</a></li>
-<li><a href="#org8274756">3.7.2. Fortran interface</a></li>
-<li><a href="#org4f314c8">3.7.3. Python interface</a></li>
-</ul>
-</li>
-<li><a href="#org22bde3e">3.8. Templates for front end has/read/write a single string attribute</a>
-<ul>
-<li><a href="#orge19c649">3.8.1. Introduction</a></li>
-<li><a href="#orgf4a45cb">3.8.2. C templates for front end</a>
-<ul>
-<li><a href="#orgfda5cb3">3.8.2.1. Function declarations</a></li>
-<li><a href="#org8235ece">3.8.2.2. Source code for default functions</a></li>
-</ul>
-</li>
-<li><a href="#org0d46367">3.8.3. Fortran templates for front end</a></li>
-<li><a href="#org19fa150">3.8.4. Python templates for front end</a></li>
-</ul>
-</li>
-<li><a href="#org4b6e084">3.9. Templates for front end delete an entire group (UNSAFE MODE)</a>
-<ul>
-<li><a href="#org9e16933">3.9.1. Introduction</a></li>
-<li><a href="#orgc07afda">3.9.2. C templates for front end</a></li>
-<li><a href="#org1f19adb">3.9.3. Fortran templates for front end</a></li>
-<li><a href="#orgc31390f">3.9.4. Python templates for front end</a></li>
+<li><a href="#org196986e">2.1.1.1. C source code</a></li>
+<li><a href="#org2df6aae">2.1.1.2. Fortran interface</a></li>
+<li><a href="#org4638abd">2.1.1.3. Python interface</a></li>
 </ul>
 </li>
 </ul>
 </li>
-<li><a href="#org8e72340">4. Source code for the determinant part</a>
+<li><a href="#orgeecf41b">2.2. Back ends</a>
+<ul>
+<li><a href="#org0f873ee">2.2.1. C</a></li>
+<li><a href="#org0f241ff">2.2.2. Fortran</a></li>
+<li><a href="#orga51bab9">2.2.3. Python</a></li>
+</ul>
+</li>
+<li><a href="#org6a0a6ae">2.3. Read/write behavior</a></li>
+<li><a href="#org0e97206">2.4. TREXIO file type</a></li>
+<li><a href="#orgdec86ab">2.5. File opening</a>
+<ul>
+<li><a href="#orgdacb0f0">2.5.1. C</a></li>
+<li><a href="#orgd9eced7">2.5.2. Fortran</a></li>
+<li><a href="#org32dc29d">2.5.3. Python</a></li>
+<li><a href="#org1dac887">2.5.4. Zero-based versus one-based arrays of indices</a></li>
+</ul>
+</li>
+<li><a href="#org6a33a62">2.6. File closing</a>
+<ul>
+<li><a href="#org88be9f7">2.6.1. C</a></li>
+<li><a href="#org8431787">2.6.2. Fortran</a></li>
+<li><a href="#org1bef047">2.6.3. Python</a></li>
+</ul>
+</li>
+<li><a href="#org77b1cae">2.7. File flushing</a>
+<ul>
+<li><a href="#org8ca4623">2.7.1. C</a></li>
+<li><a href="#orgb6c9857">2.7.2. Fortran</a></li>
+<li><a href="#orge75bc7e">2.7.3. Python</a></li>
+</ul>
+</li>
+<li><a href="#org4765a94">2.8. File existence</a>
+<ul>
+<li><a href="#org0ab5c29">2.8.1. C</a></li>
+<li><a href="#orga093cc6">2.8.2. Fortran</a></li>
+<li><a href="#orgc933da0">2.8.3. Python</a></li>
+</ul>
+</li>
+<li><a href="#org8b84b70">2.9. File copy</a>
+<ul>
+<li><a href="#org6faf439">2.9.1. C</a></li>
+<li><a href="#org5700c15">2.9.2. Fortran</a></li>
+<li><a href="#orgf7c7e34">2.9.3. Python</a></li>
+</ul>
+</li>
+<li><a href="#orgbc6317b">2.10. File state</a>
+<ul>
+<li><a href="#orge969bdf">2.10.1. C</a></li>
+<li><a href="#org45adf7d">2.10.2. Fortran</a></li>
+<li><a href="#org286a32e">2.10.3. Python</a></li>
+</ul>
+</li>
+<li><a href="#org9eb3607">2.11. Tasks to be done before closing</a></li>
+</ul>
+</li>
+<li><a href="#org7b2cee7">3. Templates for front end</a>
+<ul>
+<li><a href="#org6c2bb62">3.1. Description</a></li>
+<li><a href="#org6e87eda">3.2. Templates for front end has<sub>group</sub> functions</a>
+<ul>
+<li><a href="#orgbecaef5">3.2.1. Introduction</a></li>
+<li><a href="#org087624a">3.2.2. C templates for front end</a>
+<ul>
+<li><a href="#org2eb2331">3.2.2.1. Function declarations</a></li>
+<li><a href="#orgb224fb6">3.2.2.2. Source code</a></li>
+</ul>
+</li>
+<li><a href="#org35936e0">3.2.3. Fortran templates for front end</a></li>
+<li><a href="#org774d7c8">3.2.4. Python templates for front end</a></li>
+</ul>
+</li>
+<li><a href="#org62cba1d">3.3. Templates for front end has/read/write a single numerical attribute</a>
+<ul>
+<li><a href="#org233b1db">3.3.1. Introduction</a></li>
+<li><a href="#orgaeaf27f">3.3.2. C templates for front end</a>
+<ul>
+<li><a href="#org9563ca5">3.3.2.1. Function declarations</a></li>
+<li><a href="#org29bf252">3.3.2.2. Source code for double precision functions</a></li>
+<li><a href="#orge9d5db0">3.3.2.3. Source code for single precision functions</a></li>
+<li><a href="#orgf37b8cd">3.3.2.4. Source code for default functions</a></li>
+</ul>
+</li>
+<li><a href="#org5fd0653">3.3.3. Fortran templates for front end</a></li>
+<li><a href="#orgbaa08b9">3.3.4. Python templates for front end</a></li>
+</ul>
+</li>
+<li><a href="#orgd116600">3.4. Templates for front end has/read/write a dataset of numerical data</a>
+<ul>
+<li><a href="#org3cb785f">3.4.1. Introduction</a></li>
+<li><a href="#org5982480">3.4.2. C templates for front end</a>
+<ul>
+<li><a href="#org6da4192">3.4.2.1. Function declarations</a></li>
+<li><a href="#orgf703649">3.4.2.2. Source code for double precision functions</a></li>
+<li><a href="#org4d9bb7f">3.4.2.3. Source code for single precision functions</a></li>
+<li><a href="#orgd922309">3.4.2.4. Source code for memory-safe functions</a></li>
+<li><a href="#org77542db">3.4.2.5. Source code for default functions</a></li>
+</ul>
+</li>
+<li><a href="#org7615b61">3.4.3. Fortran templates for front end</a></li>
+<li><a href="#org8c9cc94">3.4.4. Python templates for front end</a></li>
+</ul>
+</li>
+<li><a href="#orgcbf8c4d">3.5. Templates for front end has/read/write a dataset of sparse data</a>
+<ul>
+<li><a href="#org0d2ed69">3.5.1. Introduction</a></li>
+<li><a href="#orgc5b1826">3.5.2. C templates for front end</a>
+<ul>
+<li><a href="#orgf4a151c">3.5.2.1. Function declarations</a></li>
+<li><a href="#org1aa26c4">3.5.2.2. Source code for default functions</a></li>
+</ul>
+</li>
+<li><a href="#orgd4e7e2c">3.5.3. Fortran templates for front end</a></li>
+<li><a href="#org31a2b67">3.5.4. Python templates for front end</a></li>
+</ul>
+</li>
+<li><a href="#org02df2fa">3.6. Templates for front end has/read/write a dataset of strings</a>
+<ul>
+<li><a href="#org0dd9102">3.6.1. Introduction</a></li>
+<li><a href="#org8ef1daa">3.6.2. C templates for front end</a>
+<ul>
+<li><a href="#org493c514">3.6.2.1. Function declarations</a></li>
+<li><a href="#org5f77865">3.6.2.2. Source code for default functions</a></li>
+</ul>
+</li>
+<li><a href="#org8c08ce8">3.6.3. Fortran templates for front end</a></li>
+<li><a href="#org24bde5a">3.6.4. Python templates for front end</a></li>
+</ul>
+</li>
+<li><a href="#org7462a1e">3.7. Templates for front end has/read/write a buffered vector</a>
+<ul>
+<li><a href="#org305e79f">3.7.1. C source code</a></li>
+<li><a href="#org68ffd3a">3.7.2. Fortran interface</a></li>
+<li><a href="#org1f5e41b">3.7.3. Python interface</a></li>
+</ul>
+</li>
+<li><a href="#org6d3e8e8">3.8. Templates for front end has/read/write a single string attribute</a>
+<ul>
+<li><a href="#org08dbabc">3.8.1. Introduction</a></li>
+<li><a href="#org86b1ec9">3.8.2. C templates for front end</a>
+<ul>
+<li><a href="#org47dada7">3.8.2.1. Function declarations</a></li>
+<li><a href="#orgb8b4ea9">3.8.2.2. Source code for default functions</a></li>
+</ul>
+</li>
+<li><a href="#org488593d">3.8.3. Fortran templates for front end</a></li>
+<li><a href="#org980b0d4">3.8.4. Python templates for front end</a></li>
+</ul>
+</li>
+<li><a href="#org9c04aae">3.9. Templates for front end delete an entire group (UNSAFE MODE)</a>
+<ul>
+<li><a href="#orgb185257">3.9.1. Introduction</a></li>
+<li><a href="#orgaafa2f2">3.9.2. C templates for front end</a></li>
+<li><a href="#org014813d">3.9.3. Fortran templates for front end</a></li>
+<li><a href="#org8e8c6e7">3.9.4. Python templates for front end</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a href="#orgcb179ff">4. Source code for the determinant part</a>
 <ul>
 <li>
 <ul>
-<li><a href="#org3a1ebcf">4.0.1. C source code</a></li>
-<li><a href="#orgc7a6f42">4.0.2. Fortran interface</a></li>
-<li><a href="#org3324177">4.0.3. Python interface</a></li>
+<li><a href="#org3b22441">4.0.1. C source code</a></li>
+<li><a href="#orgb3fd045">4.0.2. Fortran interface</a></li>
+<li><a href="#orga212f15">4.0.3. Python interface</a></li>
 </ul>
 </li>
 </ul>
 </li>
-<li><a href="#orgf6fe3a8">5. General helper functions</a>
+<li><a href="#org4d2f370">5. General helper functions</a>
 <ul>
-<li><a href="#org6645b28">5.1. C</a></li>
-<li><a href="#org4c8b7f7">5.2. Fortran</a></li>
-<li><a href="#org0934720">5.3. Python</a></li>
+<li><a href="#org4cd33c0">5.1. C</a></li>
+<li><a href="#org194179e">5.2. Fortran</a></li>
+<li><a href="#org775290c">5.3. Python</a></li>
 </ul>
 </li>
-<li><a href="#orgdc6f041">6. Fortran helper/wrapper functions</a></li>
+<li><a href="#org73b2543">6. Fortran helper/wrapper functions</a></li>
 </ul>
 </div>
 </div>
 
-<div id="outline-container-org4610f77" class="outline-2">
-<h2 id="org4610f77"><span class="section-number-2">1</span> Coding conventions</h2>
+<div id="outline-container-org2d8cf7a" class="outline-2">
+<h2 id="org2d8cf7a"><span class="section-number-2">1</span> Coding conventions</h2>
 <div class="outline-text-2" id="text-1">
 <ul class="org-ul">
 <li>integer types will be defined using types given in <code>stdint.h</code></li>
@@ -487,8 +487,8 @@ org_html_manager.setup();  // activate after the parameters are set
 </ul>
 </div>
 
-<div id="outline-container-org70cb8ca" class="outline-3">
-<h3 id="org70cb8ca"><span class="section-number-3">1.1</span> Memory allocation</h3>
+<div id="outline-container-orgeee5978" class="outline-3">
+<h3 id="orgeee5978"><span class="section-number-3">1.1</span> Memory allocation</h3>
 <div class="outline-text-3" id="text-1-1">
 <p>
 Memory allocation of structures can be facilitated by using the
@@ -524,8 +524,8 @@ The maximum string size for the filenames is 4096 characters.
 </div>
 </div>
 
-<div id="outline-container-org866870e" class="outline-2">
-<h2 id="org866870e"><span class="section-number-2">2</span> Front end</h2>
+<div id="outline-container-org265a8b7" class="outline-2">
+<h2 id="org265a8b7"><span class="section-number-2">2</span> Front end</h2>
 <div class="outline-text-2" id="text-2">
 <p>
 All calls to TREXIO are thread-safe.
@@ -533,10 +533,10 @@ TREXIO front end is modular, which simplifies implementation of new back ends.
 </p>
 </div>
 
-<div id="outline-container-orgc0b8881" class="outline-3">
-<h3 id="orgc0b8881"><span class="section-number-3">2.1</span> Error handling</h3>
+<div id="outline-container-org1124a28" class="outline-3">
+<h3 id="org1124a28"><span class="section-number-3">2.1</span> Error handling</h3>
 <div class="outline-text-3" id="text-2-1">
-<table id="org437edaf" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<table id="orgd6dbf83" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
 
 
 <colgroup>
@@ -879,8 +879,8 @@ and the corresponding message are not propagated to the source code.
 </div>
 </div>
 
-<div id="outline-container-orgeb96f5a" class="outline-4">
-<h4 id="orgeb96f5a"><span class="section-number-4">2.1.1</span> Decoding errors</h4>
+<div id="outline-container-org894fdb9" class="outline-4">
+<h4 id="org894fdb9"><span class="section-number-4">2.1.1</span> Decoding errors</h4>
 <div class="outline-text-4" id="text-2-1-1">
 <p>
 The <code>trexio_string_of_error</code> converts an exit code into a string. The
@@ -894,8 +894,8 @@ error code into a string.
 </p>
 </div>
 
-<div id="outline-container-org1954543" class="outline-5">
-<h5 id="org1954543"><span class="section-number-5">2.1.1.1</span> C source code</h5>
+<div id="outline-container-org196986e" class="outline-5">
+<h5 id="org196986e"><span class="section-number-5">2.1.1.1</span> C source code</h5>
 <div class="outline-text-5" id="text-2-1-1-1">
 <div class="org-src-container">
 <pre class="src src-c"><span style="color: #a020f0;">const</span> <span style="color: #228b22;">char</span>*
@@ -1065,8 +1065,8 @@ error code into a string.
 </div>
 </div>
 
-<div id="outline-container-org9a02dd3" class="outline-5">
-<h5 id="org9a02dd3"><span class="section-number-5">2.1.1.2</span> Fortran interface</h5>
+<div id="outline-container-org2df6aae" class="outline-5">
+<h5 id="org2df6aae"><span class="section-number-5">2.1.1.2</span> Fortran interface</h5>
 <div class="outline-text-5" id="text-2-1-1-2">
 <div class="org-src-container">
 <pre class="src src-f90"><span style="color: #a020f0;">interface</span>
@@ -1082,8 +1082,8 @@ error code into a string.
 </div>
 </div>
 
-<div id="outline-container-org4b5a2c1" class="outline-5">
-<h5 id="org4b5a2c1"><span class="section-number-5">2.1.1.3</span> Python interface</h5>
+<div id="outline-container-org4638abd" class="outline-5">
+<h5 id="org4638abd"><span class="section-number-5">2.1.1.3</span> Python interface</h5>
 <div class="outline-text-5" id="text-2-1-1-3">
 <div class="org-src-container">
 <pre class="src src-python"><span style="color: #a020f0;">class</span> <span style="color: #228b22;">Error</span>(<span style="color: #228b22;">Exception</span>):
@@ -1116,8 +1116,8 @@ error code into a string.
 </div>
 </div>
 
-<div id="outline-container-orgf923afb" class="outline-3">
-<h3 id="orgf923afb"><span class="section-number-3">2.2</span> Back ends</h3>
+<div id="outline-container-orgeecf41b" class="outline-3">
+<h3 id="orgeecf41b"><span class="section-number-3">2.2</span> Back ends</h3>
 <div class="outline-text-3" id="text-2-2">
 <p>
 TREXIO has several back ends:
@@ -1146,8 +1146,8 @@ lines that correspond to the <code>TREXIO_JSON</code> back end (not implemented 
 </p>
 </div>
 
-<div id="outline-container-org6c37c1b" class="outline-4">
-<h4 id="org6c37c1b"><span class="section-number-4">2.2.1</span> C</h4>
+<div id="outline-container-org0f873ee" class="outline-4">
+<h4 id="org0f873ee"><span class="section-number-4">2.2.1</span> C</h4>
 <div class="outline-text-4" id="text-2-2-1">
 <div class="org-src-container">
 <pre class="src src-c"><span style="color: #a020f0;">typedef</span> <span style="color: #228b22;">int32_t</span> <span style="color: #228b22;">back_end_t</span>;
@@ -1196,8 +1196,8 @@ This is useful due to the fact that HDF5 back end can be disabled at configure s
 </div>
 </div>
 
-<div id="outline-container-org2c194af" class="outline-4">
-<h4 id="org2c194af"><span class="section-number-4">2.2.2</span> Fortran</h4>
+<div id="outline-container-org0f241ff" class="outline-4">
+<h4 id="org0f241ff"><span class="section-number-4">2.2.2</span> Fortran</h4>
 <div class="outline-text-4" id="text-2-2-2">
 <div class="org-src-container">
 <pre class="src src-f90">  <span style="color: #228b22;">integer</span>(trexio_back_end_t), <span style="color: #a020f0;">parameter</span> ::<span style="color: #a0522d;"> TREXIO_HDF5 = 0</span>
@@ -1236,8 +1236,8 @@ consistency, in version 2.2 it was renamed <code>trexio_has_back_end</code>.
 </div>
 </div>
 
-<div id="outline-container-orgd7cae1f" class="outline-4">
-<h4 id="orgd7cae1f"><span class="section-number-4">2.2.3</span> Python</h4>
+<div id="outline-container-orga51bab9" class="outline-4">
+<h4 id="orga51bab9"><span class="section-number-4">2.2.3</span> Python</h4>
 <div class="outline-text-4" id="text-2-2-3">
 <div class="org-src-container">
 <pre class="src src-python"># <span style="color: #b22222;">define TREXIO back ends
@@ -1252,8 +1252,8 @@ consistency, in version 2.2 it was renamed <code>trexio_has_back_end</code>.
 </div>
 </div>
 
-<div id="outline-container-orgef35369" class="outline-3">
-<h3 id="orgef35369"><span class="section-number-3">2.3</span> Read/write behavior</h3>
+<div id="outline-container-org6a0a6ae" class="outline-3">
+<h3 id="org6a0a6ae"><span class="section-number-3">2.3</span> Read/write behavior</h3>
 <div class="outline-text-3" id="text-2-3">
 <p>
 Every time a reading function is called, the data is read from the
@@ -1282,8 +1282,8 @@ concurrent programs, the behavior is not specified.
 </div>
 </div>
 
-<div id="outline-container-orgf304220" class="outline-3">
-<h3 id="orgf304220"><span class="section-number-3">2.4</span> TREXIO file type</h3>
+<div id="outline-container-org0e97206" class="outline-3">
+<h3 id="org0e97206"><span class="section-number-3">2.4</span> TREXIO file type</h3>
 <div class="outline-text-3" id="text-2-4">
 <p>
 <code>trexio_s</code> is the the main type for TREXIO files, visible to the users
@@ -1447,8 +1447,8 @@ to work with TREXIO files.
 </div>
 </div>
 
-<div id="outline-container-orga101d40" class="outline-3">
-<h3 id="orga101d40"><span class="section-number-3">2.5</span> File opening</h3>
+<div id="outline-container-orgdec86ab" class="outline-3">
+<h3 id="orgdec86ab"><span class="section-number-3">2.5</span> File opening</h3>
 <div class="outline-text-3" id="text-2-5">
 <p>
 <code>trexio_open</code> creates a new TREXIO file or opens the existing one.
@@ -1504,8 +1504,8 @@ renaming the <code>.txt</code> data files.
 </p>
 </div>
 
-<div id="outline-container-org2a0fa54" class="outline-4">
-<h4 id="org2a0fa54"><span class="section-number-4">2.5.1</span> C</h4>
+<div id="outline-container-orgdacb0f0" class="outline-4">
+<h4 id="orgdacb0f0"><span class="section-number-4">2.5.1</span> C</h4>
 <div class="outline-text-4" id="text-2-5-1">
 <div class="org-src-container">
 <pre class="src src-c"><span style="color: #228b22;">trexio_t</span>*
@@ -1823,8 +1823,8 @@ renaming the <code>.txt</code> data files.
 </div>
 </div>
 
-<div id="outline-container-orgd2fac5f" class="outline-4">
-<h4 id="orgd2fac5f"><span class="section-number-4">2.5.2</span> Fortran</h4>
+<div id="outline-container-orgd9eced7" class="outline-4">
+<h4 id="orgd9eced7"><span class="section-number-4">2.5.2</span> Fortran</h4>
 <div class="outline-text-4" id="text-2-5-2">
 <div class="org-src-container">
 <pre class="src src-f90"><span style="color: #a020f0;">interface</span>
@@ -1842,8 +1842,8 @@ renaming the <code>.txt</code> data files.
 </div>
 </div>
 
-<div id="outline-container-org4bcbc38" class="outline-4">
-<h4 id="org4bcbc38"><span class="section-number-4">2.5.3</span> Python</h4>
+<div id="outline-container-org32dc29d" class="outline-4">
+<h4 id="org32dc29d"><span class="section-number-4">2.5.3</span> Python</h4>
 <div class="outline-text-4" id="text-2-5-3">
 <div class="org-src-container">
 <pre class="src src-python"><span style="color: #a020f0;">def</span> <span style="color: #0000ff;">_open</span>(file_name: <span style="color: #483d8b;">str</span>, mode: <span style="color: #483d8b;">str</span>, back_end: <span style="color: #483d8b;">int</span>):
@@ -1891,8 +1891,8 @@ renaming the <code>.txt</code> data files.
 </div>
 </div>
 
-<div id="outline-container-org7721df5" class="outline-4">
-<h4 id="org7721df5"><span class="section-number-4">2.5.4</span> Zero-based versus one-based arrays of indices</h4>
+<div id="outline-container-org1dac887" class="outline-4">
+<h4 id="org1dac887"><span class="section-number-4">2.5.4</span> Zero-based versus one-based arrays of indices</h4>
 <div class="outline-text-4" id="text-2-5-4">
 <p>
 Because arrays are zero-based in Fortran, we need to set a flag to
@@ -1924,8 +1924,8 @@ know if we need to shift by 1 arrays of indices.
 </div>
 </div>
 
-<div id="outline-container-org607620a" class="outline-3">
-<h3 id="org607620a"><span class="section-number-3">2.6</span> File closing</h3>
+<div id="outline-container-org6a33a62" class="outline-3">
+<h3 id="org6a33a62"><span class="section-number-3">2.6</span> File closing</h3>
 <div class="outline-text-3" id="text-2-6">
 <p>
 <code>trexio_close</code> closes an existing <code>trexio_t</code> file.
@@ -1942,8 +1942,8 @@ output:
 </p>
 </div>
 
-<div id="outline-container-orgb76bb6c" class="outline-4">
-<h4 id="orgb76bb6c"><span class="section-number-4">2.6.1</span> C</h4>
+<div id="outline-container-org88be9f7" class="outline-4">
+<h4 id="org88be9f7"><span class="section-number-4">2.6.1</span> C</h4>
 <div class="outline-text-4" id="text-2-6-1">
 <div class="org-src-container">
 <pre class="src src-c"><span style="color: #228b22;">trexio_exit_code</span>
@@ -2028,8 +2028,8 @@ output:
 </div>
 </div>
 
-<div id="outline-container-org3341da1" class="outline-4">
-<h4 id="org3341da1"><span class="section-number-4">2.6.2</span> Fortran</h4>
+<div id="outline-container-org8431787" class="outline-4">
+<h4 id="org8431787"><span class="section-number-4">2.6.2</span> Fortran</h4>
 <div class="outline-text-4" id="text-2-6-2">
 <div class="org-src-container">
 <pre class="src src-f90"><span style="color: #a020f0;">interface</span>
@@ -2043,8 +2043,8 @@ output:
 </div>
 </div>
 
-<div id="outline-container-orgde7f28b" class="outline-4">
-<h4 id="orgde7f28b"><span class="section-number-4">2.6.3</span> Python</h4>
+<div id="outline-container-org1bef047" class="outline-4">
+<h4 id="org1bef047"><span class="section-number-4">2.6.3</span> Python</h4>
 <div class="outline-text-4" id="text-2-6-3">
 <div class="org-src-container">
 <pre class="src src-python"><span style="color: #a020f0;">def</span> <span style="color: #0000ff;">_close</span>(trexio_file):
@@ -2062,8 +2062,8 @@ output:
 </div>
 </div>
 
-<div id="outline-container-org4387f17" class="outline-3">
-<h3 id="org4387f17"><span class="section-number-3">2.7</span> File flushing</h3>
+<div id="outline-container-org77b1cae" class="outline-3">
+<h3 id="org77b1cae"><span class="section-number-3">2.7</span> File flushing</h3>
 <div class="outline-text-3" id="text-2-7">
 <p>
 <code>trexio_flush</code> flushes all buffers into the <code>trexio_t</code> file.
@@ -2080,8 +2080,8 @@ output:
 </p>
 </div>
 
-<div id="outline-container-org4b4a734" class="outline-4">
-<h4 id="org4b4a734"><span class="section-number-4">2.7.1</span> C</h4>
+<div id="outline-container-org8ca4623" class="outline-4">
+<h4 id="org8ca4623"><span class="section-number-4">2.7.1</span> C</h4>
 <div class="outline-text-4" id="text-2-7-1">
 <div class="org-src-container">
 <pre class="src src-c"><span style="color: #228b22;">trexio_exit_code</span>
@@ -2122,8 +2122,8 @@ output:
 </div>
 </div>
 
-<div id="outline-container-org8c9f2fa" class="outline-4">
-<h4 id="org8c9f2fa"><span class="section-number-4">2.7.2</span> Fortran</h4>
+<div id="outline-container-orgb6c9857" class="outline-4">
+<h4 id="orgb6c9857"><span class="section-number-4">2.7.2</span> Fortran</h4>
 <div class="outline-text-4" id="text-2-7-2">
 <div class="org-src-container">
 <pre class="src src-f90"><span style="color: #a020f0;">interface</span>
@@ -2137,8 +2137,8 @@ output:
 </div>
 </div>
 
-<div id="outline-container-org7255aca" class="outline-4">
-<h4 id="org7255aca"><span class="section-number-4">2.7.3</span> Python</h4>
+<div id="outline-container-orge75bc7e" class="outline-4">
+<h4 id="orge75bc7e"><span class="section-number-4">2.7.3</span> Python</h4>
 <div class="outline-text-4" id="text-2-7-3">
 <div class="org-src-container">
 <pre class="src src-python"><span style="color: #a020f0;">def</span> <span style="color: #0000ff;">flush</span>(trexio_file):
@@ -2156,8 +2156,8 @@ output:
 </div>
 </div>
 
-<div id="outline-container-org3650a92" class="outline-3">
-<h3 id="org3650a92"><span class="section-number-3">2.8</span> File existence</h3>
+<div id="outline-container-org4765a94" class="outline-3">
+<h3 id="org4765a94"><span class="section-number-3">2.8</span> File existence</h3>
 <div class="outline-text-3" id="text-2-8">
 <p>
 <code>trexio_inquire</code> check whether TREXIO file exists.
@@ -2194,8 +2194,8 @@ You can see examples of both functionalities in <code>test_f.f90</code>  (search
 </p>
 </div>
 
-<div id="outline-container-org45b7663" class="outline-4">
-<h4 id="org45b7663"><span class="section-number-4">2.8.1</span> C</h4>
+<div id="outline-container-org0ab5c29" class="outline-4">
+<h4 id="org0ab5c29"><span class="section-number-4">2.8.1</span> C</h4>
 <div class="outline-text-4" id="text-2-8-1">
 <div class="org-src-container">
 <pre class="src src-c"><span style="color: #228b22;">trexio_exit_code</span>
@@ -2225,8 +2225,8 @@ You can see examples of both functionalities in <code>test_f.f90</code>  (search
 </div>
 </div>
 
-<div id="outline-container-orgbcbbe04" class="outline-4">
-<h4 id="orgbcbbe04"><span class="section-number-4">2.8.2</span> Fortran</h4>
+<div id="outline-container-orga093cc6" class="outline-4">
+<h4 id="orga093cc6"><span class="section-number-4">2.8.2</span> Fortran</h4>
 <div class="outline-text-4" id="text-2-8-2">
 <p>
 The function below is a C binding.
@@ -2245,8 +2245,8 @@ The front end Fortran function for <code>trexio_inquire</code> can be found in t
 </div>
 </div>
 
-<div id="outline-container-org21c611b" class="outline-4">
-<h4 id="org21c611b"><span class="section-number-4">2.8.3</span> Python</h4>
+<div id="outline-container-orgc933da0" class="outline-4">
+<h4 id="orgc933da0"><span class="section-number-4">2.8.3</span> Python</h4>
 <div class="outline-text-4" id="text-2-8-3">
 <div class="org-src-container">
 <pre class="src src-python"><span style="color: #a020f0;">def</span> <span style="color: #0000ff;">_inquire</span>(file_name: <span style="color: #483d8b;">str</span>) -&gt; <span style="color: #483d8b;">bool</span>:
@@ -2265,8 +2265,8 @@ The front end Fortran function for <code>trexio_inquire</code> can be found in t
 </div>
 </div>
 
-<div id="outline-container-orga15e4c5" class="outline-3">
-<h3 id="orga15e4c5"><span class="section-number-3">2.9</span> File copy</h3>
+<div id="outline-container-org8b84b70" class="outline-3">
+<h3 id="org8b84b70"><span class="section-number-3">2.9</span> File copy</h3>
 <div class="outline-text-3" id="text-2-9">
 <p>
 <code>trexio_cp</code> copies a TREXIO file using <code>cp</code>. The destination file
@@ -2289,8 +2289,8 @@ is not overwritten if it exists, an error is returned.
 </ul>
 </div>
 
-<div id="outline-container-org60503dd" class="outline-4">
-<h4 id="org60503dd"><span class="section-number-4">2.9.1</span> C</h4>
+<div id="outline-container-org6faf439" class="outline-4">
+<h4 id="org6faf439"><span class="section-number-4">2.9.1</span> C</h4>
 <div class="outline-text-4" id="text-2-9-1">
 <div class="org-src-container">
 <pre class="src src-c">
@@ -2363,8 +2363,8 @@ is not overwritten if it exists, an error is returned.
 </div>
 </div>
 
-<div id="outline-container-org0742212" class="outline-4">
-<h4 id="org0742212"><span class="section-number-4">2.9.2</span> Fortran</h4>
+<div id="outline-container-org5700c15" class="outline-4">
+<h4 id="org5700c15"><span class="section-number-4">2.9.2</span> Fortran</h4>
 <div class="outline-text-4" id="text-2-9-2">
 <div class="org-src-container">
 <pre class="src src-f90"><span style="color: #a020f0;">interface</span>
@@ -2378,8 +2378,8 @@ is not overwritten if it exists, an error is returned.
 </div>
 </div>
 
-<div id="outline-container-orga439e7a" class="outline-4">
-<h4 id="orga439e7a"><span class="section-number-4">2.9.3</span> Python</h4>
+<div id="outline-container-orgf7c7e34" class="outline-4">
+<h4 id="orgf7c7e34"><span class="section-number-4">2.9.3</span> Python</h4>
 <div class="outline-text-4" id="text-2-9-3">
 <div class="org-src-container">
 <pre class="src src-python"><span style="color: #a020f0;">def</span> <span style="color: #0000ff;">_cp</span>(source: <span style="color: #483d8b;">str</span>, destination: <span style="color: #483d8b;">str</span>):
@@ -2411,8 +2411,8 @@ is not overwritten if it exists, an error is returned.
 </div>
 </div>
 
-<div id="outline-container-orgb4f949e" class="outline-3">
-<h3 id="orgb4f949e"><span class="section-number-3">2.10</span> File state</h3>
+<div id="outline-container-orgbc6317b" class="outline-3">
+<h3 id="orgbc6317b"><span class="section-number-3">2.10</span> File state</h3>
 <div class="outline-text-3" id="text-2-10">
 <p>
 <b><b>Note:</b></b> the use of the functions below is discouraged as of version 2.3.0.
@@ -2449,8 +2449,8 @@ output:
 </p>
 </div>
 
-<div id="outline-container-org4ac3922" class="outline-4">
-<h4 id="org4ac3922"><span class="section-number-4">2.10.1</span> C</h4>
+<div id="outline-container-orge969bdf" class="outline-4">
+<h4 id="orge969bdf"><span class="section-number-4">2.10.1</span> C</h4>
 <div class="outline-text-4" id="text-2-10-1">
 <div class="org-src-container">
 <pre class="src src-c"><span style="color: #228b22;">trexio_exit_code</span>
@@ -2494,8 +2494,8 @@ output:
 </div>
 </div>
 
-<div id="outline-container-org41e4aa2" class="outline-4">
-<h4 id="org41e4aa2"><span class="section-number-4">2.10.2</span> Fortran</h4>
+<div id="outline-container-org45adf7d" class="outline-4">
+<h4 id="org45adf7d"><span class="section-number-4">2.10.2</span> Fortran</h4>
 <div class="outline-text-4" id="text-2-10-2">
 <div class="org-src-container">
 <pre class="src src-f90"><span style="color: #a020f0;">interface</span>
@@ -2518,8 +2518,8 @@ output:
 </div>
 </div>
 
-<div id="outline-container-org5cf4eb0" class="outline-4">
-<h4 id="org5cf4eb0"><span class="section-number-4">2.10.3</span> Python</h4>
+<div id="outline-container-org286a32e" class="outline-4">
+<h4 id="org286a32e"><span class="section-number-4">2.10.3</span> Python</h4>
 <div class="outline-text-4" id="text-2-10-3">
 <p>
 See TREXIO File Python class.
@@ -2528,8 +2528,8 @@ See TREXIO File Python class.
 </div>
 </div>
 
-<div id="outline-container-orgecc6fd5" class="outline-3">
-<h3 id="orgecc6fd5"><span class="section-number-3">2.11</span> Tasks to be done before closing</h3>
+<div id="outline-container-org9eb3607" class="outline-3">
+<h3 id="org9eb3607"><span class="section-number-3">2.11</span> Tasks to be done before closing</h3>
 <div class="outline-text-3" id="text-2-11">
 <div class="org-src-container">
 <pre class="src src-c"><span style="color: #228b22;">trexio_exit_code</span>
@@ -2647,12 +2647,12 @@ See TREXIO File Python class.
 </div>
 </div>
 
-<div id="outline-container-orgd0b7037" class="outline-2">
-<h2 id="orgd0b7037"><span class="section-number-2">3</span> Templates for front end</h2>
+<div id="outline-container-org7b2cee7" class="outline-2">
+<h2 id="org7b2cee7"><span class="section-number-2">3</span> Templates for front end</h2>
 <div class="outline-text-2" id="text-3">
 </div>
-<div id="outline-container-org48b134b" class="outline-3">
-<h3 id="org48b134b"><span class="section-number-3">3.1</span> Description</h3>
+<div id="outline-container-org6c2bb62" class="outline-3">
+<h3 id="org6c2bb62"><span class="section-number-3">3.1</span> Description</h3>
 <div class="outline-text-3" id="text-3-1">
 <p>
 Consider the following block of <code>trex.json</code>:
@@ -2873,12 +2873,12 @@ value will result in <code>TREXIO_INVALID_ARG_2</code> exit code.
 </div>
 </div>
 
-<div id="outline-container-org0994b01" class="outline-3">
-<h3 id="org0994b01"><span class="section-number-3">3.2</span> Templates for front end has<sub>group</sub> functions</h3>
+<div id="outline-container-org6e87eda" class="outline-3">
+<h3 id="org6e87eda"><span class="section-number-3">3.2</span> Templates for front end has<sub>group</sub> functions</h3>
 <div class="outline-text-3" id="text-3-2">
 </div>
-<div id="outline-container-org0e0e170" class="outline-4">
-<h4 id="org0e0e170"><span class="section-number-4">3.2.1</span> Introduction</h4>
+<div id="outline-container-orgbecaef5" class="outline-4">
+<h4 id="orgbecaef5"><span class="section-number-4">3.2.1</span> Introduction</h4>
 <div class="outline-text-4" id="text-3-2-1">
 <p>
 This section concerns API calls related to TREXIO groups
@@ -2908,8 +2908,8 @@ This section concerns API calls related to TREXIO groups
 </div>
 </div>
 
-<div id="outline-container-org6d159cf" class="outline-4">
-<h4 id="org6d159cf"><span class="section-number-4">3.2.2</span> C templates for front end</h4>
+<div id="outline-container-org087624a" class="outline-4">
+<h4 id="org087624a"><span class="section-number-4">3.2.2</span> C templates for front end</h4>
 <div class="outline-text-4" id="text-3-2-2">
 <p>
 The <code>C</code> templates that correspond to each of the abovementioned
@@ -2918,12 +2918,12 @@ handle.
 </p>
 </div>
 
-<div id="outline-container-org21882ad" class="outline-5">
-<h5 id="org21882ad"><span class="section-number-5">3.2.2.1</span> Function declarations</h5>
+<div id="outline-container-org2eb2331" class="outline-5">
+<h5 id="org2eb2331"><span class="section-number-5">3.2.2.1</span> Function declarations</h5>
 </div>
 
-<div id="outline-container-org22b82a1" class="outline-5">
-<h5 id="org22b82a1"><span class="section-number-5">3.2.2.2</span> Source code</h5>
+<div id="outline-container-orgb224fb6" class="outline-5">
+<h5 id="orgb224fb6"><span class="section-number-5">3.2.2.2</span> Source code</h5>
 <div class="outline-text-5" id="text-3-2-2-2">
 <div class="org-src-container">
 <pre class="src src-c"><span style="color: #228b22;">trexio_exit_code</span>
@@ -2960,8 +2960,8 @@ handle.
 </div>
 </div>
 
-<div id="outline-container-orgb0ca435" class="outline-4">
-<h4 id="orgb0ca435"><span class="section-number-4">3.2.3</span> Fortran templates for front end</h4>
+<div id="outline-container-org35936e0" class="outline-4">
+<h4 id="org35936e0"><span class="section-number-4">3.2.3</span> Fortran templates for front end</h4>
 <div class="outline-text-4" id="text-3-2-3">
 <p>
 The <code>Fortran</code> templates that provide an access to the <code>C</code> API calls from Fortran.
@@ -2982,8 +2982,8 @@ These templates are based on the use of <code>iso_c_binding</code>. Pointers hav
 </div>
 </div>
 
-<div id="outline-container-org88318c6" class="outline-4">
-<h4 id="org88318c6"><span class="section-number-4">3.2.4</span> Python templates for front end</h4>
+<div id="outline-container-org774d7c8" class="outline-4">
+<h4 id="org774d7c8"><span class="section-number-4">3.2.4</span> Python templates for front end</h4>
 <div class="outline-text-4" id="text-3-2-4">
 <div class="org-src-container">
 <pre class="src src-python"><span style="color: #a020f0;">def</span> <span style="color: #0000ff;">has_</span>$group$(trexio_file) -&gt; <span style="color: #483d8b;">bool</span>:
@@ -3010,12 +3010,12 @@ These templates are based on the use of <code>iso_c_binding</code>. Pointers hav
 </div>
 </div>
 
-<div id="outline-container-org9963cd8" class="outline-3">
-<h3 id="org9963cd8"><span class="section-number-3">3.3</span> Templates for front end has/read/write a single numerical attribute</h3>
+<div id="outline-container-org62cba1d" class="outline-3">
+<h3 id="org62cba1d"><span class="section-number-3">3.3</span> Templates for front end has/read/write a single numerical attribute</h3>
 <div class="outline-text-3" id="text-3-3">
 </div>
-<div id="outline-container-org1f4fd56" class="outline-4">
-<h4 id="org1f4fd56"><span class="section-number-4">3.3.1</span> Introduction</h4>
+<div id="outline-container-org233b1db" class="outline-4">
+<h4 id="org233b1db"><span class="section-number-4">3.3.1</span> Introduction</h4>
 <div class="outline-text-4" id="text-3-3-1">
 <p>
 This section concerns API calls related to numerical attributes,
@@ -3086,8 +3086,8 @@ namely single value of int/float types.
 </div>
 </div>
 
-<div id="outline-container-orgb75cdef" class="outline-4">
-<h4 id="orgb75cdef"><span class="section-number-4">3.3.2</span> C templates for front end</h4>
+<div id="outline-container-orgaeaf27f" class="outline-4">
+<h4 id="orgaeaf27f"><span class="section-number-4">3.3.2</span> C templates for front end</h4>
 <div class="outline-text-4" id="text-3-3-2">
 <p>
 The <code>C</code> templates that correspond to each of the abovementioned
@@ -3101,12 +3101,12 @@ precision (see Table above).
 </p>
 </div>
 
-<div id="outline-container-orgf6ca23a" class="outline-5">
-<h5 id="orgf6ca23a"><span class="section-number-5">3.3.2.1</span> Function declarations</h5>
+<div id="outline-container-org9563ca5" class="outline-5">
+<h5 id="org9563ca5"><span class="section-number-5">3.3.2.1</span> Function declarations</h5>
 </div>
 
-<div id="outline-container-orgf8c0a59" class="outline-5">
-<h5 id="orgf8c0a59"><span class="section-number-5">3.3.2.2</span> Source code for double precision functions</h5>
+<div id="outline-container-org29bf252" class="outline-5">
+<h5 id="org29bf252"><span class="section-number-5">3.3.2.2</span> Source code for double precision functions</h5>
 <div class="outline-text-5" id="text-3-3-2-2">
 <div class="org-src-container">
 <pre class="src src-c"><span style="color: #228b22;">trexio_exit_code</span>
@@ -3187,8 +3187,8 @@ precision (see Table above).
 </div>
 </div>
 
-<div id="outline-container-orge671280" class="outline-5">
-<h5 id="orge671280"><span class="section-number-5">3.3.2.3</span> Source code for single precision functions</h5>
+<div id="outline-container-orge9d5db0" class="outline-5">
+<h5 id="orge9d5db0"><span class="section-number-5">3.3.2.3</span> Source code for single precision functions</h5>
 <div class="outline-text-5" id="text-3-3-2-3">
 <div class="org-src-container">
 <pre class="src src-c"><span style="color: #228b22;">trexio_exit_code</span>
@@ -3276,8 +3276,8 @@ precision (see Table above).
 </div>
 </div>
 
-<div id="outline-container-org54993d4" class="outline-5">
-<h5 id="org54993d4"><span class="section-number-5">3.3.2.4</span> Source code for default functions</h5>
+<div id="outline-container-orgf37b8cd" class="outline-5">
+<h5 id="orgf37b8cd"><span class="section-number-5">3.3.2.4</span> Source code for default functions</h5>
 <div class="outline-text-5" id="text-3-3-2-4">
 <div class="org-src-container">
 <pre class="src src-c"><span style="color: #228b22;">trexio_exit_code</span>
@@ -3332,8 +3332,8 @@ precision (see Table above).
 </div>
 </div>
 
-<div id="outline-container-org966a6b7" class="outline-4">
-<h4 id="org966a6b7"><span class="section-number-4">3.3.3</span> Fortran templates for front end</h4>
+<div id="outline-container-org5fd0653" class="outline-4">
+<h4 id="org5fd0653"><span class="section-number-4">3.3.3</span> Fortran templates for front end</h4>
 <div class="outline-text-4" id="text-3-3-3">
 <p>
 The <code>Fortran</code> templates that provide an access to the <code>C</code> API calls from Fortran.
@@ -3432,8 +3432,8 @@ These templates are based on the use of <code>iso_c_binding</code>. Pointers hav
 </div>
 </div>
 
-<div id="outline-container-org4541fad" class="outline-4">
-<h4 id="org4541fad"><span class="section-number-4">3.3.4</span> Python templates for front end</h4>
+<div id="outline-container-orgbaa08b9" class="outline-4">
+<h4 id="orgbaa08b9"><span class="section-number-4">3.3.4</span> Python templates for front end</h4>
 <div class="outline-text-4" id="text-3-3-4">
 <div class="org-src-container">
 <pre class="src src-python"><span style="color: #a020f0;">def</span> <span style="color: #0000ff;">write_</span>$group_num$(trexio_file, num_w: $group_num_py_dtype$) -&gt; <span style="color: #008b8b;">None</span>:
@@ -3506,12 +3506,12 @@ These templates are based on the use of <code>iso_c_binding</code>. Pointers hav
 </div>
 </div>
 
-<div id="outline-container-orgb12b667" class="outline-3">
-<h3 id="orgb12b667"><span class="section-number-3">3.4</span> Templates for front end has/read/write a dataset of numerical data</h3>
+<div id="outline-container-orgd116600" class="outline-3">
+<h3 id="orgd116600"><span class="section-number-3">3.4</span> Templates for front end has/read/write a dataset of numerical data</h3>
 <div class="outline-text-3" id="text-3-4">
 </div>
-<div id="outline-container-orgf8bf584" class="outline-4">
-<h4 id="orgf8bf584"><span class="section-number-4">3.4.1</span> Introduction</h4>
+<div id="outline-container-org3cb785f" class="outline-4">
+<h4 id="org3cb785f"><span class="section-number-4">3.4.1</span> Introduction</h4>
 <div class="outline-text-4" id="text-3-4-1">
 <p>
 This section concerns API calls related to datasets.
@@ -3593,8 +3593,8 @@ This section concerns API calls related to datasets.
 </div>
 </div>
 
-<div id="outline-container-org16f4c65" class="outline-4">
-<h4 id="org16f4c65"><span class="section-number-4">3.4.2</span> C templates for front end</h4>
+<div id="outline-container-org5982480" class="outline-4">
+<h4 id="org5982480"><span class="section-number-4">3.4.2</span> C templates for front end</h4>
 <div class="outline-text-4" id="text-3-4-2">
 <p>
 The C templates that correspond to each of the abovementioned functions can be found below.
@@ -3605,12 +3605,12 @@ The basic (non-suffixed) API call on datasets deals with real(c<sub>double</sub>
 </p>
 </div>
 
-<div id="outline-container-org55f21d2" class="outline-5">
-<h5 id="org55f21d2"><span class="section-number-5">3.4.2.1</span> Function declarations</h5>
+<div id="outline-container-org6da4192" class="outline-5">
+<h5 id="org6da4192"><span class="section-number-5">3.4.2.1</span> Function declarations</h5>
 </div>
 
-<div id="outline-container-org64e89e7" class="outline-5">
-<h5 id="org64e89e7"><span class="section-number-5">3.4.2.2</span> Source code for double precision functions</h5>
+<div id="outline-container-orgf703649" class="outline-5">
+<h5 id="orgf703649"><span class="section-number-5">3.4.2.2</span> Source code for double precision functions</h5>
 <div class="outline-text-5" id="text-3-4-2-2">
 <div class="org-src-container">
 <pre class="src src-c"><span style="color: #228b22;">trexio_exit_code</span>
@@ -3773,8 +3773,8 @@ The basic (non-suffixed) API call on datasets deals with real(c<sub>double</sub>
 </div>
 </div>
 
-<div id="outline-container-org8ad367e" class="outline-5">
-<h5 id="org8ad367e"><span class="section-number-5">3.4.2.3</span> Source code for single precision functions</h5>
+<div id="outline-container-org4d9bb7f" class="outline-5">
+<h5 id="org4d9bb7f"><span class="section-number-5">3.4.2.3</span> Source code for single precision functions</h5>
 <div class="outline-text-5" id="text-3-4-2-3">
 <div class="org-src-container">
 <pre class="src src-c"><span style="color: #228b22;">trexio_exit_code</span>
@@ -3927,11 +3927,11 @@ The basic (non-suffixed) API call on datasets deals with real(c<sub>double</sub>
 </div>
 </div>
 
-<div id="outline-container-orgf911f9f" class="outline-5">
-<h5 id="orgf911f9f"><span class="section-number-5">3.4.2.4</span> Source code for memory-safe functions</h5>
+<div id="outline-container-orgd922309" class="outline-5">
+<h5 id="orgd922309"><span class="section-number-5">3.4.2.4</span> Source code for memory-safe functions</h5>
 <div class="outline-text-5" id="text-3-4-2-4">
 <div class="org-src-container">
-<pre class="src src-c" id="org9b7f1e8">int64_t $group_dset_dim$ = 0;
+<pre class="src src-c" id="orgf709125">int64_t $group_dset_dim$ = 0;
 
 <span style="color: #228b22;">trexio_exit_code</span> <span style="color: #a0522d;">rc</span> = TREXIO_FAILURE;
 (<span style="color: #228b22;">void</span>) rc; // <span style="color: #b22222;">Avoids unused parameter error for scalar variables
@@ -4097,8 +4097,8 @@ rc = trexio_read_$group_dset_dim$_64(file, &amp;($group_dset_dim$));
 </div>
 </div>
 
-<div id="outline-container-org1628658" class="outline-5">
-<h5 id="org1628658"><span class="section-number-5">3.4.2.5</span> Source code for default functions</h5>
+<div id="outline-container-org77542db" class="outline-5">
+<h5 id="org77542db"><span class="section-number-5">3.4.2.5</span> Source code for default functions</h5>
 <div class="outline-text-5" id="text-3-4-2-5">
 <div class="org-src-container">
 <pre class="src src-c"><span style="color: #228b22;">trexio_exit_code</span>
@@ -4173,8 +4173,8 @@ rc = trexio_read_$group_dset_dim$_64(file, &amp;($group_dset_dim$));
 </div>
 </div>
 
-<div id="outline-container-org0cc64e0" class="outline-4">
-<h4 id="org0cc64e0"><span class="section-number-4">3.4.3</span> Fortran templates for front end</h4>
+<div id="outline-container-org7615b61" class="outline-4">
+<h4 id="org7615b61"><span class="section-number-4">3.4.3</span> Fortran templates for front end</h4>
 <div class="outline-text-4" id="text-3-4-3">
 <p>
 The <code>Fortran</code> templates that provide an access to the <code>C</code> API calls from <code>Fortran</code>.
@@ -4273,8 +4273,8 @@ These templates are based on the use of <code>iso_c_binding</code>. Pointers hav
 </div>
 </div>
 
-<div id="outline-container-orga4438b8" class="outline-4">
-<h4 id="orga4438b8"><span class="section-number-4">3.4.4</span> Python templates for front end</h4>
+<div id="outline-container-org8c9cc94" class="outline-4">
+<h4 id="org8c9cc94"><span class="section-number-4">3.4.4</span> Python templates for front end</h4>
 <div class="outline-text-4" id="text-3-4-4">
 <div class="org-src-container">
 <pre class="src src-python"><span style="color: #a020f0;">def</span> <span style="color: #0000ff;">write_</span>$group_dset$(trexio_file, dset_w) -&gt; <span style="color: #008b8b;">None</span>:
@@ -4446,12 +4446,12 @@ These templates are based on the use of <code>iso_c_binding</code>. Pointers hav
 </div>
 </div>
 
-<div id="outline-container-org88c8cff" class="outline-3">
-<h3 id="org88c8cff"><span class="section-number-3">3.5</span> Templates for front end has/read/write a dataset of sparse data</h3>
+<div id="outline-container-orgcbf8c4d" class="outline-3">
+<h3 id="orgcbf8c4d"><span class="section-number-3">3.5</span> Templates for front end has/read/write a dataset of sparse data</h3>
 <div class="outline-text-3" id="text-3-5">
 </div>
-<div id="outline-container-org74d737f" class="outline-4">
-<h4 id="org74d737f"><span class="section-number-4">3.5.1</span> Introduction</h4>
+<div id="outline-container-org0d2ed69" class="outline-4">
+<h4 id="org0d2ed69"><span class="section-number-4">3.5.1</span> Introduction</h4>
 <div class="outline-text-4" id="text-3-5-1">
 <p>
 Sparse data structures are used typically for large tensors such as
@@ -4612,16 +4612,16 @@ This section concerns API calls related to sparse data structures.
 </div>
 </div>
 
-<div id="outline-container-org0a7b956" class="outline-4">
-<h4 id="org0a7b956"><span class="section-number-4">3.5.2</span> C templates for front end</h4>
+<div id="outline-container-orgc5b1826" class="outline-4">
+<h4 id="orgc5b1826"><span class="section-number-4">3.5.2</span> C templates for front end</h4>
 <div class="outline-text-4" id="text-3-5-2">
 </div>
-<div id="outline-container-org11e8035" class="outline-5">
-<h5 id="org11e8035"><span class="section-number-5">3.5.2.1</span> Function declarations</h5>
+<div id="outline-container-orgf4a151c" class="outline-5">
+<h5 id="orgf4a151c"><span class="section-number-5">3.5.2.1</span> Function declarations</h5>
 </div>
 
-<div id="outline-container-org35fba57" class="outline-5">
-<h5 id="org35fba57"><span class="section-number-5">3.5.2.2</span> Source code for default functions</h5>
+<div id="outline-container-org1aa26c4" class="outline-5">
+<h5 id="org1aa26c4"><span class="section-number-5">3.5.2.2</span> Source code for default functions</h5>
 <div class="outline-text-5" id="text-3-5-2-2">
 <div class="org-src-container">
 <pre class="src src-c"><span style="color: #228b22;">trexio_exit_code</span> <span style="color: #0000ff;">trexio_read_safe_$group_dset$</span>(<span style="color: #228b22;">trexio_t</span>* <span style="color: #a020f0;">const</span> <span style="color: #a0522d;">file</span>,
@@ -4937,8 +4937,8 @@ This section concerns API calls related to sparse data structures.
 </div>
 </div>
 
-<div id="outline-container-orga059ca8" class="outline-4">
-<h4 id="orga059ca8"><span class="section-number-4">3.5.3</span> Fortran templates for front end</h4>
+<div id="outline-container-orgd4e7e2c" class="outline-4">
+<h4 id="orgd4e7e2c"><span class="section-number-4">3.5.3</span> Fortran templates for front end</h4>
 <div class="outline-text-4" id="text-3-5-3">
 <p>
 The <code>Fortran</code> templates that provide an access to the <code>C</code> API calls from <code>Fortran</code>.
@@ -5044,8 +5044,8 @@ These templates are based on the use of <code>iso_c_binding</code>. Pointers hav
 </div>
 </div>
 
-<div id="outline-container-org013db19" class="outline-4">
-<h4 id="org013db19"><span class="section-number-4">3.5.4</span> Python templates for front end</h4>
+<div id="outline-container-org31a2b67" class="outline-4">
+<h4 id="org31a2b67"><span class="section-number-4">3.5.4</span> Python templates for front end</h4>
 <div class="outline-text-4" id="text-3-5-4">
 <div class="org-src-container">
 <pre class="src src-python"><span style="color: #a020f0;">def</span> <span style="color: #0000ff;">write_</span>$group_dset$(trexio_file: File, offset_file: <span style="color: #483d8b;">int</span>, buffer_size: <span style="color: #483d8b;">int</span>, indices: <span style="color: #483d8b;">list</span>, values: <span style="color: #483d8b;">list</span>) -&gt; <span style="color: #008b8b;">None</span>:
@@ -5247,12 +5247,12 @@ These templates are based on the use of <code>iso_c_binding</code>. Pointers hav
 </div>
 </div>
 
-<div id="outline-container-org843b42e" class="outline-3">
-<h3 id="org843b42e"><span class="section-number-3">3.6</span> Templates for front end has/read/write a dataset of strings</h3>
+<div id="outline-container-org02df2fa" class="outline-3">
+<h3 id="org02df2fa"><span class="section-number-3">3.6</span> Templates for front end has/read/write a dataset of strings</h3>
 <div class="outline-text-3" id="text-3-6">
 </div>
-<div id="outline-container-org613350f" class="outline-4">
-<h4 id="org613350f"><span class="section-number-4">3.6.1</span> Introduction</h4>
+<div id="outline-container-org0dd9102" class="outline-4">
+<h4 id="org0dd9102"><span class="section-number-4">3.6.1</span> Introduction</h4>
 <div class="outline-text-4" id="text-3-6-1">
 <p>
 This section concerns API calls related to datasets of strings.
@@ -5292,8 +5292,8 @@ This section concerns API calls related to datasets of strings.
 </div>
 </div>
 
-<div id="outline-container-org0ab7a4a" class="outline-4">
-<h4 id="org0ab7a4a"><span class="section-number-4">3.6.2</span> C templates for front end</h4>
+<div id="outline-container-org8ef1daa" class="outline-4">
+<h4 id="org8ef1daa"><span class="section-number-4">3.6.2</span> C templates for front end</h4>
 <div class="outline-text-4" id="text-3-6-2">
 <p>
 First parameter is the <code>TREXIO</code> file handle. Second parameter is the variable to be written/read
@@ -5301,12 +5301,12 @@ to/from the <code>TREXIO</code> file (except for <code>trexio_has_</code> functi
 </p>
 </div>
 
-<div id="outline-container-org6970ae0" class="outline-5">
-<h5 id="org6970ae0"><span class="section-number-5">3.6.2.1</span> Function declarations</h5>
+<div id="outline-container-org493c514" class="outline-5">
+<h5 id="org493c514"><span class="section-number-5">3.6.2.1</span> Function declarations</h5>
 </div>
 
-<div id="outline-container-org24d4727" class="outline-5">
-<h5 id="org24d4727"><span class="section-number-5">3.6.2.2</span> Source code for default functions</h5>
+<div id="outline-container-org5f77865" class="outline-5">
+<h5 id="org5f77865"><span class="section-number-5">3.6.2.2</span> Source code for default functions</h5>
 <div class="outline-text-5" id="text-3-6-2-2">
 <div class="org-src-container">
 <pre class="src src-c"><span style="color: #228b22;">trexio_exit_code</span>
@@ -5552,8 +5552,8 @@ to/from the <code>TREXIO</code> file (except for <code>trexio_has_</code> functi
 </div>
 </div>
 
-<div id="outline-container-orgfc1b71d" class="outline-4">
-<h4 id="orgfc1b71d"><span class="section-number-4">3.6.3</span> Fortran templates for front end</h4>
+<div id="outline-container-org8c08ce8" class="outline-4">
+<h4 id="org8c08ce8"><span class="section-number-4">3.6.3</span> Fortran templates for front end</h4>
 <div class="outline-text-4" id="text-3-6-3">
 <p>
 The <code>Fortran</code> templates that provide an access to the <code>C</code> API calls from <code>Fortran</code>.
@@ -5666,8 +5666,8 @@ These templates are based on the use of <code>iso_c_binding</code>. Pointers hav
 </div>
 </div>
 
-<div id="outline-container-org9b3a33f" class="outline-4">
-<h4 id="org9b3a33f"><span class="section-number-4">3.6.4</span> Python templates for front end</h4>
+<div id="outline-container-org24bde5a" class="outline-4">
+<h4 id="org24bde5a"><span class="section-number-4">3.6.4</span> Python templates for front end</h4>
 <div class="outline-text-4" id="text-3-6-4">
 <div class="org-src-container">
 <pre class="src src-python"><span style="color: #a020f0;">def</span> <span style="color: #0000ff;">write_</span>$group_dset$(trexio_file, dset_w: <span style="color: #483d8b;">list</span>) -&gt; <span style="color: #008b8b;">None</span>:
@@ -5768,8 +5768,8 @@ These templates are based on the use of <code>iso_c_binding</code>. Pointers hav
 </div>
 </div>
 
-<div id="outline-container-org6f0d7a4" class="outline-3">
-<h3 id="org6f0d7a4"><span class="section-number-3">3.7</span> Templates for front end has/read/write a buffered vector</h3>
+<div id="outline-container-org7462a1e" class="outline-3">
+<h3 id="org7462a1e"><span class="section-number-3">3.7</span> Templates for front end has/read/write a buffered vector</h3>
 <div class="outline-text-3" id="text-3-7">
 <p>
 This corresponds to the <code>buffer</code> data type and is particularly useful for incremental additiona of values like
@@ -5834,8 +5834,8 @@ it was done for <code>sparse</code> data but without the need to supply tuples o
 </table>
 </div>
 
-<div id="outline-container-orgbfc975e" class="outline-4">
-<h4 id="orgbfc975e"><span class="section-number-4">3.7.1</span> C source code</h4>
+<div id="outline-container-org305e79f" class="outline-4">
+<h4 id="org305e79f"><span class="section-number-4">3.7.1</span> C source code</h4>
 <div class="outline-text-4" id="text-3-7-1">
 <div class="org-src-container">
 <pre class="src src-c"><span style="color: #228b22;">trexio_exit_code</span>
@@ -6017,8 +6017,8 @@ it was done for <code>sparse</code> data but without the need to supply tuples o
 </div>
 </div>
 
-<div id="outline-container-org8274756" class="outline-4">
-<h4 id="org8274756"><span class="section-number-4">3.7.2</span> Fortran interface</h4>
+<div id="outline-container-org68ffd3a" class="outline-4">
+<h4 id="org68ffd3a"><span class="section-number-4">3.7.2</span> Fortran interface</h4>
 <div class="outline-text-4" id="text-3-7-2">
 <p>
 The <code>Fortran</code> templates that provide an access to the <code>C</code> API calls from Fortran.
@@ -6109,8 +6109,8 @@ These templates are based on the use of <code>iso_c_binding</code>. Pointers hav
 </div>
 </div>
 
-<div id="outline-container-org4f314c8" class="outline-4">
-<h4 id="org4f314c8"><span class="section-number-4">3.7.3</span> Python interface</h4>
+<div id="outline-container-org1f5e41b" class="outline-4">
+<h4 id="org1f5e41b"><span class="section-number-4">3.7.3</span> Python interface</h4>
 <div class="outline-text-4" id="text-3-7-3">
 <div class="org-src-container">
 <pre class="src src-python"><span style="color: #a020f0;">def</span> <span style="color: #0000ff;">write_</span>$group_dset$(trexio_file: File, offset_file: <span style="color: #483d8b;">int</span>, buffer_size: <span style="color: #483d8b;">int</span>, dset) -&gt; <span style="color: #008b8b;">None</span>:
@@ -6261,12 +6261,12 @@ These templates are based on the use of <code>iso_c_binding</code>. Pointers hav
 </div>
 </div>
 
-<div id="outline-container-org22bde3e" class="outline-3">
-<h3 id="org22bde3e"><span class="section-number-3">3.8</span> Templates for front end has/read/write a single string attribute</h3>
+<div id="outline-container-org6d3e8e8" class="outline-3">
+<h3 id="org6d3e8e8"><span class="section-number-3">3.8</span> Templates for front end has/read/write a single string attribute</h3>
 <div class="outline-text-3" id="text-3-8">
 </div>
-<div id="outline-container-orge19c649" class="outline-4">
-<h4 id="orge19c649"><span class="section-number-4">3.8.1</span> Introduction</h4>
+<div id="outline-container-org08dbabc" class="outline-4">
+<h4 id="org08dbabc"><span class="section-number-4">3.8.1</span> Introduction</h4>
 <div class="outline-text-4" id="text-3-8-1">
 <p>
 This section concerns API calls related to string attributes.
@@ -6306,16 +6306,16 @@ This section concerns API calls related to string attributes.
 </div>
 </div>
 
-<div id="outline-container-orgf4a45cb" class="outline-4">
-<h4 id="orgf4a45cb"><span class="section-number-4">3.8.2</span> C templates for front end</h4>
+<div id="outline-container-org86b1ec9" class="outline-4">
+<h4 id="org86b1ec9"><span class="section-number-4">3.8.2</span> C templates for front end</h4>
 <div class="outline-text-4" id="text-3-8-2">
 </div>
-<div id="outline-container-orgfda5cb3" class="outline-5">
-<h5 id="orgfda5cb3"><span class="section-number-5">3.8.2.1</span> Function declarations</h5>
+<div id="outline-container-org47dada7" class="outline-5">
+<h5 id="org47dada7"><span class="section-number-5">3.8.2.1</span> Function declarations</h5>
 </div>
 
-<div id="outline-container-org8235ece" class="outline-5">
-<h5 id="org8235ece"><span class="section-number-5">3.8.2.2</span> Source code for default functions</h5>
+<div id="outline-container-orgb8b4ea9" class="outline-5">
+<h5 id="orgb8b4ea9"><span class="section-number-5">3.8.2.2</span> Source code for default functions</h5>
 <div class="outline-text-5" id="text-3-8-2-2">
 <div class="org-src-container">
 <pre class="src src-c"><span style="color: #228b22;">trexio_exit_code</span>
@@ -6419,8 +6419,8 @@ This section concerns API calls related to string attributes.
 </div>
 </div>
 
-<div id="outline-container-org0d46367" class="outline-4">
-<h4 id="org0d46367"><span class="section-number-4">3.8.3</span> Fortran templates for front end</h4>
+<div id="outline-container-org488593d" class="outline-4">
+<h4 id="org488593d"><span class="section-number-4">3.8.3</span> Fortran templates for front end</h4>
 <div class="outline-text-4" id="text-3-8-3">
 <p>
 The <code>Fortran</code> templates that provide an access to the <code>C</code> API calls from Fortran.
@@ -6506,8 +6506,8 @@ These templates are based on the use of <code>iso_c_binding</code>. Pointers hav
 </div>
 </div>
 
-<div id="outline-container-org19fa150" class="outline-4">
-<h4 id="org19fa150"><span class="section-number-4">3.8.4</span> Python templates for front end</h4>
+<div id="outline-container-org980b0d4" class="outline-4">
+<h4 id="org980b0d4"><span class="section-number-4">3.8.4</span> Python templates for front end</h4>
 <div class="outline-text-4" id="text-3-8-4">
 <div class="org-src-container">
 <pre class="src src-python"><span style="color: #a020f0;">def</span> <span style="color: #0000ff;">write_</span>$group_str$(trexio_file, str_w: <span style="color: #483d8b;">str</span>) -&gt; <span style="color: #008b8b;">None</span>:
@@ -6582,12 +6582,12 @@ These templates are based on the use of <code>iso_c_binding</code>. Pointers hav
 </div>
 </div>
 
-<div id="outline-container-org4b6e084" class="outline-3">
-<h3 id="org4b6e084"><span class="section-number-3">3.9</span> Templates for front end delete an entire group (UNSAFE MODE)</h3>
+<div id="outline-container-org9c04aae" class="outline-3">
+<h3 id="org9c04aae"><span class="section-number-3">3.9</span> Templates for front end delete an entire group (UNSAFE MODE)</h3>
 <div class="outline-text-3" id="text-3-9">
 </div>
-<div id="outline-container-org9e16933" class="outline-4">
-<h4 id="org9e16933"><span class="section-number-4">3.9.1</span> Introduction</h4>
+<div id="outline-container-orgb185257" class="outline-4">
+<h4 id="orgb185257"><span class="section-number-4">3.9.1</span> Introduction</h4>
 <div class="outline-text-4" id="text-3-9-1">
 <p>
 This section concerns API calls related to string attributes.
@@ -6617,8 +6617,8 @@ This section concerns API calls related to string attributes.
 </div>
 </div>
 
-<div id="outline-container-orgc07afda" class="outline-4">
-<h4 id="orgc07afda"><span class="section-number-4">3.9.2</span> C templates for front end</h4>
+<div id="outline-container-orgaafa2f2" class="outline-4">
+<h4 id="orgaafa2f2"><span class="section-number-4">3.9.2</span> C templates for front end</h4>
 <div class="outline-text-4" id="text-3-9-2">
 <div class="org-src-container">
 <pre class="src src-c"><span style="color: #228b22;">trexio_exit_code</span>
@@ -6653,8 +6653,8 @@ This section concerns API calls related to string attributes.
 </div>
 </div>
 
-<div id="outline-container-org1f19adb" class="outline-4">
-<h4 id="org1f19adb"><span class="section-number-4">3.9.3</span> Fortran templates for front end</h4>
+<div id="outline-container-org014813d" class="outline-4">
+<h4 id="org014813d"><span class="section-number-4">3.9.3</span> Fortran templates for front end</h4>
 <div class="outline-text-4" id="text-3-9-3">
 <p>
 The <code>Fortran</code> templates that provide an access to the <code>C</code> API calls from Fortran.
@@ -6675,8 +6675,8 @@ These templates are based on the use of <code>iso_c_binding</code>. Pointers hav
 </div>
 </div>
 
-<div id="outline-container-orgc31390f" class="outline-4">
-<h4 id="orgc31390f"><span class="section-number-4">3.9.4</span> Python templates for front end</h4>
+<div id="outline-container-org8e8c6e7" class="outline-4">
+<h4 id="org8e8c6e7"><span class="section-number-4">3.9.4</span> Python templates for front end</h4>
 <div class="outline-text-4" id="text-3-9-4">
 <div class="org-src-container">
 <pre class="src src-python"><span style="color: #a020f0;">def</span> <span style="color: #0000ff;">delete_</span>$group$(trexio_file) -&gt; <span style="color: #008b8b;">None</span>:
@@ -6702,8 +6702,8 @@ These templates are based on the use of <code>iso_c_binding</code>. Pointers hav
 </div>
 </div>
 
-<div id="outline-container-org8e72340" class="outline-2">
-<h2 id="org8e72340"><span class="section-number-2">4</span> Source code for the determinant part</h2>
+<div id="outline-container-orgcb179ff" class="outline-2">
+<h2 id="orgcb179ff"><span class="section-number-2">4</span> Source code for the determinant part</h2>
 <div class="outline-text-2" id="text-4">
 <p>
 Storage of the determinants is a particular case,
@@ -6754,8 +6754,8 @@ This section concerns API calls related to Slater determinants.
 </table>
 </div>
 
-<div id="outline-container-org3a1ebcf" class="outline-4">
-<h4 id="org3a1ebcf"><span class="section-number-4">4.0.1</span> C source code</h4>
+<div id="outline-container-org3b22441" class="outline-4">
+<h4 id="org3b22441"><span class="section-number-4">4.0.1</span> C source code</h4>
 <div class="outline-text-4" id="text-4-0-1">
 <div class="org-src-container">
 <pre class="src src-c"><span style="color: #228b22;">trexio_exit_code</span>
@@ -7048,8 +7048,8 @@ is returned.
 </div>
 </div>
 
-<div id="outline-container-orgc7a6f42" class="outline-4">
-<h4 id="orgc7a6f42"><span class="section-number-4">4.0.2</span> Fortran interface</h4>
+<div id="outline-container-orgb3fd045" class="outline-4">
+<h4 id="orgb3fd045"><span class="section-number-4">4.0.2</span> Fortran interface</h4>
 <div class="outline-text-4" id="text-4-0-2">
 <p>
 The <code>Fortran</code> templates that provide an access to the <code>C</code> API calls from Fortran.
@@ -7140,8 +7140,8 @@ These templates are based on the use of <code>iso_c_binding</code>. Pointers hav
 </div>
 </div>
 
-<div id="outline-container-org3324177" class="outline-4">
-<h4 id="org3324177"><span class="section-number-4">4.0.3</span> Python interface</h4>
+<div id="outline-container-orga212f15" class="outline-4">
+<h4 id="orga212f15"><span class="section-number-4">4.0.3</span> Python interface</h4>
 <div class="outline-text-4" id="text-4-0-3">
 <div class="org-src-container">
 <pre class="src src-python"><span style="color: #a020f0;">def</span> <span style="color: #0000ff;">write_determinant_list</span>(trexio_file: File, offset_file: <span style="color: #483d8b;">int</span>, buffer_size: <span style="color: #483d8b;">int</span>, determinants: <span style="color: #483d8b;">list</span>) -&gt; <span style="color: #008b8b;">None</span>:
@@ -7323,8 +7323,8 @@ These templates are based on the use of <code>iso_c_binding</code>. Pointers hav
 </div>
 </div>
 
-<div id="outline-container-orgf6fe3a8" class="outline-2">
-<h2 id="orgf6fe3a8"><span class="section-number-2">5</span> General helper functions</h2>
+<div id="outline-container-org4d2f370" class="outline-2">
+<h2 id="org4d2f370"><span class="section-number-2">5</span> General helper functions</h2>
 <div class="outline-text-2" id="text-5">
 <p>
 This section contains general helper functions like <code>trexio_info</code>.
@@ -7376,8 +7376,8 @@ bitfield representation of the determinant. If the creation of the bitfield requ
 </p>
 </div>
 
-<div id="outline-container-org6645b28" class="outline-3">
-<h3 id="org6645b28"><span class="section-number-3">5.1</span> C</h3>
+<div id="outline-container-org4cd33c0" class="outline-3">
+<h3 id="org4cd33c0"><span class="section-number-3">5.1</span> C</h3>
 <div class="outline-text-3" id="text-5-1">
 <div class="org-src-container">
 <pre class="src src-c"><span style="color: #228b22;">trexio_exit_code</span> <span style="color: #0000ff;">trexio_info</span>(<span style="color: #228b22;">void</span>);
@@ -7864,8 +7864,8 @@ bitfield representation of the determinant. If the creation of the bitfield requ
 </div>
 </div>
 
-<div id="outline-container-org4c8b7f7" class="outline-3">
-<h3 id="org4c8b7f7"><span class="section-number-3">5.2</span> Fortran</h3>
+<div id="outline-container-org194179e" class="outline-3">
+<h3 id="org194179e"><span class="section-number-3">5.2</span> Fortran</h3>
 <div class="outline-text-3" id="text-5-2">
 <div class="org-src-container">
 <pre class="src src-f90"><span style="color: #a020f0;">interface</span>
@@ -8005,8 +8005,8 @@ bitfield representation of the determinant. If the creation of the bitfield requ
 </div>
 </div>
 
-<div id="outline-container-org0934720" class="outline-3">
-<h3 id="org0934720"><span class="section-number-3">5.3</span> Python</h3>
+<div id="outline-container-org775290c" class="outline-3">
+<h3 id="org775290c"><span class="section-number-3">5.3</span> Python</h3>
 <div class="outline-text-3" id="text-5-3">
 <div class="org-src-container">
 <pre class="src src-python"><span style="color: #a020f0;">def</span> <span style="color: #0000ff;">info</span>():
@@ -8207,8 +8207,8 @@ bitfield representation of the determinant. If the creation of the bitfield requ
 </div>
 </div>
 
-<div id="outline-container-orgdc6f041" class="outline-2">
-<h2 id="orgdc6f041"><span class="section-number-2">6</span> Fortran helper/wrapper functions</h2>
+<div id="outline-container-org73b2543" class="outline-2">
+<h2 id="org73b2543"><span class="section-number-2">6</span> Fortran helper/wrapper functions</h2>
 <div class="outline-text-2" id="text-6">
 <div class="org-src-container">
 <pre class="src src-f90"><span style="color: #a020f0;">contains</span>
@@ -8472,7 +8472,7 @@ two code are identical, i.e. if the <code>assert</code> statement pass.
 </div>
 <div id="postamble" class="status">
 <p class="author">Author: TREX-CoE</p>
-<p class="date">Created: 2025-07-21 Mon 20:03</p>
+<p class="date">Created: 2025-07-23 Wed 15:34</p>
 <p class="validation"><a href="https://validator.w3.org/check?uri=referer">Validate</a></p>
 </div>
 </body>

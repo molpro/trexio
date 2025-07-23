@@ -1631,7 +1631,7 @@ trexio_exit_code trexio_hdf5_has_determinant_coefficient(trexio_t* const file)
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
   if (f->determinant_group == (hsize_t) 0) return TREXIO_HAS_NOT;
 
-  const char* dset_name = "determinant_coefficient";
+  const char dset_name[] = "determinant_coefficient";
 
   htri_t exists = H5Lexists(f->determinant_group, dset_name, H5P_DEFAULT);
   if (exists > 0) {
@@ -1650,7 +1650,7 @@ trexio_exit_code trexio_hdf5_has_csf_coefficient(trexio_t* const file)
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
   if (f->csf_group == (hsize_t) 0) return TREXIO_HAS_NOT;
 
-  const char* dset_name = "csf_coefficient";
+  const char dset_name[] = "csf_coefficient";
 
   htri_t exists = H5Lexists(f->csf_group, dset_name, H5P_DEFAULT);
   if (exists > 0) {
@@ -6014,7 +6014,7 @@ trexio_exit_code trexio_hdf5_read_determinant_coefficient(trexio_t* const file,
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
   if (dset == NULL) return TREXIO_INVALID_ARG_6;
 
-  const char* dset_name = "determinant_coefficient";
+  const char dset_name[] = "determinant_coefficient";
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -6040,7 +6040,7 @@ trexio_exit_code trexio_hdf5_read_csf_coefficient(trexio_t* const file,
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
   if (dset == NULL) return TREXIO_INVALID_ARG_6;
 
-  const char* dset_name = "csf_coefficient";
+  const char dset_name[] = "csf_coefficient";
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -16147,7 +16147,7 @@ trexio_exit_code trexio_hdf5_write_determinant_coefficient(trexio_t* const file,
   if (dims == NULL) return TREXIO_INVALID_ARG_4;
   if (dset == NULL) return TREXIO_INVALID_ARG_5;
 
-  const char* dset_name = "determinant_coefficient";
+  const char dset_name[] = "determinant_coefficient";
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -16185,7 +16185,7 @@ trexio_hdf5_read_determinant_coefficient_size (trexio_t* const file, int64_t* co
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (size_max == NULL) return TREXIO_INVALID_ARG_2;
 
-  const char* dset_name = "determinant_coefficient";
+  const char dset_name[] = "determinant_coefficient";
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -16225,7 +16225,7 @@ trexio_exit_code trexio_hdf5_write_csf_coefficient(trexio_t* const file,
   if (dims == NULL) return TREXIO_INVALID_ARG_4;
   if (dset == NULL) return TREXIO_INVALID_ARG_5;
 
-  const char* dset_name = "csf_coefficient";
+  const char dset_name[] = "csf_coefficient";
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -16263,7 +16263,7 @@ trexio_hdf5_read_csf_coefficient_size (trexio_t* const file, int64_t* const size
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (size_max == NULL) return TREXIO_INVALID_ARG_2;
 
-  const char* dset_name = "csf_coefficient";
+  const char dset_name[] = "csf_coefficient";
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 

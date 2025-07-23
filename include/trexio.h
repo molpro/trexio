@@ -388,7 +388,7 @@ trexio_exit_code trexio_evaluate_nao_radial_all_py (const int32_t shell_num,
 #define TREXIO_VERSION_MAJOR 2
 #define TREXIO_VERSION_MINOR 5
 #define TREXIO_VERSION_PATCH 2
-#define TREXIO_GIT_HASH "b99e53f32dc58e5abf535ff46b5cdbb5655df44b"
+#define TREXIO_GIT_HASH "20309ed9e58546d73438310d2becbbfbf12fbb7d"
 
 trexio_exit_code trexio_delete_metadata(trexio_t* const file);
 

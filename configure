@@ -17642,6 +17642,80 @@ $as_echo "$as_me: HDF5 support disabled by user." >&6;}
 else
   if test "x$with_hdf5" = "xyes"; then :
 
+      hdf5_found=yes
+      for ac_header in hdf5.h
+do :
+  ac_fn_c_check_header_mongrel "$LINENO" "hdf5.h" "ac_cv_header_hdf5_h" "$ac_includes_default"
+if test "x$ac_cv_header_hdf5_h" = xyes; then :
+  cat >>confdefs.h <<_ACEOF
+#define HAVE_HDF5_H 1
+_ACEOF
+
+else
+  hdf5_found=no
+fi
+
+done
+
+      { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing H5Screate_simple" >&5
+$as_echo_n "checking for library containing H5Screate_simple... " >&6; }
+if ${ac_cv_search_H5Screate_simple+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char H5Screate_simple ();
+int
+main ()
+{
+return H5Screate_simple ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' hdf5; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_H5Screate_simple=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if ${ac_cv_search_H5Screate_simple+:} false; then :
+  break
+fi
+done
+if ${ac_cv_search_H5Screate_simple+:} false; then :
+
+else
+  ac_cv_search_H5Screate_simple=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_H5Screate_simple" >&5
+$as_echo "$ac_cv_search_H5Screate_simple" >&6; }
+ac_res=$ac_cv_search_H5Screate_simple
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+
+else
+  hdf5_found=no
+fi
+
+      if test ${hdf5_found} = no ; then
       # pkg-config
 
 
@@ -17961,7 +18035,7 @@ fi
 
 
 fi
-
+      fi
 else
 
       # User-provided path
