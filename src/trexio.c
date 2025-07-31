@@ -14,9 +14,13 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#ifndef __MINGW32__
 #include <err.h>
+#endif
 #include <sys/types.h>
+#ifndef __MINGW32__
 #include <sys/wait.h>
+#endif
 
 
 #include "trexio.h"
@@ -716,6 +720,9 @@ trexio_cp(const char* source, const char* dest)
 #endif
 
 
+#ifdef __MINGW32__
+  return TREXIO_FAILURE;
+#else
   pid_t pid = fork();
   if (pid == 0) {
     execlp("cp", CP_COMMAND, source, dest, (char *)0);
@@ -729,6 +736,7 @@ trexio_cp(const char* source, const char* dest)
   }
 
   return TREXIO_SUCCESS;
+#endif
 }
 
 trexio_exit_code

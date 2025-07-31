@@ -59,7 +59,11 @@ char* mkdtemp(char* template) {
     dir = tmpnam(dir);
     if (dir == NULL) return NULL;
 
+#ifdef __MINGW32__
+    if (mkdir(dir) != 0) {
+#else
     if (mkdir(dir, S_IRWXU | S_IRWXG | S_IRWXO) != 0) {
+#endif
         return NULL;
     }
 
@@ -90,7 +94,11 @@ trexio_text_init (trexio_t* const file)
 
     if (file->mode == 'r') return TREXIO_READONLY;
 
+#ifdef __MINGW32__
+    int rc_dir = mkdir(file->file_name);
+#else
     int rc_dir = mkdir(file->file_name, 0777);
+#endif
     if (rc_dir != 0) return TREXIO_ERRNO;
 
   }
@@ -140,6 +148,9 @@ trexio_exit_code trexio_text_lock(trexio_t* const file) {
 
   trexio_text_t* const f = (trexio_text_t*) file;
 
+#ifdef __MINGW32__
+  return TREXIO_FAILURE;
+#else
   struct flock fl;
 
   fl.l_type   = F_WRLCK;
@@ -152,6 +163,7 @@ trexio_exit_code trexio_text_lock(trexio_t* const file) {
   if (rc == -1) return TREXIO_FAILURE;
 
   return TREXIO_SUCCESS;
+#endif
 
 }
 
@@ -163,6 +175,9 @@ trexio_text_unlock (trexio_t* const file)
 
   trexio_text_t* const f = (trexio_text_t*) file;
 
+#ifdef __MINGW32__
+  return TREXIO_FAILURE;
+#else
   struct flock fl;
 
   fl.l_type   = F_UNLCK;
@@ -174,6 +189,7 @@ trexio_text_unlock (trexio_t* const file)
 
   close(f->lock_file);
   return TREXIO_SUCCESS;
+#endif
 
 }
 trexio_exit_code
