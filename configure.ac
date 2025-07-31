@@ -136,10 +136,6 @@ AS_IF([test "x$with_hdf5" = "xno"],
   [AC_MSG_NOTICE([HDF5 support disabled by user.])],
   [AS_IF([test "x$with_hdf5" = "xyes"],
     [
-      hdf5_found=yes
-      AC_CHECK_HEADERS([hdf5.h],,[hdf5_found=no])
-      AC_SEARCH_LIBS([H5Screate_simple],[hdf5],,[hdf5_found=no])
-      if test ${hdf5_found} = no ; then
       # pkg-config
       PKG_PROG_PKG_CONFIG()
 
@@ -204,7 +200,7 @@ AS_IF([test "x$with_hdf5" = "xno"],
           )
         ]
       )
-      fi],
+    ],
     [
       # User-provided path
       HDF5_PATH="$with_hdf5"

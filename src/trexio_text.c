@@ -104,7 +104,7 @@ trexio_text_init (trexio_t* const file)
   }
 
   /* Create the lock file in the directory */
-  const char lock_file_name[] = "/.lock";
+  const char* lock_file_name = "/.lock";
 
   char file_name[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -287,7 +287,7 @@ trexio_exit_code trexio_text_has_determinant_list(trexio_t* const file)
 {
   if (file == NULL) return TREXIO_INVALID_ARG_1;
 
-  const char determinant_list_file_name[] = "/determinant_list.txt";
+  const char determinant_list_file_name[256] = "/determinant_list.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -319,7 +319,7 @@ trexio_exit_code trexio_text_read_determinant_list(trexio_t* const file,
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
   if (list == NULL) return TREXIO_INVALID_ARG_6;
 
-  const char determinant_list_file_name[] = "/determinant_list.txt";
+  const char determinant_list_file_name[256] = "/determinant_list.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -403,7 +403,7 @@ trexio_exit_code trexio_text_write_determinant_list(trexio_t* const file,
   if (dims == NULL) return TREXIO_INVALID_ARG_4;
   if (list == NULL) return TREXIO_INVALID_ARG_5;
 
-  const char determinant_list_file_name[] = "/determinant_list.txt";
+  const char determinant_list_file_name[256] = "/determinant_list.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -439,7 +439,7 @@ trexio_exit_code trexio_text_write_determinant_list(trexio_t* const file,
   if (rc != 0) return TREXIO_FILE_ERROR;
 
   /* Additional part for the trexio_text_has_group to work */
-  const char det_file_name[] = "/determinant.txt";
+  const char det_file_name[256] = "/determinant.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -475,7 +475,7 @@ trexio_text_has_metadata (trexio_t* const file)
   /* Build the file name */
   char metadata_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char metadata_file_name[] = "/metadata.txt";
+  const char* metadata_file_name = "/metadata.txt";
 
   strncpy (metadata_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   metadata_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -509,7 +509,7 @@ trexio_text_has_nucleus (trexio_t* const file)
   /* Build the file name */
   char nucleus_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char nucleus_file_name[] = "/nucleus.txt";
+  const char* nucleus_file_name = "/nucleus.txt";
 
   strncpy (nucleus_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   nucleus_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -543,7 +543,7 @@ trexio_text_has_cell (trexio_t* const file)
   /* Build the file name */
   char cell_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char cell_file_name[] = "/cell.txt";
+  const char* cell_file_name = "/cell.txt";
 
   strncpy (cell_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   cell_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -577,7 +577,7 @@ trexio_text_has_pbc (trexio_t* const file)
   /* Build the file name */
   char pbc_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char pbc_file_name[] = "/pbc.txt";
+  const char* pbc_file_name = "/pbc.txt";
 
   strncpy (pbc_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   pbc_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -611,7 +611,7 @@ trexio_text_has_electron (trexio_t* const file)
   /* Build the file name */
   char electron_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char electron_file_name[] = "/electron.txt";
+  const char* electron_file_name = "/electron.txt";
 
   strncpy (electron_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   electron_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -645,7 +645,7 @@ trexio_text_has_state (trexio_t* const file)
   /* Build the file name */
   char state_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char state_file_name[] = "/state.txt";
+  const char* state_file_name = "/state.txt";
 
   strncpy (state_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   state_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -679,7 +679,7 @@ trexio_text_has_basis (trexio_t* const file)
   /* Build the file name */
   char basis_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char basis_file_name[] = "/basis.txt";
+  const char* basis_file_name = "/basis.txt";
 
   strncpy (basis_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   basis_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -713,7 +713,7 @@ trexio_text_has_ecp (trexio_t* const file)
   /* Build the file name */
   char ecp_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char ecp_file_name[] = "/ecp.txt";
+  const char* ecp_file_name = "/ecp.txt";
 
   strncpy (ecp_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   ecp_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -747,7 +747,7 @@ trexio_text_has_grid (trexio_t* const file)
   /* Build the file name */
   char grid_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char grid_file_name[] = "/grid.txt";
+  const char* grid_file_name = "/grid.txt";
 
   strncpy (grid_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   grid_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -781,7 +781,7 @@ trexio_text_has_ao (trexio_t* const file)
   /* Build the file name */
   char ao_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char ao_file_name[] = "/ao.txt";
+  const char* ao_file_name = "/ao.txt";
 
   strncpy (ao_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   ao_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -815,7 +815,7 @@ trexio_text_has_ao_1e_int (trexio_t* const file)
   /* Build the file name */
   char ao_1e_int_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char ao_1e_int_file_name[] = "/ao_1e_int.txt";
+  const char* ao_1e_int_file_name = "/ao_1e_int.txt";
 
   strncpy (ao_1e_int_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   ao_1e_int_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -849,7 +849,7 @@ trexio_text_has_ao_2e_int (trexio_t* const file)
   /* Build the file name */
   char ao_2e_int_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char ao_2e_int_file_name[] = "/ao_2e_int.txt";
+  const char* ao_2e_int_file_name = "/ao_2e_int.txt";
 
   strncpy (ao_2e_int_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   ao_2e_int_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -883,7 +883,7 @@ trexio_text_has_mo (trexio_t* const file)
   /* Build the file name */
   char mo_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char mo_file_name[] = "/mo.txt";
+  const char* mo_file_name = "/mo.txt";
 
   strncpy (mo_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   mo_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -917,7 +917,7 @@ trexio_text_has_mo_1e_int (trexio_t* const file)
   /* Build the file name */
   char mo_1e_int_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char mo_1e_int_file_name[] = "/mo_1e_int.txt";
+  const char* mo_1e_int_file_name = "/mo_1e_int.txt";
 
   strncpy (mo_1e_int_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   mo_1e_int_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -951,7 +951,7 @@ trexio_text_has_mo_2e_int (trexio_t* const file)
   /* Build the file name */
   char mo_2e_int_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char mo_2e_int_file_name[] = "/mo_2e_int.txt";
+  const char* mo_2e_int_file_name = "/mo_2e_int.txt";
 
   strncpy (mo_2e_int_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   mo_2e_int_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -985,7 +985,7 @@ trexio_text_has_determinant (trexio_t* const file)
   /* Build the file name */
   char determinant_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char determinant_file_name[] = "/determinant.txt";
+  const char* determinant_file_name = "/determinant.txt";
 
   strncpy (determinant_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   determinant_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -1019,7 +1019,7 @@ trexio_text_has_csf (trexio_t* const file)
   /* Build the file name */
   char csf_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char csf_file_name[] = "/csf.txt";
+  const char* csf_file_name = "/csf.txt";
 
   strncpy (csf_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   csf_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -1053,7 +1053,7 @@ trexio_text_has_amplitude (trexio_t* const file)
   /* Build the file name */
   char amplitude_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char amplitude_file_name[] = "/amplitude.txt";
+  const char* amplitude_file_name = "/amplitude.txt";
 
   strncpy (amplitude_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   amplitude_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -1087,7 +1087,7 @@ trexio_text_has_rdm (trexio_t* const file)
   /* Build the file name */
   char rdm_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char rdm_file_name[] = "/rdm.txt";
+  const char* rdm_file_name = "/rdm.txt";
 
   strncpy (rdm_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   rdm_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -1121,7 +1121,7 @@ trexio_text_has_jastrow (trexio_t* const file)
   /* Build the file name */
   char jastrow_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char jastrow_file_name[] = "/jastrow.txt";
+  const char* jastrow_file_name = "/jastrow.txt";
 
   strncpy (jastrow_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   jastrow_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -1155,7 +1155,7 @@ trexio_text_has_qmc (trexio_t* const file)
   /* Build the file name */
   char qmc_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char qmc_file_name[] = "/qmc.txt";
+  const char* qmc_file_name = "/qmc.txt";
 
   strncpy (qmc_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   qmc_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -2133,7 +2133,7 @@ trexio_text_read_metadata (trexio_text_t* const file)
   memset(metadata,0,sizeof(metadata_t));
 
   /* Build the file name */
-  const char metadata_file_name[] = "/metadata.txt";
+  const char* metadata_file_name = "/metadata.txt";
 
   strncpy (metadata->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   metadata->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -2477,7 +2477,7 @@ trexio_text_read_nucleus (trexio_text_t* const file)
   memset(nucleus,0,sizeof(nucleus_t));
 
   /* Build the file name */
-  const char nucleus_file_name[] = "/nucleus.txt";
+  const char* nucleus_file_name = "/nucleus.txt";
 
   strncpy (nucleus->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   nucleus->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -2791,7 +2791,7 @@ trexio_text_read_cell (trexio_text_t* const file)
   memset(cell,0,sizeof(cell_t));
 
   /* Build the file name */
-  const char cell_file_name[] = "/cell.txt";
+  const char* cell_file_name = "/cell.txt";
 
   strncpy (cell->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   cell->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -3167,7 +3167,7 @@ trexio_text_read_pbc (trexio_text_t* const file)
   memset(pbc,0,sizeof(pbc_t));
 
   /* Build the file name */
-  const char pbc_file_name[] = "/pbc.txt";
+  const char* pbc_file_name = "/pbc.txt";
 
   strncpy (pbc->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   pbc->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -3413,7 +3413,7 @@ trexio_text_read_electron (trexio_text_t* const file)
   memset(electron,0,sizeof(electron_t));
 
   /* Build the file name */
-  const char electron_file_name[] = "/electron.txt";
+  const char* electron_file_name = "/electron.txt";
 
   strncpy (electron->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   electron->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -3567,7 +3567,7 @@ trexio_text_read_state (trexio_text_t* const file)
   memset(state,0,sizeof(state_t));
 
   /* Build the file name */
-  const char state_file_name[] = "/state.txt";
+  const char* state_file_name = "/state.txt";
 
   strncpy (state->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   state->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -3879,7 +3879,7 @@ trexio_text_read_basis (trexio_text_t* const file)
   memset(basis,0,sizeof(basis_t));
 
   /* Build the file name */
-  const char basis_file_name[] = "/basis.txt";
+  const char* basis_file_name = "/basis.txt";
 
   strncpy (basis->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   basis->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -5103,7 +5103,7 @@ trexio_text_read_ecp (trexio_text_t* const file)
   memset(ecp,0,sizeof(ecp_t));
 
   /* Build the file name */
-  const char ecp_file_name[] = "/ecp.txt";
+  const char* ecp_file_name = "/ecp.txt";
 
   strncpy (ecp->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   ecp->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -5525,7 +5525,7 @@ trexio_text_read_grid (trexio_text_t* const file)
   memset(grid,0,sizeof(grid_t));
 
   /* Build the file name */
-  const char grid_file_name[] = "/grid.txt";
+  const char* grid_file_name = "/grid.txt";
 
   strncpy (grid->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   grid->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -6068,7 +6068,7 @@ trexio_text_read_ao (trexio_text_t* const file)
   memset(ao,0,sizeof(ao_t));
 
   /* Build the file name */
-  const char ao_file_name[] = "/ao.txt";
+  const char* ao_file_name = "/ao.txt";
 
   strncpy (ao->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   ao->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -6287,7 +6287,7 @@ trexio_text_read_ao_1e_int (trexio_text_t* const file)
   memset(ao_1e_int,0,sizeof(ao_1e_int_t));
 
   /* Build the file name */
-  const char ao_1e_int_file_name[] = "/ao_1e_int.txt";
+  const char* ao_1e_int_file_name = "/ao_1e_int.txt";
 
   strncpy (ao_1e_int->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   ao_1e_int->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -6820,7 +6820,7 @@ trexio_text_read_ao_2e_int (trexio_text_t* const file)
   memset(ao_2e_int,0,sizeof(ao_2e_int_t));
 
   /* Build the file name */
-  const char ao_2e_int_file_name[] = "/ao_2e_int.txt";
+  const char* ao_2e_int_file_name = "/ao_2e_int.txt";
 
   strncpy (ao_2e_int->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   ao_2e_int->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -6947,7 +6947,7 @@ trexio_text_read_mo (trexio_text_t* const file)
   memset(mo,0,sizeof(mo_t));
 
   /* Build the file name */
-  const char mo_file_name[] = "/mo.txt";
+  const char* mo_file_name = "/mo.txt";
 
   strncpy (mo->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   mo->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -7481,7 +7481,7 @@ trexio_text_read_mo_1e_int (trexio_text_t* const file)
   memset(mo_1e_int,0,sizeof(mo_1e_int_t));
 
   /* Build the file name */
-  const char mo_1e_int_file_name[] = "/mo_1e_int.txt";
+  const char* mo_1e_int_file_name = "/mo_1e_int.txt";
 
   strncpy (mo_1e_int->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   mo_1e_int->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -8014,7 +8014,7 @@ trexio_text_read_mo_2e_int (trexio_text_t* const file)
   memset(mo_2e_int,0,sizeof(mo_2e_int_t));
 
   /* Build the file name */
-  const char mo_2e_int_file_name[] = "/mo_2e_int.txt";
+  const char* mo_2e_int_file_name = "/mo_2e_int.txt";
 
   strncpy (mo_2e_int->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   mo_2e_int->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -8141,7 +8141,7 @@ trexio_text_read_determinant (trexio_text_t* const file)
   memset(determinant,0,sizeof(determinant_t));
 
   /* Build the file name */
-  const char determinant_file_name[] = "/determinant.txt";
+  const char* determinant_file_name = "/determinant.txt";
 
   strncpy (determinant->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   determinant->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -8241,7 +8241,7 @@ trexio_text_read_csf (trexio_text_t* const file)
   memset(csf,0,sizeof(csf_t));
 
   /* Build the file name */
-  const char csf_file_name[] = "/csf.txt";
+  const char* csf_file_name = "/csf.txt";
 
   strncpy (csf->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   csf->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -8341,7 +8341,7 @@ trexio_text_read_amplitude (trexio_text_t* const file)
   memset(amplitude,0,sizeof(amplitude_t));
 
   /* Build the file name */
-  const char amplitude_file_name[] = "/amplitude.txt";
+  const char* amplitude_file_name = "/amplitude.txt";
 
   strncpy (amplitude->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   amplitude->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -8414,7 +8414,7 @@ trexio_text_read_rdm (trexio_text_t* const file)
   memset(rdm,0,sizeof(rdm_t));
 
   /* Build the file name */
-  const char rdm_file_name[] = "/rdm.txt";
+  const char* rdm_file_name = "/rdm.txt";
 
   strncpy (rdm->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   rdm->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -8779,7 +8779,7 @@ trexio_text_read_jastrow (trexio_text_t* const file)
   memset(jastrow,0,sizeof(jastrow_t));
 
   /* Build the file name */
-  const char jastrow_file_name[] = "/jastrow.txt";
+  const char* jastrow_file_name = "/jastrow.txt";
 
   strncpy (jastrow->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   jastrow->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -9268,7 +9268,7 @@ trexio_text_read_qmc (trexio_text_t* const file)
   memset(qmc,0,sizeof(qmc_t));
 
   /* Build the file name */
-  const char qmc_file_name[] = "/qmc.txt";
+  const char* qmc_file_name = "/qmc.txt";
 
   strncpy (qmc->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   qmc->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -13507,7 +13507,7 @@ trexio_exit_code trexio_text_has_ao_2e_int_eri(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The ao_2e_int_eri.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char ao_2e_int_eri_file_name[] = "/ao_2e_int_eri.txt";
+  const char ao_2e_int_eri_file_name[256] = "/ao_2e_int_eri.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13533,7 +13533,7 @@ trexio_exit_code trexio_text_has_ao_2e_int_eri_lr(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The ao_2e_int_eri_lr.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char ao_2e_int_eri_lr_file_name[] = "/ao_2e_int_eri_lr.txt";
+  const char ao_2e_int_eri_lr_file_name[256] = "/ao_2e_int_eri_lr.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13559,7 +13559,7 @@ trexio_exit_code trexio_text_has_ao_2e_int_eri_cholesky(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The ao_2e_int_eri_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char ao_2e_int_eri_cholesky_file_name[] = "/ao_2e_int_eri_cholesky.txt";
+  const char ao_2e_int_eri_cholesky_file_name[256] = "/ao_2e_int_eri_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13585,7 +13585,7 @@ trexio_exit_code trexio_text_has_ao_2e_int_eri_lr_cholesky(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The ao_2e_int_eri_lr_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char ao_2e_int_eri_lr_cholesky_file_name[] = "/ao_2e_int_eri_lr_cholesky.txt";
+  const char ao_2e_int_eri_lr_cholesky_file_name[256] = "/ao_2e_int_eri_lr_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13611,7 +13611,7 @@ trexio_exit_code trexio_text_has_mo_2e_int_eri(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The mo_2e_int_eri.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char mo_2e_int_eri_file_name[] = "/mo_2e_int_eri.txt";
+  const char mo_2e_int_eri_file_name[256] = "/mo_2e_int_eri.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13637,7 +13637,7 @@ trexio_exit_code trexio_text_has_mo_2e_int_eri_lr(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The mo_2e_int_eri_lr.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char mo_2e_int_eri_lr_file_name[] = "/mo_2e_int_eri_lr.txt";
+  const char mo_2e_int_eri_lr_file_name[256] = "/mo_2e_int_eri_lr.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13663,7 +13663,7 @@ trexio_exit_code trexio_text_has_mo_2e_int_eri_cholesky(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The mo_2e_int_eri_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char mo_2e_int_eri_cholesky_file_name[] = "/mo_2e_int_eri_cholesky.txt";
+  const char mo_2e_int_eri_cholesky_file_name[256] = "/mo_2e_int_eri_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13689,7 +13689,7 @@ trexio_exit_code trexio_text_has_mo_2e_int_eri_lr_cholesky(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The mo_2e_int_eri_lr_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char mo_2e_int_eri_lr_cholesky_file_name[] = "/mo_2e_int_eri_lr_cholesky.txt";
+  const char mo_2e_int_eri_lr_cholesky_file_name[256] = "/mo_2e_int_eri_lr_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13715,7 +13715,7 @@ trexio_exit_code trexio_text_has_csf_det_coefficient(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The csf_det_coefficient.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char csf_det_coefficient_file_name[] = "/csf_det_coefficient.txt";
+  const char csf_det_coefficient_file_name[256] = "/csf_det_coefficient.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13741,7 +13741,7 @@ trexio_exit_code trexio_text_has_amplitude_single(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The amplitude_single.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_single_file_name[] = "/amplitude_single.txt";
+  const char amplitude_single_file_name[256] = "/amplitude_single.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13767,7 +13767,7 @@ trexio_exit_code trexio_text_has_amplitude_single_exp(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The amplitude_single_exp.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_single_exp_file_name[] = "/amplitude_single_exp.txt";
+  const char amplitude_single_exp_file_name[256] = "/amplitude_single_exp.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13793,7 +13793,7 @@ trexio_exit_code trexio_text_has_amplitude_double(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The amplitude_double.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_double_file_name[] = "/amplitude_double.txt";
+  const char amplitude_double_file_name[256] = "/amplitude_double.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13819,7 +13819,7 @@ trexio_exit_code trexio_text_has_amplitude_double_exp(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The amplitude_double_exp.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_double_exp_file_name[] = "/amplitude_double_exp.txt";
+  const char amplitude_double_exp_file_name[256] = "/amplitude_double_exp.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13845,7 +13845,7 @@ trexio_exit_code trexio_text_has_amplitude_triple(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The amplitude_triple.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_triple_file_name[] = "/amplitude_triple.txt";
+  const char amplitude_triple_file_name[256] = "/amplitude_triple.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13871,7 +13871,7 @@ trexio_exit_code trexio_text_has_amplitude_triple_exp(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The amplitude_triple_exp.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_triple_exp_file_name[] = "/amplitude_triple_exp.txt";
+  const char amplitude_triple_exp_file_name[256] = "/amplitude_triple_exp.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13897,7 +13897,7 @@ trexio_exit_code trexio_text_has_amplitude_quadruple(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The amplitude_quadruple.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_quadruple_file_name[] = "/amplitude_quadruple.txt";
+  const char amplitude_quadruple_file_name[256] = "/amplitude_quadruple.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13923,7 +13923,7 @@ trexio_exit_code trexio_text_has_amplitude_quadruple_exp(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The amplitude_quadruple_exp.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_quadruple_exp_file_name[] = "/amplitude_quadruple_exp.txt";
+  const char amplitude_quadruple_exp_file_name[256] = "/amplitude_quadruple_exp.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13949,7 +13949,7 @@ trexio_exit_code trexio_text_has_rdm_2e(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The rdm_2e.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_file_name[] = "/rdm_2e.txt";
+  const char rdm_2e_file_name[256] = "/rdm_2e.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13975,7 +13975,7 @@ trexio_exit_code trexio_text_has_rdm_2e_upup(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The rdm_2e_upup.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_upup_file_name[] = "/rdm_2e_upup.txt";
+  const char rdm_2e_upup_file_name[256] = "/rdm_2e_upup.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -14001,7 +14001,7 @@ trexio_exit_code trexio_text_has_rdm_2e_dndn(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The rdm_2e_dndn.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_dndn_file_name[] = "/rdm_2e_dndn.txt";
+  const char rdm_2e_dndn_file_name[256] = "/rdm_2e_dndn.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -14027,7 +14027,7 @@ trexio_exit_code trexio_text_has_rdm_2e_updn(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The rdm_2e_updn.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_updn_file_name[] = "/rdm_2e_updn.txt";
+  const char rdm_2e_updn_file_name[256] = "/rdm_2e_updn.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -14053,7 +14053,7 @@ trexio_exit_code trexio_text_has_rdm_2e_transition(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The rdm_2e_transition.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_transition_file_name[] = "/rdm_2e_transition.txt";
+  const char rdm_2e_transition_file_name[256] = "/rdm_2e_transition.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -14079,7 +14079,7 @@ trexio_exit_code trexio_text_has_rdm_2e_cholesky(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The rdm_2e_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_cholesky_file_name[] = "/rdm_2e_cholesky.txt";
+  const char rdm_2e_cholesky_file_name[256] = "/rdm_2e_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -14105,7 +14105,7 @@ trexio_exit_code trexio_text_has_rdm_2e_upup_cholesky(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The rdm_2e_upup_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_upup_cholesky_file_name[] = "/rdm_2e_upup_cholesky.txt";
+  const char rdm_2e_upup_cholesky_file_name[256] = "/rdm_2e_upup_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -14131,7 +14131,7 @@ trexio_exit_code trexio_text_has_rdm_2e_dndn_cholesky(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The rdm_2e_dndn_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_dndn_cholesky_file_name[] = "/rdm_2e_dndn_cholesky.txt";
+  const char rdm_2e_dndn_cholesky_file_name[256] = "/rdm_2e_dndn_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -14157,7 +14157,7 @@ trexio_exit_code trexio_text_has_rdm_2e_updn_cholesky(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The rdm_2e_updn_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_updn_cholesky_file_name[] = "/rdm_2e_updn_cholesky.txt";
+  const char rdm_2e_updn_cholesky_file_name[256] = "/rdm_2e_updn_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -15070,7 +15070,7 @@ trexio_exit_code trexio_text_has_determinant_coefficient(trexio_t* const file)
 {
   if (file == NULL) return TREXIO_INVALID_ARG_1;
 
-  const char file_name[] = "/determinant_coefficient.txt";
+  const char file_name[256] = "/determinant_coefficient.txt";
 
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
@@ -15092,7 +15092,7 @@ trexio_exit_code trexio_text_has_csf_coefficient(trexio_t* const file)
 {
   if (file == NULL) return TREXIO_INVALID_ARG_1;
 
-  const char file_name[] = "/csf_coefficient.txt";
+  const char file_name[256] = "/csf_coefficient.txt";
 
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
@@ -17742,7 +17742,7 @@ trexio_exit_code trexio_text_read_ao_2e_int_eri(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The ao_2e_int_eri.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char ao_2e_int_eri_file_name[] = "/ao_2e_int_eri.txt";
+  const char ao_2e_int_eri_file_name[256] = "/ao_2e_int_eri.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -17815,7 +17815,7 @@ trexio_exit_code trexio_text_read_ao_2e_int_eri_size(trexio_t* const file, int64
   /* Build the name of the file with sparse data.
      The ao_2e_int_eri.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char ao_2e_int_eri_file_name[] = "/ao_2e_int_eri.txt.size";
+  const char ao_2e_int_eri_file_name[256] = "/ao_2e_int_eri.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -17871,7 +17871,7 @@ trexio_exit_code trexio_text_read_ao_2e_int_eri_lr(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The ao_2e_int_eri_lr.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char ao_2e_int_eri_lr_file_name[] = "/ao_2e_int_eri_lr.txt";
+  const char ao_2e_int_eri_lr_file_name[256] = "/ao_2e_int_eri_lr.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -17944,7 +17944,7 @@ trexio_exit_code trexio_text_read_ao_2e_int_eri_lr_size(trexio_t* const file, in
   /* Build the name of the file with sparse data.
      The ao_2e_int_eri_lr.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char ao_2e_int_eri_lr_file_name[] = "/ao_2e_int_eri_lr.txt.size";
+  const char ao_2e_int_eri_lr_file_name[256] = "/ao_2e_int_eri_lr.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -18000,7 +18000,7 @@ trexio_exit_code trexio_text_read_ao_2e_int_eri_cholesky(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The ao_2e_int_eri_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char ao_2e_int_eri_cholesky_file_name[] = "/ao_2e_int_eri_cholesky.txt";
+  const char ao_2e_int_eri_cholesky_file_name[256] = "/ao_2e_int_eri_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -18073,7 +18073,7 @@ trexio_exit_code trexio_text_read_ao_2e_int_eri_cholesky_size(trexio_t* const fi
   /* Build the name of the file with sparse data.
      The ao_2e_int_eri_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char ao_2e_int_eri_cholesky_file_name[] = "/ao_2e_int_eri_cholesky.txt.size";
+  const char ao_2e_int_eri_cholesky_file_name[256] = "/ao_2e_int_eri_cholesky.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -18129,7 +18129,7 @@ trexio_exit_code trexio_text_read_ao_2e_int_eri_lr_cholesky(trexio_t* const file
   /* Build the name of the file with sparse data.
      The ao_2e_int_eri_lr_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char ao_2e_int_eri_lr_cholesky_file_name[] = "/ao_2e_int_eri_lr_cholesky.txt";
+  const char ao_2e_int_eri_lr_cholesky_file_name[256] = "/ao_2e_int_eri_lr_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -18202,7 +18202,7 @@ trexio_exit_code trexio_text_read_ao_2e_int_eri_lr_cholesky_size(trexio_t* const
   /* Build the name of the file with sparse data.
      The ao_2e_int_eri_lr_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char ao_2e_int_eri_lr_cholesky_file_name[] = "/ao_2e_int_eri_lr_cholesky.txt.size";
+  const char ao_2e_int_eri_lr_cholesky_file_name[256] = "/ao_2e_int_eri_lr_cholesky.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -18258,7 +18258,7 @@ trexio_exit_code trexio_text_read_mo_2e_int_eri(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The mo_2e_int_eri.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char mo_2e_int_eri_file_name[] = "/mo_2e_int_eri.txt";
+  const char mo_2e_int_eri_file_name[256] = "/mo_2e_int_eri.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -18331,7 +18331,7 @@ trexio_exit_code trexio_text_read_mo_2e_int_eri_size(trexio_t* const file, int64
   /* Build the name of the file with sparse data.
      The mo_2e_int_eri.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char mo_2e_int_eri_file_name[] = "/mo_2e_int_eri.txt.size";
+  const char mo_2e_int_eri_file_name[256] = "/mo_2e_int_eri.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -18387,7 +18387,7 @@ trexio_exit_code trexio_text_read_mo_2e_int_eri_lr(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The mo_2e_int_eri_lr.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char mo_2e_int_eri_lr_file_name[] = "/mo_2e_int_eri_lr.txt";
+  const char mo_2e_int_eri_lr_file_name[256] = "/mo_2e_int_eri_lr.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -18460,7 +18460,7 @@ trexio_exit_code trexio_text_read_mo_2e_int_eri_lr_size(trexio_t* const file, in
   /* Build the name of the file with sparse data.
      The mo_2e_int_eri_lr.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char mo_2e_int_eri_lr_file_name[] = "/mo_2e_int_eri_lr.txt.size";
+  const char mo_2e_int_eri_lr_file_name[256] = "/mo_2e_int_eri_lr.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -18516,7 +18516,7 @@ trexio_exit_code trexio_text_read_mo_2e_int_eri_cholesky(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The mo_2e_int_eri_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char mo_2e_int_eri_cholesky_file_name[] = "/mo_2e_int_eri_cholesky.txt";
+  const char mo_2e_int_eri_cholesky_file_name[256] = "/mo_2e_int_eri_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -18589,7 +18589,7 @@ trexio_exit_code trexio_text_read_mo_2e_int_eri_cholesky_size(trexio_t* const fi
   /* Build the name of the file with sparse data.
      The mo_2e_int_eri_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char mo_2e_int_eri_cholesky_file_name[] = "/mo_2e_int_eri_cholesky.txt.size";
+  const char mo_2e_int_eri_cholesky_file_name[256] = "/mo_2e_int_eri_cholesky.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -18645,7 +18645,7 @@ trexio_exit_code trexio_text_read_mo_2e_int_eri_lr_cholesky(trexio_t* const file
   /* Build the name of the file with sparse data.
      The mo_2e_int_eri_lr_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char mo_2e_int_eri_lr_cholesky_file_name[] = "/mo_2e_int_eri_lr_cholesky.txt";
+  const char mo_2e_int_eri_lr_cholesky_file_name[256] = "/mo_2e_int_eri_lr_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -18718,7 +18718,7 @@ trexio_exit_code trexio_text_read_mo_2e_int_eri_lr_cholesky_size(trexio_t* const
   /* Build the name of the file with sparse data.
      The mo_2e_int_eri_lr_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char mo_2e_int_eri_lr_cholesky_file_name[] = "/mo_2e_int_eri_lr_cholesky.txt.size";
+  const char mo_2e_int_eri_lr_cholesky_file_name[256] = "/mo_2e_int_eri_lr_cholesky.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -18774,7 +18774,7 @@ trexio_exit_code trexio_text_read_csf_det_coefficient(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The csf_det_coefficient.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char csf_det_coefficient_file_name[] = "/csf_det_coefficient.txt";
+  const char csf_det_coefficient_file_name[256] = "/csf_det_coefficient.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -18847,7 +18847,7 @@ trexio_exit_code trexio_text_read_csf_det_coefficient_size(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The csf_det_coefficient.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char csf_det_coefficient_file_name[] = "/csf_det_coefficient.txt.size";
+  const char csf_det_coefficient_file_name[256] = "/csf_det_coefficient.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -18903,7 +18903,7 @@ trexio_exit_code trexio_text_read_amplitude_single(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The amplitude_single.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_single_file_name[] = "/amplitude_single.txt";
+  const char amplitude_single_file_name[256] = "/amplitude_single.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -18976,7 +18976,7 @@ trexio_exit_code trexio_text_read_amplitude_single_size(trexio_t* const file, in
   /* Build the name of the file with sparse data.
      The amplitude_single.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_single_file_name[] = "/amplitude_single.txt.size";
+  const char amplitude_single_file_name[256] = "/amplitude_single.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -19032,7 +19032,7 @@ trexio_exit_code trexio_text_read_amplitude_single_exp(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The amplitude_single_exp.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_single_exp_file_name[] = "/amplitude_single_exp.txt";
+  const char amplitude_single_exp_file_name[256] = "/amplitude_single_exp.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -19105,7 +19105,7 @@ trexio_exit_code trexio_text_read_amplitude_single_exp_size(trexio_t* const file
   /* Build the name of the file with sparse data.
      The amplitude_single_exp.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_single_exp_file_name[] = "/amplitude_single_exp.txt.size";
+  const char amplitude_single_exp_file_name[256] = "/amplitude_single_exp.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -19161,7 +19161,7 @@ trexio_exit_code trexio_text_read_amplitude_double(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The amplitude_double.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_double_file_name[] = "/amplitude_double.txt";
+  const char amplitude_double_file_name[256] = "/amplitude_double.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -19234,7 +19234,7 @@ trexio_exit_code trexio_text_read_amplitude_double_size(trexio_t* const file, in
   /* Build the name of the file with sparse data.
      The amplitude_double.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_double_file_name[] = "/amplitude_double.txt.size";
+  const char amplitude_double_file_name[256] = "/amplitude_double.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -19290,7 +19290,7 @@ trexio_exit_code trexio_text_read_amplitude_double_exp(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The amplitude_double_exp.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_double_exp_file_name[] = "/amplitude_double_exp.txt";
+  const char amplitude_double_exp_file_name[256] = "/amplitude_double_exp.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -19363,7 +19363,7 @@ trexio_exit_code trexio_text_read_amplitude_double_exp_size(trexio_t* const file
   /* Build the name of the file with sparse data.
      The amplitude_double_exp.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_double_exp_file_name[] = "/amplitude_double_exp.txt.size";
+  const char amplitude_double_exp_file_name[256] = "/amplitude_double_exp.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -19419,7 +19419,7 @@ trexio_exit_code trexio_text_read_amplitude_triple(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The amplitude_triple.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_triple_file_name[] = "/amplitude_triple.txt";
+  const char amplitude_triple_file_name[256] = "/amplitude_triple.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -19492,7 +19492,7 @@ trexio_exit_code trexio_text_read_amplitude_triple_size(trexio_t* const file, in
   /* Build the name of the file with sparse data.
      The amplitude_triple.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_triple_file_name[] = "/amplitude_triple.txt.size";
+  const char amplitude_triple_file_name[256] = "/amplitude_triple.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -19548,7 +19548,7 @@ trexio_exit_code trexio_text_read_amplitude_triple_exp(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The amplitude_triple_exp.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_triple_exp_file_name[] = "/amplitude_triple_exp.txt";
+  const char amplitude_triple_exp_file_name[256] = "/amplitude_triple_exp.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -19621,7 +19621,7 @@ trexio_exit_code trexio_text_read_amplitude_triple_exp_size(trexio_t* const file
   /* Build the name of the file with sparse data.
      The amplitude_triple_exp.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_triple_exp_file_name[] = "/amplitude_triple_exp.txt.size";
+  const char amplitude_triple_exp_file_name[256] = "/amplitude_triple_exp.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -19677,7 +19677,7 @@ trexio_exit_code trexio_text_read_amplitude_quadruple(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The amplitude_quadruple.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_quadruple_file_name[] = "/amplitude_quadruple.txt";
+  const char amplitude_quadruple_file_name[256] = "/amplitude_quadruple.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -19750,7 +19750,7 @@ trexio_exit_code trexio_text_read_amplitude_quadruple_size(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The amplitude_quadruple.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_quadruple_file_name[] = "/amplitude_quadruple.txt.size";
+  const char amplitude_quadruple_file_name[256] = "/amplitude_quadruple.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -19806,7 +19806,7 @@ trexio_exit_code trexio_text_read_amplitude_quadruple_exp(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The amplitude_quadruple_exp.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_quadruple_exp_file_name[] = "/amplitude_quadruple_exp.txt";
+  const char amplitude_quadruple_exp_file_name[256] = "/amplitude_quadruple_exp.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -19879,7 +19879,7 @@ trexio_exit_code trexio_text_read_amplitude_quadruple_exp_size(trexio_t* const f
   /* Build the name of the file with sparse data.
      The amplitude_quadruple_exp.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_quadruple_exp_file_name[] = "/amplitude_quadruple_exp.txt.size";
+  const char amplitude_quadruple_exp_file_name[256] = "/amplitude_quadruple_exp.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -19935,7 +19935,7 @@ trexio_exit_code trexio_text_read_rdm_2e(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The rdm_2e.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_file_name[] = "/rdm_2e.txt";
+  const char rdm_2e_file_name[256] = "/rdm_2e.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -20008,7 +20008,7 @@ trexio_exit_code trexio_text_read_rdm_2e_size(trexio_t* const file, int64_t* con
   /* Build the name of the file with sparse data.
      The rdm_2e.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_file_name[] = "/rdm_2e.txt.size";
+  const char rdm_2e_file_name[256] = "/rdm_2e.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -20064,7 +20064,7 @@ trexio_exit_code trexio_text_read_rdm_2e_upup(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The rdm_2e_upup.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_upup_file_name[] = "/rdm_2e_upup.txt";
+  const char rdm_2e_upup_file_name[256] = "/rdm_2e_upup.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -20137,7 +20137,7 @@ trexio_exit_code trexio_text_read_rdm_2e_upup_size(trexio_t* const file, int64_t
   /* Build the name of the file with sparse data.
      The rdm_2e_upup.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_upup_file_name[] = "/rdm_2e_upup.txt.size";
+  const char rdm_2e_upup_file_name[256] = "/rdm_2e_upup.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -20193,7 +20193,7 @@ trexio_exit_code trexio_text_read_rdm_2e_dndn(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The rdm_2e_dndn.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_dndn_file_name[] = "/rdm_2e_dndn.txt";
+  const char rdm_2e_dndn_file_name[256] = "/rdm_2e_dndn.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -20266,7 +20266,7 @@ trexio_exit_code trexio_text_read_rdm_2e_dndn_size(trexio_t* const file, int64_t
   /* Build the name of the file with sparse data.
      The rdm_2e_dndn.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_dndn_file_name[] = "/rdm_2e_dndn.txt.size";
+  const char rdm_2e_dndn_file_name[256] = "/rdm_2e_dndn.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -20322,7 +20322,7 @@ trexio_exit_code trexio_text_read_rdm_2e_updn(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The rdm_2e_updn.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_updn_file_name[] = "/rdm_2e_updn.txt";
+  const char rdm_2e_updn_file_name[256] = "/rdm_2e_updn.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -20395,7 +20395,7 @@ trexio_exit_code trexio_text_read_rdm_2e_updn_size(trexio_t* const file, int64_t
   /* Build the name of the file with sparse data.
      The rdm_2e_updn.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_updn_file_name[] = "/rdm_2e_updn.txt.size";
+  const char rdm_2e_updn_file_name[256] = "/rdm_2e_updn.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -20451,7 +20451,7 @@ trexio_exit_code trexio_text_read_rdm_2e_transition(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The rdm_2e_transition.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_transition_file_name[] = "/rdm_2e_transition.txt";
+  const char rdm_2e_transition_file_name[256] = "/rdm_2e_transition.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -20524,7 +20524,7 @@ trexio_exit_code trexio_text_read_rdm_2e_transition_size(trexio_t* const file, i
   /* Build the name of the file with sparse data.
      The rdm_2e_transition.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_transition_file_name[] = "/rdm_2e_transition.txt.size";
+  const char rdm_2e_transition_file_name[256] = "/rdm_2e_transition.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -20580,7 +20580,7 @@ trexio_exit_code trexio_text_read_rdm_2e_cholesky(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The rdm_2e_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_cholesky_file_name[] = "/rdm_2e_cholesky.txt";
+  const char rdm_2e_cholesky_file_name[256] = "/rdm_2e_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -20653,7 +20653,7 @@ trexio_exit_code trexio_text_read_rdm_2e_cholesky_size(trexio_t* const file, int
   /* Build the name of the file with sparse data.
      The rdm_2e_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_cholesky_file_name[] = "/rdm_2e_cholesky.txt.size";
+  const char rdm_2e_cholesky_file_name[256] = "/rdm_2e_cholesky.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -20709,7 +20709,7 @@ trexio_exit_code trexio_text_read_rdm_2e_upup_cholesky(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The rdm_2e_upup_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_upup_cholesky_file_name[] = "/rdm_2e_upup_cholesky.txt";
+  const char rdm_2e_upup_cholesky_file_name[256] = "/rdm_2e_upup_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -20782,7 +20782,7 @@ trexio_exit_code trexio_text_read_rdm_2e_upup_cholesky_size(trexio_t* const file
   /* Build the name of the file with sparse data.
      The rdm_2e_upup_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_upup_cholesky_file_name[] = "/rdm_2e_upup_cholesky.txt.size";
+  const char rdm_2e_upup_cholesky_file_name[256] = "/rdm_2e_upup_cholesky.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -20838,7 +20838,7 @@ trexio_exit_code trexio_text_read_rdm_2e_dndn_cholesky(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The rdm_2e_dndn_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_dndn_cholesky_file_name[] = "/rdm_2e_dndn_cholesky.txt";
+  const char rdm_2e_dndn_cholesky_file_name[256] = "/rdm_2e_dndn_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -20911,7 +20911,7 @@ trexio_exit_code trexio_text_read_rdm_2e_dndn_cholesky_size(trexio_t* const file
   /* Build the name of the file with sparse data.
      The rdm_2e_dndn_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_dndn_cholesky_file_name[] = "/rdm_2e_dndn_cholesky.txt.size";
+  const char rdm_2e_dndn_cholesky_file_name[256] = "/rdm_2e_dndn_cholesky.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -20967,7 +20967,7 @@ trexio_exit_code trexio_text_read_rdm_2e_updn_cholesky(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The rdm_2e_updn_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_updn_cholesky_file_name[] = "/rdm_2e_updn_cholesky.txt";
+  const char rdm_2e_updn_cholesky_file_name[256] = "/rdm_2e_updn_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -21040,7 +21040,7 @@ trexio_exit_code trexio_text_read_rdm_2e_updn_cholesky_size(trexio_t* const file
   /* Build the name of the file with sparse data.
      The rdm_2e_updn_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_updn_cholesky_file_name[] = "/rdm_2e_updn_cholesky.txt.size";
+  const char rdm_2e_updn_cholesky_file_name[256] = "/rdm_2e_updn_cholesky.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -21986,7 +21986,7 @@ trexio_exit_code trexio_text_read_determinant_coefficient(trexio_t* const file,
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
   if (dset == NULL) return TREXIO_INVALID_ARG_6;
 
-  const char file_name[] = "/determinant_coefficient.txt";
+  const char file_name[256] = "/determinant_coefficient.txt";
 
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
@@ -22049,7 +22049,7 @@ trexio_text_read_determinant_coefficient_size(trexio_t* const file, int64_t* con
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (size_max == NULL) return TREXIO_INVALID_ARG_2;
 
-  const char file_name[] = "/determinant_coefficient.txt.size";
+  const char file_name[256] = "/determinant_coefficient.txt.size";
 
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
@@ -22102,7 +22102,7 @@ trexio_exit_code trexio_text_read_csf_coefficient(trexio_t* const file,
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
   if (dset == NULL) return TREXIO_INVALID_ARG_6;
 
-  const char file_name[] = "/csf_coefficient.txt";
+  const char file_name[256] = "/csf_coefficient.txt";
 
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
@@ -22165,7 +22165,7 @@ trexio_text_read_csf_coefficient_size(trexio_t* const file, int64_t* const size_
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (size_max == NULL) return TREXIO_INVALID_ARG_2;
 
-  const char file_name[] = "/csf_coefficient.txt.size";
+  const char file_name[256] = "/csf_coefficient.txt.size";
 
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
@@ -25709,7 +25709,7 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The ao_2e_int_eri.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char ao_2e_int_eri_file_name[] = "/ao_2e_int_eri.txt";
+  const char ao_2e_int_eri_file_name[256] = "/ao_2e_int_eri.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -25790,7 +25790,7 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char ao_2e_int_file_name[] = "/ao_2e_int.txt";
+  const char ao_2e_int_file_name[256] = "/ao_2e_int.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -25824,7 +25824,7 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri_lr(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The ao_2e_int_eri_lr.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char ao_2e_int_eri_lr_file_name[] = "/ao_2e_int_eri_lr.txt";
+  const char ao_2e_int_eri_lr_file_name[256] = "/ao_2e_int_eri_lr.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -25905,7 +25905,7 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri_lr(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char ao_2e_int_file_name[] = "/ao_2e_int.txt";
+  const char ao_2e_int_file_name[256] = "/ao_2e_int.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -25939,7 +25939,7 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri_cholesky(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The ao_2e_int_eri_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char ao_2e_int_eri_cholesky_file_name[] = "/ao_2e_int_eri_cholesky.txt";
+  const char ao_2e_int_eri_cholesky_file_name[256] = "/ao_2e_int_eri_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -26020,7 +26020,7 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri_cholesky(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char ao_2e_int_file_name[] = "/ao_2e_int.txt";
+  const char ao_2e_int_file_name[256] = "/ao_2e_int.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -26054,7 +26054,7 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri_lr_cholesky(trexio_t* const fil
 
   /* Build the name of the file with sparse data*/
   /* The ao_2e_int_eri_lr_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char ao_2e_int_eri_lr_cholesky_file_name[] = "/ao_2e_int_eri_lr_cholesky.txt";
+  const char ao_2e_int_eri_lr_cholesky_file_name[256] = "/ao_2e_int_eri_lr_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -26135,7 +26135,7 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri_lr_cholesky(trexio_t* const fil
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char ao_2e_int_file_name[] = "/ao_2e_int.txt";
+  const char ao_2e_int_file_name[256] = "/ao_2e_int.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -26169,7 +26169,7 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The mo_2e_int_eri.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char mo_2e_int_eri_file_name[] = "/mo_2e_int_eri.txt";
+  const char mo_2e_int_eri_file_name[256] = "/mo_2e_int_eri.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -26250,7 +26250,7 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char mo_2e_int_file_name[] = "/mo_2e_int.txt";
+  const char mo_2e_int_file_name[256] = "/mo_2e_int.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -26284,7 +26284,7 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri_lr(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The mo_2e_int_eri_lr.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char mo_2e_int_eri_lr_file_name[] = "/mo_2e_int_eri_lr.txt";
+  const char mo_2e_int_eri_lr_file_name[256] = "/mo_2e_int_eri_lr.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -26365,7 +26365,7 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri_lr(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char mo_2e_int_file_name[] = "/mo_2e_int.txt";
+  const char mo_2e_int_file_name[256] = "/mo_2e_int.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -26399,7 +26399,7 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri_cholesky(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The mo_2e_int_eri_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char mo_2e_int_eri_cholesky_file_name[] = "/mo_2e_int_eri_cholesky.txt";
+  const char mo_2e_int_eri_cholesky_file_name[256] = "/mo_2e_int_eri_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -26480,7 +26480,7 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri_cholesky(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char mo_2e_int_file_name[] = "/mo_2e_int.txt";
+  const char mo_2e_int_file_name[256] = "/mo_2e_int.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -26514,7 +26514,7 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri_lr_cholesky(trexio_t* const fil
 
   /* Build the name of the file with sparse data*/
   /* The mo_2e_int_eri_lr_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char mo_2e_int_eri_lr_cholesky_file_name[] = "/mo_2e_int_eri_lr_cholesky.txt";
+  const char mo_2e_int_eri_lr_cholesky_file_name[256] = "/mo_2e_int_eri_lr_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -26595,7 +26595,7 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri_lr_cholesky(trexio_t* const fil
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char mo_2e_int_file_name[] = "/mo_2e_int.txt";
+  const char mo_2e_int_file_name[256] = "/mo_2e_int.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -26629,7 +26629,7 @@ trexio_exit_code trexio_text_write_csf_det_coefficient(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The csf_det_coefficient.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char csf_det_coefficient_file_name[] = "/csf_det_coefficient.txt";
+  const char csf_det_coefficient_file_name[256] = "/csf_det_coefficient.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -26710,7 +26710,7 @@ trexio_exit_code trexio_text_write_csf_det_coefficient(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char csf_file_name[] = "/csf.txt";
+  const char csf_file_name[256] = "/csf.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -26744,7 +26744,7 @@ trexio_exit_code trexio_text_write_amplitude_single(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The amplitude_single.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char amplitude_single_file_name[] = "/amplitude_single.txt";
+  const char amplitude_single_file_name[256] = "/amplitude_single.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -26825,7 +26825,7 @@ trexio_exit_code trexio_text_write_amplitude_single(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char amplitude_file_name[] = "/amplitude.txt";
+  const char amplitude_file_name[256] = "/amplitude.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -26859,7 +26859,7 @@ trexio_exit_code trexio_text_write_amplitude_single_exp(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The amplitude_single_exp.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char amplitude_single_exp_file_name[] = "/amplitude_single_exp.txt";
+  const char amplitude_single_exp_file_name[256] = "/amplitude_single_exp.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -26940,7 +26940,7 @@ trexio_exit_code trexio_text_write_amplitude_single_exp(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char amplitude_file_name[] = "/amplitude.txt";
+  const char amplitude_file_name[256] = "/amplitude.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -26974,7 +26974,7 @@ trexio_exit_code trexio_text_write_amplitude_double(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The amplitude_double.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char amplitude_double_file_name[] = "/amplitude_double.txt";
+  const char amplitude_double_file_name[256] = "/amplitude_double.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -27055,7 +27055,7 @@ trexio_exit_code trexio_text_write_amplitude_double(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char amplitude_file_name[] = "/amplitude.txt";
+  const char amplitude_file_name[256] = "/amplitude.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -27089,7 +27089,7 @@ trexio_exit_code trexio_text_write_amplitude_double_exp(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The amplitude_double_exp.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char amplitude_double_exp_file_name[] = "/amplitude_double_exp.txt";
+  const char amplitude_double_exp_file_name[256] = "/amplitude_double_exp.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -27170,7 +27170,7 @@ trexio_exit_code trexio_text_write_amplitude_double_exp(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char amplitude_file_name[] = "/amplitude.txt";
+  const char amplitude_file_name[256] = "/amplitude.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -27204,7 +27204,7 @@ trexio_exit_code trexio_text_write_amplitude_triple(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The amplitude_triple.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char amplitude_triple_file_name[] = "/amplitude_triple.txt";
+  const char amplitude_triple_file_name[256] = "/amplitude_triple.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -27285,7 +27285,7 @@ trexio_exit_code trexio_text_write_amplitude_triple(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char amplitude_file_name[] = "/amplitude.txt";
+  const char amplitude_file_name[256] = "/amplitude.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -27319,7 +27319,7 @@ trexio_exit_code trexio_text_write_amplitude_triple_exp(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The amplitude_triple_exp.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char amplitude_triple_exp_file_name[] = "/amplitude_triple_exp.txt";
+  const char amplitude_triple_exp_file_name[256] = "/amplitude_triple_exp.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -27400,7 +27400,7 @@ trexio_exit_code trexio_text_write_amplitude_triple_exp(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char amplitude_file_name[] = "/amplitude.txt";
+  const char amplitude_file_name[256] = "/amplitude.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -27434,7 +27434,7 @@ trexio_exit_code trexio_text_write_amplitude_quadruple(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The amplitude_quadruple.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char amplitude_quadruple_file_name[] = "/amplitude_quadruple.txt";
+  const char amplitude_quadruple_file_name[256] = "/amplitude_quadruple.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -27515,7 +27515,7 @@ trexio_exit_code trexio_text_write_amplitude_quadruple(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char amplitude_file_name[] = "/amplitude.txt";
+  const char amplitude_file_name[256] = "/amplitude.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -27549,7 +27549,7 @@ trexio_exit_code trexio_text_write_amplitude_quadruple_exp(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The amplitude_quadruple_exp.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char amplitude_quadruple_exp_file_name[] = "/amplitude_quadruple_exp.txt";
+  const char amplitude_quadruple_exp_file_name[256] = "/amplitude_quadruple_exp.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -27630,7 +27630,7 @@ trexio_exit_code trexio_text_write_amplitude_quadruple_exp(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char amplitude_file_name[] = "/amplitude.txt";
+  const char amplitude_file_name[256] = "/amplitude.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -27664,7 +27664,7 @@ trexio_exit_code trexio_text_write_rdm_2e(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The rdm_2e.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char rdm_2e_file_name[] = "/rdm_2e.txt";
+  const char rdm_2e_file_name[256] = "/rdm_2e.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -27745,7 +27745,7 @@ trexio_exit_code trexio_text_write_rdm_2e(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char rdm_file_name[] = "/rdm.txt";
+  const char rdm_file_name[256] = "/rdm.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -27779,7 +27779,7 @@ trexio_exit_code trexio_text_write_rdm_2e_upup(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The rdm_2e_upup.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char rdm_2e_upup_file_name[] = "/rdm_2e_upup.txt";
+  const char rdm_2e_upup_file_name[256] = "/rdm_2e_upup.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -27860,7 +27860,7 @@ trexio_exit_code trexio_text_write_rdm_2e_upup(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char rdm_file_name[] = "/rdm.txt";
+  const char rdm_file_name[256] = "/rdm.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -27894,7 +27894,7 @@ trexio_exit_code trexio_text_write_rdm_2e_dndn(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The rdm_2e_dndn.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char rdm_2e_dndn_file_name[] = "/rdm_2e_dndn.txt";
+  const char rdm_2e_dndn_file_name[256] = "/rdm_2e_dndn.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -27975,7 +27975,7 @@ trexio_exit_code trexio_text_write_rdm_2e_dndn(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char rdm_file_name[] = "/rdm.txt";
+  const char rdm_file_name[256] = "/rdm.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -28009,7 +28009,7 @@ trexio_exit_code trexio_text_write_rdm_2e_updn(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The rdm_2e_updn.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char rdm_2e_updn_file_name[] = "/rdm_2e_updn.txt";
+  const char rdm_2e_updn_file_name[256] = "/rdm_2e_updn.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -28090,7 +28090,7 @@ trexio_exit_code trexio_text_write_rdm_2e_updn(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char rdm_file_name[] = "/rdm.txt";
+  const char rdm_file_name[256] = "/rdm.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -28124,7 +28124,7 @@ trexio_exit_code trexio_text_write_rdm_2e_transition(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The rdm_2e_transition.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char rdm_2e_transition_file_name[] = "/rdm_2e_transition.txt";
+  const char rdm_2e_transition_file_name[256] = "/rdm_2e_transition.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -28205,7 +28205,7 @@ trexio_exit_code trexio_text_write_rdm_2e_transition(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char rdm_file_name[] = "/rdm.txt";
+  const char rdm_file_name[256] = "/rdm.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -28239,7 +28239,7 @@ trexio_exit_code trexio_text_write_rdm_2e_cholesky(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The rdm_2e_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char rdm_2e_cholesky_file_name[] = "/rdm_2e_cholesky.txt";
+  const char rdm_2e_cholesky_file_name[256] = "/rdm_2e_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -28320,7 +28320,7 @@ trexio_exit_code trexio_text_write_rdm_2e_cholesky(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char rdm_file_name[] = "/rdm.txt";
+  const char rdm_file_name[256] = "/rdm.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -28354,7 +28354,7 @@ trexio_exit_code trexio_text_write_rdm_2e_upup_cholesky(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The rdm_2e_upup_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char rdm_2e_upup_cholesky_file_name[] = "/rdm_2e_upup_cholesky.txt";
+  const char rdm_2e_upup_cholesky_file_name[256] = "/rdm_2e_upup_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -28435,7 +28435,7 @@ trexio_exit_code trexio_text_write_rdm_2e_upup_cholesky(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char rdm_file_name[] = "/rdm.txt";
+  const char rdm_file_name[256] = "/rdm.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -28469,7 +28469,7 @@ trexio_exit_code trexio_text_write_rdm_2e_dndn_cholesky(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The rdm_2e_dndn_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char rdm_2e_dndn_cholesky_file_name[] = "/rdm_2e_dndn_cholesky.txt";
+  const char rdm_2e_dndn_cholesky_file_name[256] = "/rdm_2e_dndn_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -28550,7 +28550,7 @@ trexio_exit_code trexio_text_write_rdm_2e_dndn_cholesky(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char rdm_file_name[] = "/rdm.txt";
+  const char rdm_file_name[256] = "/rdm.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -28584,7 +28584,7 @@ trexio_exit_code trexio_text_write_rdm_2e_updn_cholesky(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The rdm_2e_updn_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char rdm_2e_updn_cholesky_file_name[] = "/rdm_2e_updn_cholesky.txt";
+  const char rdm_2e_updn_cholesky_file_name[256] = "/rdm_2e_updn_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -28665,7 +28665,7 @@ trexio_exit_code trexio_text_write_rdm_2e_updn_cholesky(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char rdm_file_name[] = "/rdm.txt";
+  const char rdm_file_name[256] = "/rdm.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -29809,7 +29809,7 @@ trexio_exit_code trexio_text_write_determinant_coefficient(trexio_t* const file,
   if (dims == NULL) return TREXIO_INVALID_ARG_4;
   if (dset == NULL) return TREXIO_INVALID_ARG_5;
 
-  const char file_name[] = "/determinant_coefficient.txt";
+  const char file_name[256] = "/determinant_coefficient.txt";
   const int append_str_len = 6;
 
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
@@ -29859,7 +29859,7 @@ trexio_exit_code trexio_text_write_determinant_coefficient(trexio_t* const file,
   if (rc != 0) return TREXIO_FILE_ERROR;
 
   /* Additional part for the trexio_text_has_group to work */
-  const char group_file_name[] = "/determinant.txt";
+  const char group_file_name[256] = "/determinant.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -29892,7 +29892,7 @@ trexio_exit_code trexio_text_write_csf_coefficient(trexio_t* const file,
   if (dims == NULL) return TREXIO_INVALID_ARG_4;
   if (dset == NULL) return TREXIO_INVALID_ARG_5;
 
-  const char file_name[] = "/csf_coefficient.txt";
+  const char file_name[256] = "/csf_coefficient.txt";
   const int append_str_len = 6;
 
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
@@ -29942,7 +29942,7 @@ trexio_exit_code trexio_text_write_csf_coefficient(trexio_t* const file,
   if (rc != 0) return TREXIO_FILE_ERROR;
 
   /* Additional part for the trexio_text_has_group to work */
-  const char group_file_name[] = "/csf.txt";
+  const char group_file_name[256] = "/csf.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
