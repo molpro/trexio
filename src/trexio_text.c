@@ -59,7 +59,7 @@ char* mkdtemp(char* template) {
     dir = tmpnam(dir);
     if (dir == NULL) return NULL;
 
-#ifdef __MINGW32__
+#ifdef _WIN32
     if (mkdir(dir) != 0) {
 #else
     if (mkdir(dir, S_IRWXU | S_IRWXG | S_IRWXO) != 0) {
@@ -94,7 +94,7 @@ trexio_text_init (trexio_t* const file)
 
     if (file->mode == 'r') return TREXIO_READONLY;
 
-#ifdef __MINGW32__
+#ifdef _WIN32
     int rc_dir = mkdir(file->file_name);
 #else
     int rc_dir = mkdir(file->file_name, 0777);
@@ -104,7 +104,7 @@ trexio_text_init (trexio_t* const file)
   }
 
   /* Create the lock file in the directory */
-  const char* lock_file_name = "/.lock";
+  const char lock_file_name[] = "/.lock";
 
   char file_name[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -119,6 +119,11 @@ trexio_text_init (trexio_t* const file)
   f->lock_file = open(file_name,O_WRONLY|O_CREAT|O_TRUNC, 0644);
 
   if (f->lock_file <= 0) {
+#ifdef _WIN32
+    /* On Windows, we can't lock files but we should still be able to create them.
+       If we can't create the lock file, return an error */
+    return TREXIO_LOCK_ERROR;
+#else
     if (file->mode != 'r') {
       return TREXIO_ERRNO;
     } else {
@@ -138,6 +143,7 @@ trexio_text_init (trexio_t* const file)
         return TREXIO_ERRNO;
       }
     }
+#endif
   }
 
   return TREXIO_SUCCESS;
@@ -148,9 +154,9 @@ trexio_exit_code trexio_text_lock(trexio_t* const file) {
 
   trexio_text_t* const f = (trexio_text_t*) file;
 
-#ifdef __MINGW32__
-  return TREXIO_FAILURE;
-#else
+#ifndef _WIN32
+  /* On Windows, we can't lock the file, so we pass here */
+
   struct flock fl;
 
   fl.l_type   = F_WRLCK;
@@ -162,8 +168,9 @@ trexio_exit_code trexio_text_lock(trexio_t* const file) {
   int rc = fcntl(f->lock_file, F_SETLKW, &fl);
   if (rc == -1) return TREXIO_FAILURE;
 
-  return TREXIO_SUCCESS;
 #endif
+
+  return TREXIO_SUCCESS;
 
 }
 
@@ -175,9 +182,8 @@ trexio_text_unlock (trexio_t* const file)
 
   trexio_text_t* const f = (trexio_text_t*) file;
 
-#ifdef __MINGW32__
-  return TREXIO_FAILURE;
-#else
+#ifndef _WIN32
+
   struct flock fl;
 
   fl.l_type   = F_UNLCK;
@@ -187,9 +193,10 @@ trexio_text_unlock (trexio_t* const file)
   fl.l_pid    = getpid();
   fcntl(f->lock_file, F_SETLK, &fl);
 
+#endif
+
   close(f->lock_file);
   return TREXIO_SUCCESS;
-#endif
 
 }
 trexio_exit_code
@@ -287,7 +294,7 @@ trexio_exit_code trexio_text_has_determinant_list(trexio_t* const file)
 {
   if (file == NULL) return TREXIO_INVALID_ARG_1;
 
-  const char determinant_list_file_name[256] = "/determinant_list.txt";
+  const char determinant_list_file_name[] = "/determinant_list.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -319,7 +326,7 @@ trexio_exit_code trexio_text_read_determinant_list(trexio_t* const file,
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
   if (list == NULL) return TREXIO_INVALID_ARG_6;
 
-  const char determinant_list_file_name[256] = "/determinant_list.txt";
+  const char determinant_list_file_name[] = "/determinant_list.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -330,8 +337,8 @@ trexio_exit_code trexio_text_read_determinant_list(trexio_t* const file,
   strncat (file_full_path, determinant_list_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(determinant_list_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly.
@@ -403,7 +410,7 @@ trexio_exit_code trexio_text_write_determinant_list(trexio_t* const file,
   if (dims == NULL) return TREXIO_INVALID_ARG_4;
   if (list == NULL) return TREXIO_INVALID_ARG_5;
 
-  const char determinant_list_file_name[256] = "/determinant_list.txt";
+  const char determinant_list_file_name[] = "/determinant_list.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -414,8 +421,8 @@ trexio_exit_code trexio_text_write_determinant_list(trexio_t* const file,
   strncat (file_full_path, determinant_list_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(determinant_list_file_name));
 
-  /* Open the file in "a" (append) mode to guarantee that no truncation happens upon consecutive writes */
-  FILE* f = fopen(file_full_path, "a");
+  /* Open the file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE* f = fopen(file_full_path, "ab");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Write the data in the file and check the return code of fprintf to verify that > 0 bytes have been written */
@@ -439,7 +446,7 @@ trexio_exit_code trexio_text_write_determinant_list(trexio_t* const file,
   if (rc != 0) return TREXIO_FILE_ERROR;
 
   /* Additional part for the trexio_text_has_group to work */
-  const char det_file_name[256] = "/determinant.txt";
+  const char det_file_name[] = "/determinant.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -475,7 +482,7 @@ trexio_text_has_metadata (trexio_t* const file)
   /* Build the file name */
   char metadata_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char* metadata_file_name = "/metadata.txt";
+  const char metadata_file_name[] = "/metadata.txt";
 
   strncpy (metadata_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   metadata_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -509,7 +516,7 @@ trexio_text_has_nucleus (trexio_t* const file)
   /* Build the file name */
   char nucleus_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char* nucleus_file_name = "/nucleus.txt";
+  const char nucleus_file_name[] = "/nucleus.txt";
 
   strncpy (nucleus_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   nucleus_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -543,7 +550,7 @@ trexio_text_has_cell (trexio_t* const file)
   /* Build the file name */
   char cell_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char* cell_file_name = "/cell.txt";
+  const char cell_file_name[] = "/cell.txt";
 
   strncpy (cell_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   cell_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -577,7 +584,7 @@ trexio_text_has_pbc (trexio_t* const file)
   /* Build the file name */
   char pbc_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char* pbc_file_name = "/pbc.txt";
+  const char pbc_file_name[] = "/pbc.txt";
 
   strncpy (pbc_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   pbc_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -611,7 +618,7 @@ trexio_text_has_electron (trexio_t* const file)
   /* Build the file name */
   char electron_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char* electron_file_name = "/electron.txt";
+  const char electron_file_name[] = "/electron.txt";
 
   strncpy (electron_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   electron_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -645,7 +652,7 @@ trexio_text_has_state (trexio_t* const file)
   /* Build the file name */
   char state_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char* state_file_name = "/state.txt";
+  const char state_file_name[] = "/state.txt";
 
   strncpy (state_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   state_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -679,7 +686,7 @@ trexio_text_has_basis (trexio_t* const file)
   /* Build the file name */
   char basis_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char* basis_file_name = "/basis.txt";
+  const char basis_file_name[] = "/basis.txt";
 
   strncpy (basis_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   basis_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -713,7 +720,7 @@ trexio_text_has_ecp (trexio_t* const file)
   /* Build the file name */
   char ecp_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char* ecp_file_name = "/ecp.txt";
+  const char ecp_file_name[] = "/ecp.txt";
 
   strncpy (ecp_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   ecp_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -747,7 +754,7 @@ trexio_text_has_grid (trexio_t* const file)
   /* Build the file name */
   char grid_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char* grid_file_name = "/grid.txt";
+  const char grid_file_name[] = "/grid.txt";
 
   strncpy (grid_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   grid_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -781,7 +788,7 @@ trexio_text_has_ao (trexio_t* const file)
   /* Build the file name */
   char ao_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char* ao_file_name = "/ao.txt";
+  const char ao_file_name[] = "/ao.txt";
 
   strncpy (ao_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   ao_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -815,7 +822,7 @@ trexio_text_has_ao_1e_int (trexio_t* const file)
   /* Build the file name */
   char ao_1e_int_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char* ao_1e_int_file_name = "/ao_1e_int.txt";
+  const char ao_1e_int_file_name[] = "/ao_1e_int.txt";
 
   strncpy (ao_1e_int_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   ao_1e_int_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -849,7 +856,7 @@ trexio_text_has_ao_2e_int (trexio_t* const file)
   /* Build the file name */
   char ao_2e_int_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char* ao_2e_int_file_name = "/ao_2e_int.txt";
+  const char ao_2e_int_file_name[] = "/ao_2e_int.txt";
 
   strncpy (ao_2e_int_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   ao_2e_int_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -883,7 +890,7 @@ trexio_text_has_mo (trexio_t* const file)
   /* Build the file name */
   char mo_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char* mo_file_name = "/mo.txt";
+  const char mo_file_name[] = "/mo.txt";
 
   strncpy (mo_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   mo_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -917,7 +924,7 @@ trexio_text_has_mo_1e_int (trexio_t* const file)
   /* Build the file name */
   char mo_1e_int_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char* mo_1e_int_file_name = "/mo_1e_int.txt";
+  const char mo_1e_int_file_name[] = "/mo_1e_int.txt";
 
   strncpy (mo_1e_int_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   mo_1e_int_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -951,7 +958,7 @@ trexio_text_has_mo_2e_int (trexio_t* const file)
   /* Build the file name */
   char mo_2e_int_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char* mo_2e_int_file_name = "/mo_2e_int.txt";
+  const char mo_2e_int_file_name[] = "/mo_2e_int.txt";
 
   strncpy (mo_2e_int_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   mo_2e_int_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -985,7 +992,7 @@ trexio_text_has_determinant (trexio_t* const file)
   /* Build the file name */
   char determinant_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char* determinant_file_name = "/determinant.txt";
+  const char determinant_file_name[] = "/determinant.txt";
 
   strncpy (determinant_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   determinant_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -1019,7 +1026,7 @@ trexio_text_has_csf (trexio_t* const file)
   /* Build the file name */
   char csf_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char* csf_file_name = "/csf.txt";
+  const char csf_file_name[] = "/csf.txt";
 
   strncpy (csf_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   csf_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -1053,7 +1060,7 @@ trexio_text_has_amplitude (trexio_t* const file)
   /* Build the file name */
   char amplitude_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char* amplitude_file_name = "/amplitude.txt";
+  const char amplitude_file_name[] = "/amplitude.txt";
 
   strncpy (amplitude_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   amplitude_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -1087,7 +1094,7 @@ trexio_text_has_rdm (trexio_t* const file)
   /* Build the file name */
   char rdm_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char* rdm_file_name = "/rdm.txt";
+  const char rdm_file_name[] = "/rdm.txt";
 
   strncpy (rdm_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   rdm_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -1121,7 +1128,7 @@ trexio_text_has_jastrow (trexio_t* const file)
   /* Build the file name */
   char jastrow_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char* jastrow_file_name = "/jastrow.txt";
+  const char jastrow_file_name[] = "/jastrow.txt";
 
   strncpy (jastrow_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   jastrow_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -1155,7 +1162,7 @@ trexio_text_has_qmc (trexio_t* const file)
   /* Build the file name */
   char qmc_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
-  const char* qmc_file_name = "/qmc.txt";
+  const char qmc_file_name[] = "/qmc.txt";
 
   strncpy (qmc_full_path, file->file_name, TREXIO_MAX_FILENAME_LENGTH);
   qmc_full_path[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -1656,11 +1663,17 @@ trexio_text_free_ao_1e_int (trexio_text_t* const file)
   if (ao_1e_int->ao_1e_int_potential_n_e != NULL) FREE (ao_1e_int->ao_1e_int_potential_n_e);
   if (ao_1e_int->ao_1e_int_ecp != NULL) FREE (ao_1e_int->ao_1e_int_ecp);
   if (ao_1e_int->ao_1e_int_core_hamiltonian != NULL) FREE (ao_1e_int->ao_1e_int_core_hamiltonian);
+  if (ao_1e_int->ao_1e_int_dipole_x != NULL) FREE (ao_1e_int->ao_1e_int_dipole_x);
+  if (ao_1e_int->ao_1e_int_dipole_y != NULL) FREE (ao_1e_int->ao_1e_int_dipole_y);
+  if (ao_1e_int->ao_1e_int_dipole_z != NULL) FREE (ao_1e_int->ao_1e_int_dipole_z);
   if (ao_1e_int->ao_1e_int_overlap_im != NULL) FREE (ao_1e_int->ao_1e_int_overlap_im);
   if (ao_1e_int->ao_1e_int_kinetic_im != NULL) FREE (ao_1e_int->ao_1e_int_kinetic_im);
   if (ao_1e_int->ao_1e_int_potential_n_e_im != NULL) FREE (ao_1e_int->ao_1e_int_potential_n_e_im);
   if (ao_1e_int->ao_1e_int_ecp_im != NULL) FREE (ao_1e_int->ao_1e_int_ecp_im);
   if (ao_1e_int->ao_1e_int_core_hamiltonian_im != NULL) FREE (ao_1e_int->ao_1e_int_core_hamiltonian_im);
+  if (ao_1e_int->ao_1e_int_dipole_x_im != NULL) FREE (ao_1e_int->ao_1e_int_dipole_x_im);
+  if (ao_1e_int->ao_1e_int_dipole_y_im != NULL) FREE (ao_1e_int->ao_1e_int_dipole_y_im);
+  if (ao_1e_int->ao_1e_int_dipole_z_im != NULL) FREE (ao_1e_int->ao_1e_int_dipole_z_im);
 
 
 
@@ -1798,11 +1811,17 @@ trexio_text_free_mo_1e_int (trexio_text_t* const file)
   if (mo_1e_int->mo_1e_int_potential_n_e != NULL) FREE (mo_1e_int->mo_1e_int_potential_n_e);
   if (mo_1e_int->mo_1e_int_ecp != NULL) FREE (mo_1e_int->mo_1e_int_ecp);
   if (mo_1e_int->mo_1e_int_core_hamiltonian != NULL) FREE (mo_1e_int->mo_1e_int_core_hamiltonian);
+  if (mo_1e_int->mo_1e_int_dipole_x != NULL) FREE (mo_1e_int->mo_1e_int_dipole_x);
+  if (mo_1e_int->mo_1e_int_dipole_y != NULL) FREE (mo_1e_int->mo_1e_int_dipole_y);
+  if (mo_1e_int->mo_1e_int_dipole_z != NULL) FREE (mo_1e_int->mo_1e_int_dipole_z);
   if (mo_1e_int->mo_1e_int_overlap_im != NULL) FREE (mo_1e_int->mo_1e_int_overlap_im);
   if (mo_1e_int->mo_1e_int_kinetic_im != NULL) FREE (mo_1e_int->mo_1e_int_kinetic_im);
   if (mo_1e_int->mo_1e_int_potential_n_e_im != NULL) FREE (mo_1e_int->mo_1e_int_potential_n_e_im);
   if (mo_1e_int->mo_1e_int_ecp_im != NULL) FREE (mo_1e_int->mo_1e_int_ecp_im);
   if (mo_1e_int->mo_1e_int_core_hamiltonian_im != NULL) FREE (mo_1e_int->mo_1e_int_core_hamiltonian_im);
+  if (mo_1e_int->mo_1e_int_dipole_x_im != NULL) FREE (mo_1e_int->mo_1e_int_dipole_x_im);
+  if (mo_1e_int->mo_1e_int_dipole_y_im != NULL) FREE (mo_1e_int->mo_1e_int_dipole_y_im);
+  if (mo_1e_int->mo_1e_int_dipole_z_im != NULL) FREE (mo_1e_int->mo_1e_int_dipole_z_im);
 
 
 
@@ -2133,7 +2152,7 @@ trexio_text_read_metadata (trexio_text_t* const file)
   memset(metadata,0,sizeof(metadata_t));
 
   /* Build the file name */
-  const char* metadata_file_name = "/metadata.txt";
+  const char metadata_file_name[] = "/metadata.txt";
 
   strncpy (metadata->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   metadata->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -2477,7 +2496,7 @@ trexio_text_read_nucleus (trexio_text_t* const file)
   memset(nucleus,0,sizeof(nucleus_t));
 
   /* Build the file name */
-  const char* nucleus_file_name = "/nucleus.txt";
+  const char nucleus_file_name[] = "/nucleus.txt";
 
   strncpy (nucleus->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   nucleus->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -2791,7 +2810,7 @@ trexio_text_read_cell (trexio_text_t* const file)
   memset(cell,0,sizeof(cell_t));
 
   /* Build the file name */
-  const char* cell_file_name = "/cell.txt";
+  const char cell_file_name[] = "/cell.txt";
 
   strncpy (cell->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   cell->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -3167,7 +3186,7 @@ trexio_text_read_pbc (trexio_text_t* const file)
   memset(pbc,0,sizeof(pbc_t));
 
   /* Build the file name */
-  const char* pbc_file_name = "/pbc.txt";
+  const char pbc_file_name[] = "/pbc.txt";
 
   strncpy (pbc->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   pbc->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -3413,7 +3432,7 @@ trexio_text_read_electron (trexio_text_t* const file)
   memset(electron,0,sizeof(electron_t));
 
   /* Build the file name */
-  const char* electron_file_name = "/electron.txt";
+  const char electron_file_name[] = "/electron.txt";
 
   strncpy (electron->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   electron->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -3567,7 +3586,7 @@ trexio_text_read_state (trexio_text_t* const file)
   memset(state,0,sizeof(state_t));
 
   /* Build the file name */
-  const char* state_file_name = "/state.txt";
+  const char state_file_name[] = "/state.txt";
 
   strncpy (state->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   state->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -3879,7 +3898,7 @@ trexio_text_read_basis (trexio_text_t* const file)
   memset(basis,0,sizeof(basis_t));
 
   /* Build the file name */
-  const char* basis_file_name = "/basis.txt";
+  const char basis_file_name[] = "/basis.txt";
 
   strncpy (basis->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   basis->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -5103,7 +5122,7 @@ trexio_text_read_ecp (trexio_text_t* const file)
   memset(ecp,0,sizeof(ecp_t));
 
   /* Build the file name */
-  const char* ecp_file_name = "/ecp.txt";
+  const char ecp_file_name[] = "/ecp.txt";
 
   strncpy (ecp->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   ecp->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -5525,7 +5544,7 @@ trexio_text_read_grid (trexio_text_t* const file)
   memset(grid,0,sizeof(grid_t));
 
   /* Build the file name */
-  const char* grid_file_name = "/grid.txt";
+  const char grid_file_name[] = "/grid.txt";
 
   strncpy (grid->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   grid->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -6068,7 +6087,7 @@ trexio_text_read_ao (trexio_text_t* const file)
   memset(ao,0,sizeof(ao_t));
 
   /* Build the file name */
-  const char* ao_file_name = "/ao.txt";
+  const char ao_file_name[] = "/ao.txt";
 
   strncpy (ao->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   ao->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -6287,7 +6306,7 @@ trexio_text_read_ao_1e_int (trexio_text_t* const file)
   memset(ao_1e_int,0,sizeof(ao_1e_int_t));
 
   /* Build the file name */
-  const char* ao_1e_int_file_name = "/ao_1e_int.txt";
+  const char ao_1e_int_file_name[] = "/ao_1e_int.txt";
 
   strncpy (ao_1e_int->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   ao_1e_int->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -6327,11 +6346,17 @@ trexio_text_read_ao_1e_int (trexio_text_t* const file)
     uint64_t size_ao_1e_int_potential_n_e = 0;
     uint64_t size_ao_1e_int_ecp = 0;
     uint64_t size_ao_1e_int_core_hamiltonian = 0;
+    uint64_t size_ao_1e_int_dipole_x = 0;
+    uint64_t size_ao_1e_int_dipole_y = 0;
+    uint64_t size_ao_1e_int_dipole_z = 0;
     uint64_t size_ao_1e_int_overlap_im = 0;
     uint64_t size_ao_1e_int_kinetic_im = 0;
     uint64_t size_ao_1e_int_potential_n_e_im = 0;
     uint64_t size_ao_1e_int_ecp_im = 0;
     uint64_t size_ao_1e_int_core_hamiltonian_im = 0;
+    uint64_t size_ao_1e_int_dipole_x_im = 0;
+    uint64_t size_ao_1e_int_dipole_y_im = 0;
+    uint64_t size_ao_1e_int_dipole_z_im = 0;
 
     while(fscanf(f, "%1023s", buffer) != EOF) {
 
@@ -6477,6 +6502,90 @@ trexio_text_read_ao_1e_int (trexio_text_t* const file)
 
           size_ao_1e_int_core_hamiltonian *= ao_1e_int->dims_ao_1e_int_core_hamiltonian[i];
         }
+      } else if (strcmp(buffer, "rank_ao_1e_int_dipole_x") == 0) {
+
+        rc = fscanf(f, "%u", &(ao_1e_int->rank_ao_1e_int_dipole_x));
+        if (rc != 1) {
+          trexio_text_free_read_ao_1e_int(buffer, f, file, ao_1e_int);
+          return NULL;
+        }
+
+        if (ao_1e_int->rank_ao_1e_int_dipole_x != 0) size_ao_1e_int_dipole_x = 1UL;
+
+        for (uint32_t i=0; i<ao_1e_int->rank_ao_1e_int_dipole_x; ++i){
+
+          uint32_t j=0;
+          rc = fscanf(f, "%1023s %u", buffer, &j);
+          if ((rc != 2) || (strcmp(buffer, "dims_ao_1e_int_dipole_x") != 0) || (j!=i)) {
+            trexio_text_free_read_ao_1e_int(buffer, f, file, ao_1e_int);
+            return NULL;
+          }
+
+          rc = fscanf(f, "%" SCNu64 "\n", &(ao_1e_int->dims_ao_1e_int_dipole_x[i]));
+          assert(!(rc != 1));
+          if (rc != 1) {
+            trexio_text_free_read_ao_1e_int(buffer, f, file, ao_1e_int);
+            return NULL;
+          }
+
+          size_ao_1e_int_dipole_x *= ao_1e_int->dims_ao_1e_int_dipole_x[i];
+        }
+      } else if (strcmp(buffer, "rank_ao_1e_int_dipole_y") == 0) {
+
+        rc = fscanf(f, "%u", &(ao_1e_int->rank_ao_1e_int_dipole_y));
+        if (rc != 1) {
+          trexio_text_free_read_ao_1e_int(buffer, f, file, ao_1e_int);
+          return NULL;
+        }
+
+        if (ao_1e_int->rank_ao_1e_int_dipole_y != 0) size_ao_1e_int_dipole_y = 1UL;
+
+        for (uint32_t i=0; i<ao_1e_int->rank_ao_1e_int_dipole_y; ++i){
+
+          uint32_t j=0;
+          rc = fscanf(f, "%1023s %u", buffer, &j);
+          if ((rc != 2) || (strcmp(buffer, "dims_ao_1e_int_dipole_y") != 0) || (j!=i)) {
+            trexio_text_free_read_ao_1e_int(buffer, f, file, ao_1e_int);
+            return NULL;
+          }
+
+          rc = fscanf(f, "%" SCNu64 "\n", &(ao_1e_int->dims_ao_1e_int_dipole_y[i]));
+          assert(!(rc != 1));
+          if (rc != 1) {
+            trexio_text_free_read_ao_1e_int(buffer, f, file, ao_1e_int);
+            return NULL;
+          }
+
+          size_ao_1e_int_dipole_y *= ao_1e_int->dims_ao_1e_int_dipole_y[i];
+        }
+      } else if (strcmp(buffer, "rank_ao_1e_int_dipole_z") == 0) {
+
+        rc = fscanf(f, "%u", &(ao_1e_int->rank_ao_1e_int_dipole_z));
+        if (rc != 1) {
+          trexio_text_free_read_ao_1e_int(buffer, f, file, ao_1e_int);
+          return NULL;
+        }
+
+        if (ao_1e_int->rank_ao_1e_int_dipole_z != 0) size_ao_1e_int_dipole_z = 1UL;
+
+        for (uint32_t i=0; i<ao_1e_int->rank_ao_1e_int_dipole_z; ++i){
+
+          uint32_t j=0;
+          rc = fscanf(f, "%1023s %u", buffer, &j);
+          if ((rc != 2) || (strcmp(buffer, "dims_ao_1e_int_dipole_z") != 0) || (j!=i)) {
+            trexio_text_free_read_ao_1e_int(buffer, f, file, ao_1e_int);
+            return NULL;
+          }
+
+          rc = fscanf(f, "%" SCNu64 "\n", &(ao_1e_int->dims_ao_1e_int_dipole_z[i]));
+          assert(!(rc != 1));
+          if (rc != 1) {
+            trexio_text_free_read_ao_1e_int(buffer, f, file, ao_1e_int);
+            return NULL;
+          }
+
+          size_ao_1e_int_dipole_z *= ao_1e_int->dims_ao_1e_int_dipole_z[i];
+        }
       } else if (strcmp(buffer, "rank_ao_1e_int_overlap_im") == 0) {
 
         rc = fscanf(f, "%u", &(ao_1e_int->rank_ao_1e_int_overlap_im));
@@ -6617,6 +6726,90 @@ trexio_text_read_ao_1e_int (trexio_text_t* const file)
 
           size_ao_1e_int_core_hamiltonian_im *= ao_1e_int->dims_ao_1e_int_core_hamiltonian_im[i];
         }
+      } else if (strcmp(buffer, "rank_ao_1e_int_dipole_x_im") == 0) {
+
+        rc = fscanf(f, "%u", &(ao_1e_int->rank_ao_1e_int_dipole_x_im));
+        if (rc != 1) {
+          trexio_text_free_read_ao_1e_int(buffer, f, file, ao_1e_int);
+          return NULL;
+        }
+
+        if (ao_1e_int->rank_ao_1e_int_dipole_x_im != 0) size_ao_1e_int_dipole_x_im = 1UL;
+
+        for (uint32_t i=0; i<ao_1e_int->rank_ao_1e_int_dipole_x_im; ++i){
+
+          uint32_t j=0;
+          rc = fscanf(f, "%1023s %u", buffer, &j);
+          if ((rc != 2) || (strcmp(buffer, "dims_ao_1e_int_dipole_x_im") != 0) || (j!=i)) {
+            trexio_text_free_read_ao_1e_int(buffer, f, file, ao_1e_int);
+            return NULL;
+          }
+
+          rc = fscanf(f, "%" SCNu64 "\n", &(ao_1e_int->dims_ao_1e_int_dipole_x_im[i]));
+          assert(!(rc != 1));
+          if (rc != 1) {
+            trexio_text_free_read_ao_1e_int(buffer, f, file, ao_1e_int);
+            return NULL;
+          }
+
+          size_ao_1e_int_dipole_x_im *= ao_1e_int->dims_ao_1e_int_dipole_x_im[i];
+        }
+      } else if (strcmp(buffer, "rank_ao_1e_int_dipole_y_im") == 0) {
+
+        rc = fscanf(f, "%u", &(ao_1e_int->rank_ao_1e_int_dipole_y_im));
+        if (rc != 1) {
+          trexio_text_free_read_ao_1e_int(buffer, f, file, ao_1e_int);
+          return NULL;
+        }
+
+        if (ao_1e_int->rank_ao_1e_int_dipole_y_im != 0) size_ao_1e_int_dipole_y_im = 1UL;
+
+        for (uint32_t i=0; i<ao_1e_int->rank_ao_1e_int_dipole_y_im; ++i){
+
+          uint32_t j=0;
+          rc = fscanf(f, "%1023s %u", buffer, &j);
+          if ((rc != 2) || (strcmp(buffer, "dims_ao_1e_int_dipole_y_im") != 0) || (j!=i)) {
+            trexio_text_free_read_ao_1e_int(buffer, f, file, ao_1e_int);
+            return NULL;
+          }
+
+          rc = fscanf(f, "%" SCNu64 "\n", &(ao_1e_int->dims_ao_1e_int_dipole_y_im[i]));
+          assert(!(rc != 1));
+          if (rc != 1) {
+            trexio_text_free_read_ao_1e_int(buffer, f, file, ao_1e_int);
+            return NULL;
+          }
+
+          size_ao_1e_int_dipole_y_im *= ao_1e_int->dims_ao_1e_int_dipole_y_im[i];
+        }
+      } else if (strcmp(buffer, "rank_ao_1e_int_dipole_z_im") == 0) {
+
+        rc = fscanf(f, "%u", &(ao_1e_int->rank_ao_1e_int_dipole_z_im));
+        if (rc != 1) {
+          trexio_text_free_read_ao_1e_int(buffer, f, file, ao_1e_int);
+          return NULL;
+        }
+
+        if (ao_1e_int->rank_ao_1e_int_dipole_z_im != 0) size_ao_1e_int_dipole_z_im = 1UL;
+
+        for (uint32_t i=0; i<ao_1e_int->rank_ao_1e_int_dipole_z_im; ++i){
+
+          uint32_t j=0;
+          rc = fscanf(f, "%1023s %u", buffer, &j);
+          if ((rc != 2) || (strcmp(buffer, "dims_ao_1e_int_dipole_z_im") != 0) || (j!=i)) {
+            trexio_text_free_read_ao_1e_int(buffer, f, file, ao_1e_int);
+            return NULL;
+          }
+
+          rc = fscanf(f, "%" SCNu64 "\n", &(ao_1e_int->dims_ao_1e_int_dipole_z_im[i]));
+          assert(!(rc != 1));
+          if (rc != 1) {
+            trexio_text_free_read_ao_1e_int(buffer, f, file, ao_1e_int);
+            return NULL;
+          }
+
+          size_ao_1e_int_dipole_z_im *= ao_1e_int->dims_ao_1e_int_dipole_z_im[i];
+        }
       } else if (strcmp(buffer, "ao_1e_int_overlap") == 0) {
 
         /* Allocate arrays */
@@ -6696,6 +6889,57 @@ trexio_text_read_ao_1e_int (trexio_text_t* const file)
 
         for (uint64_t i=0 ; i<size_ao_1e_int_core_hamiltonian ; ++i) {
           rc = fscanf(f, "%lf", &(ao_1e_int->ao_1e_int_core_hamiltonian[i]));
+          if (rc != 1) {
+            trexio_text_free_read_ao_1e_int(buffer, f, file, ao_1e_int);
+            return NULL;
+          }
+        }
+
+      } else if (strcmp(buffer, "ao_1e_int_dipole_x") == 0) {
+
+        /* Allocate arrays */
+        ao_1e_int->ao_1e_int_dipole_x = CALLOC(size_ao_1e_int_dipole_x, double);
+        if (ao_1e_int->ao_1e_int_dipole_x == NULL) {
+          trexio_text_free_read_ao_1e_int(buffer, f, file, ao_1e_int);
+          return NULL;
+        }
+
+        for (uint64_t i=0 ; i<size_ao_1e_int_dipole_x ; ++i) {
+          rc = fscanf(f, "%lf", &(ao_1e_int->ao_1e_int_dipole_x[i]));
+          if (rc != 1) {
+            trexio_text_free_read_ao_1e_int(buffer, f, file, ao_1e_int);
+            return NULL;
+          }
+        }
+
+      } else if (strcmp(buffer, "ao_1e_int_dipole_y") == 0) {
+
+        /* Allocate arrays */
+        ao_1e_int->ao_1e_int_dipole_y = CALLOC(size_ao_1e_int_dipole_y, double);
+        if (ao_1e_int->ao_1e_int_dipole_y == NULL) {
+          trexio_text_free_read_ao_1e_int(buffer, f, file, ao_1e_int);
+          return NULL;
+        }
+
+        for (uint64_t i=0 ; i<size_ao_1e_int_dipole_y ; ++i) {
+          rc = fscanf(f, "%lf", &(ao_1e_int->ao_1e_int_dipole_y[i]));
+          if (rc != 1) {
+            trexio_text_free_read_ao_1e_int(buffer, f, file, ao_1e_int);
+            return NULL;
+          }
+        }
+
+      } else if (strcmp(buffer, "ao_1e_int_dipole_z") == 0) {
+
+        /* Allocate arrays */
+        ao_1e_int->ao_1e_int_dipole_z = CALLOC(size_ao_1e_int_dipole_z, double);
+        if (ao_1e_int->ao_1e_int_dipole_z == NULL) {
+          trexio_text_free_read_ao_1e_int(buffer, f, file, ao_1e_int);
+          return NULL;
+        }
+
+        for (uint64_t i=0 ; i<size_ao_1e_int_dipole_z ; ++i) {
+          rc = fscanf(f, "%lf", &(ao_1e_int->ao_1e_int_dipole_z[i]));
           if (rc != 1) {
             trexio_text_free_read_ao_1e_int(buffer, f, file, ao_1e_int);
             return NULL;
@@ -6787,6 +7031,57 @@ trexio_text_read_ao_1e_int (trexio_text_t* const file)
           }
         }
 
+      } else if (strcmp(buffer, "ao_1e_int_dipole_x_im") == 0) {
+
+        /* Allocate arrays */
+        ao_1e_int->ao_1e_int_dipole_x_im = CALLOC(size_ao_1e_int_dipole_x_im, double);
+        if (ao_1e_int->ao_1e_int_dipole_x_im == NULL) {
+          trexio_text_free_read_ao_1e_int(buffer, f, file, ao_1e_int);
+          return NULL;
+        }
+
+        for (uint64_t i=0 ; i<size_ao_1e_int_dipole_x_im ; ++i) {
+          rc = fscanf(f, "%lf", &(ao_1e_int->ao_1e_int_dipole_x_im[i]));
+          if (rc != 1) {
+            trexio_text_free_read_ao_1e_int(buffer, f, file, ao_1e_int);
+            return NULL;
+          }
+        }
+
+      } else if (strcmp(buffer, "ao_1e_int_dipole_y_im") == 0) {
+
+        /* Allocate arrays */
+        ao_1e_int->ao_1e_int_dipole_y_im = CALLOC(size_ao_1e_int_dipole_y_im, double);
+        if (ao_1e_int->ao_1e_int_dipole_y_im == NULL) {
+          trexio_text_free_read_ao_1e_int(buffer, f, file, ao_1e_int);
+          return NULL;
+        }
+
+        for (uint64_t i=0 ; i<size_ao_1e_int_dipole_y_im ; ++i) {
+          rc = fscanf(f, "%lf", &(ao_1e_int->ao_1e_int_dipole_y_im[i]));
+          if (rc != 1) {
+            trexio_text_free_read_ao_1e_int(buffer, f, file, ao_1e_int);
+            return NULL;
+          }
+        }
+
+      } else if (strcmp(buffer, "ao_1e_int_dipole_z_im") == 0) {
+
+        /* Allocate arrays */
+        ao_1e_int->ao_1e_int_dipole_z_im = CALLOC(size_ao_1e_int_dipole_z_im, double);
+        if (ao_1e_int->ao_1e_int_dipole_z_im == NULL) {
+          trexio_text_free_read_ao_1e_int(buffer, f, file, ao_1e_int);
+          return NULL;
+        }
+
+        for (uint64_t i=0 ; i<size_ao_1e_int_dipole_z_im ; ++i) {
+          rc = fscanf(f, "%lf", &(ao_1e_int->ao_1e_int_dipole_z_im[i]));
+          if (rc != 1) {
+            trexio_text_free_read_ao_1e_int(buffer, f, file, ao_1e_int);
+            return NULL;
+          }
+        }
+
       } else {
         continue;
       }
@@ -6820,7 +7115,7 @@ trexio_text_read_ao_2e_int (trexio_text_t* const file)
   memset(ao_2e_int,0,sizeof(ao_2e_int_t));
 
   /* Build the file name */
-  const char* ao_2e_int_file_name = "/ao_2e_int.txt";
+  const char ao_2e_int_file_name[] = "/ao_2e_int.txt";
 
   strncpy (ao_2e_int->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   ao_2e_int->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -6947,7 +7242,7 @@ trexio_text_read_mo (trexio_text_t* const file)
   memset(mo,0,sizeof(mo_t));
 
   /* Build the file name */
-  const char* mo_file_name = "/mo.txt";
+  const char mo_file_name[] = "/mo.txt";
 
   strncpy (mo->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   mo->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -7481,7 +7776,7 @@ trexio_text_read_mo_1e_int (trexio_text_t* const file)
   memset(mo_1e_int,0,sizeof(mo_1e_int_t));
 
   /* Build the file name */
-  const char* mo_1e_int_file_name = "/mo_1e_int.txt";
+  const char mo_1e_int_file_name[] = "/mo_1e_int.txt";
 
   strncpy (mo_1e_int->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   mo_1e_int->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -7521,11 +7816,17 @@ trexio_text_read_mo_1e_int (trexio_text_t* const file)
     uint64_t size_mo_1e_int_potential_n_e = 0;
     uint64_t size_mo_1e_int_ecp = 0;
     uint64_t size_mo_1e_int_core_hamiltonian = 0;
+    uint64_t size_mo_1e_int_dipole_x = 0;
+    uint64_t size_mo_1e_int_dipole_y = 0;
+    uint64_t size_mo_1e_int_dipole_z = 0;
     uint64_t size_mo_1e_int_overlap_im = 0;
     uint64_t size_mo_1e_int_kinetic_im = 0;
     uint64_t size_mo_1e_int_potential_n_e_im = 0;
     uint64_t size_mo_1e_int_ecp_im = 0;
     uint64_t size_mo_1e_int_core_hamiltonian_im = 0;
+    uint64_t size_mo_1e_int_dipole_x_im = 0;
+    uint64_t size_mo_1e_int_dipole_y_im = 0;
+    uint64_t size_mo_1e_int_dipole_z_im = 0;
 
     while(fscanf(f, "%1023s", buffer) != EOF) {
 
@@ -7671,6 +7972,90 @@ trexio_text_read_mo_1e_int (trexio_text_t* const file)
 
           size_mo_1e_int_core_hamiltonian *= mo_1e_int->dims_mo_1e_int_core_hamiltonian[i];
         }
+      } else if (strcmp(buffer, "rank_mo_1e_int_dipole_x") == 0) {
+
+        rc = fscanf(f, "%u", &(mo_1e_int->rank_mo_1e_int_dipole_x));
+        if (rc != 1) {
+          trexio_text_free_read_mo_1e_int(buffer, f, file, mo_1e_int);
+          return NULL;
+        }
+
+        if (mo_1e_int->rank_mo_1e_int_dipole_x != 0) size_mo_1e_int_dipole_x = 1UL;
+
+        for (uint32_t i=0; i<mo_1e_int->rank_mo_1e_int_dipole_x; ++i){
+
+          uint32_t j=0;
+          rc = fscanf(f, "%1023s %u", buffer, &j);
+          if ((rc != 2) || (strcmp(buffer, "dims_mo_1e_int_dipole_x") != 0) || (j!=i)) {
+            trexio_text_free_read_mo_1e_int(buffer, f, file, mo_1e_int);
+            return NULL;
+          }
+
+          rc = fscanf(f, "%" SCNu64 "\n", &(mo_1e_int->dims_mo_1e_int_dipole_x[i]));
+          assert(!(rc != 1));
+          if (rc != 1) {
+            trexio_text_free_read_mo_1e_int(buffer, f, file, mo_1e_int);
+            return NULL;
+          }
+
+          size_mo_1e_int_dipole_x *= mo_1e_int->dims_mo_1e_int_dipole_x[i];
+        }
+      } else if (strcmp(buffer, "rank_mo_1e_int_dipole_y") == 0) {
+
+        rc = fscanf(f, "%u", &(mo_1e_int->rank_mo_1e_int_dipole_y));
+        if (rc != 1) {
+          trexio_text_free_read_mo_1e_int(buffer, f, file, mo_1e_int);
+          return NULL;
+        }
+
+        if (mo_1e_int->rank_mo_1e_int_dipole_y != 0) size_mo_1e_int_dipole_y = 1UL;
+
+        for (uint32_t i=0; i<mo_1e_int->rank_mo_1e_int_dipole_y; ++i){
+
+          uint32_t j=0;
+          rc = fscanf(f, "%1023s %u", buffer, &j);
+          if ((rc != 2) || (strcmp(buffer, "dims_mo_1e_int_dipole_y") != 0) || (j!=i)) {
+            trexio_text_free_read_mo_1e_int(buffer, f, file, mo_1e_int);
+            return NULL;
+          }
+
+          rc = fscanf(f, "%" SCNu64 "\n", &(mo_1e_int->dims_mo_1e_int_dipole_y[i]));
+          assert(!(rc != 1));
+          if (rc != 1) {
+            trexio_text_free_read_mo_1e_int(buffer, f, file, mo_1e_int);
+            return NULL;
+          }
+
+          size_mo_1e_int_dipole_y *= mo_1e_int->dims_mo_1e_int_dipole_y[i];
+        }
+      } else if (strcmp(buffer, "rank_mo_1e_int_dipole_z") == 0) {
+
+        rc = fscanf(f, "%u", &(mo_1e_int->rank_mo_1e_int_dipole_z));
+        if (rc != 1) {
+          trexio_text_free_read_mo_1e_int(buffer, f, file, mo_1e_int);
+          return NULL;
+        }
+
+        if (mo_1e_int->rank_mo_1e_int_dipole_z != 0) size_mo_1e_int_dipole_z = 1UL;
+
+        for (uint32_t i=0; i<mo_1e_int->rank_mo_1e_int_dipole_z; ++i){
+
+          uint32_t j=0;
+          rc = fscanf(f, "%1023s %u", buffer, &j);
+          if ((rc != 2) || (strcmp(buffer, "dims_mo_1e_int_dipole_z") != 0) || (j!=i)) {
+            trexio_text_free_read_mo_1e_int(buffer, f, file, mo_1e_int);
+            return NULL;
+          }
+
+          rc = fscanf(f, "%" SCNu64 "\n", &(mo_1e_int->dims_mo_1e_int_dipole_z[i]));
+          assert(!(rc != 1));
+          if (rc != 1) {
+            trexio_text_free_read_mo_1e_int(buffer, f, file, mo_1e_int);
+            return NULL;
+          }
+
+          size_mo_1e_int_dipole_z *= mo_1e_int->dims_mo_1e_int_dipole_z[i];
+        }
       } else if (strcmp(buffer, "rank_mo_1e_int_overlap_im") == 0) {
 
         rc = fscanf(f, "%u", &(mo_1e_int->rank_mo_1e_int_overlap_im));
@@ -7811,6 +8196,90 @@ trexio_text_read_mo_1e_int (trexio_text_t* const file)
 
           size_mo_1e_int_core_hamiltonian_im *= mo_1e_int->dims_mo_1e_int_core_hamiltonian_im[i];
         }
+      } else if (strcmp(buffer, "rank_mo_1e_int_dipole_x_im") == 0) {
+
+        rc = fscanf(f, "%u", &(mo_1e_int->rank_mo_1e_int_dipole_x_im));
+        if (rc != 1) {
+          trexio_text_free_read_mo_1e_int(buffer, f, file, mo_1e_int);
+          return NULL;
+        }
+
+        if (mo_1e_int->rank_mo_1e_int_dipole_x_im != 0) size_mo_1e_int_dipole_x_im = 1UL;
+
+        for (uint32_t i=0; i<mo_1e_int->rank_mo_1e_int_dipole_x_im; ++i){
+
+          uint32_t j=0;
+          rc = fscanf(f, "%1023s %u", buffer, &j);
+          if ((rc != 2) || (strcmp(buffer, "dims_mo_1e_int_dipole_x_im") != 0) || (j!=i)) {
+            trexio_text_free_read_mo_1e_int(buffer, f, file, mo_1e_int);
+            return NULL;
+          }
+
+          rc = fscanf(f, "%" SCNu64 "\n", &(mo_1e_int->dims_mo_1e_int_dipole_x_im[i]));
+          assert(!(rc != 1));
+          if (rc != 1) {
+            trexio_text_free_read_mo_1e_int(buffer, f, file, mo_1e_int);
+            return NULL;
+          }
+
+          size_mo_1e_int_dipole_x_im *= mo_1e_int->dims_mo_1e_int_dipole_x_im[i];
+        }
+      } else if (strcmp(buffer, "rank_mo_1e_int_dipole_y_im") == 0) {
+
+        rc = fscanf(f, "%u", &(mo_1e_int->rank_mo_1e_int_dipole_y_im));
+        if (rc != 1) {
+          trexio_text_free_read_mo_1e_int(buffer, f, file, mo_1e_int);
+          return NULL;
+        }
+
+        if (mo_1e_int->rank_mo_1e_int_dipole_y_im != 0) size_mo_1e_int_dipole_y_im = 1UL;
+
+        for (uint32_t i=0; i<mo_1e_int->rank_mo_1e_int_dipole_y_im; ++i){
+
+          uint32_t j=0;
+          rc = fscanf(f, "%1023s %u", buffer, &j);
+          if ((rc != 2) || (strcmp(buffer, "dims_mo_1e_int_dipole_y_im") != 0) || (j!=i)) {
+            trexio_text_free_read_mo_1e_int(buffer, f, file, mo_1e_int);
+            return NULL;
+          }
+
+          rc = fscanf(f, "%" SCNu64 "\n", &(mo_1e_int->dims_mo_1e_int_dipole_y_im[i]));
+          assert(!(rc != 1));
+          if (rc != 1) {
+            trexio_text_free_read_mo_1e_int(buffer, f, file, mo_1e_int);
+            return NULL;
+          }
+
+          size_mo_1e_int_dipole_y_im *= mo_1e_int->dims_mo_1e_int_dipole_y_im[i];
+        }
+      } else if (strcmp(buffer, "rank_mo_1e_int_dipole_z_im") == 0) {
+
+        rc = fscanf(f, "%u", &(mo_1e_int->rank_mo_1e_int_dipole_z_im));
+        if (rc != 1) {
+          trexio_text_free_read_mo_1e_int(buffer, f, file, mo_1e_int);
+          return NULL;
+        }
+
+        if (mo_1e_int->rank_mo_1e_int_dipole_z_im != 0) size_mo_1e_int_dipole_z_im = 1UL;
+
+        for (uint32_t i=0; i<mo_1e_int->rank_mo_1e_int_dipole_z_im; ++i){
+
+          uint32_t j=0;
+          rc = fscanf(f, "%1023s %u", buffer, &j);
+          if ((rc != 2) || (strcmp(buffer, "dims_mo_1e_int_dipole_z_im") != 0) || (j!=i)) {
+            trexio_text_free_read_mo_1e_int(buffer, f, file, mo_1e_int);
+            return NULL;
+          }
+
+          rc = fscanf(f, "%" SCNu64 "\n", &(mo_1e_int->dims_mo_1e_int_dipole_z_im[i]));
+          assert(!(rc != 1));
+          if (rc != 1) {
+            trexio_text_free_read_mo_1e_int(buffer, f, file, mo_1e_int);
+            return NULL;
+          }
+
+          size_mo_1e_int_dipole_z_im *= mo_1e_int->dims_mo_1e_int_dipole_z_im[i];
+        }
       } else if (strcmp(buffer, "mo_1e_int_overlap") == 0) {
 
         /* Allocate arrays */
@@ -7890,6 +8359,57 @@ trexio_text_read_mo_1e_int (trexio_text_t* const file)
 
         for (uint64_t i=0 ; i<size_mo_1e_int_core_hamiltonian ; ++i) {
           rc = fscanf(f, "%lf", &(mo_1e_int->mo_1e_int_core_hamiltonian[i]));
+          if (rc != 1) {
+            trexio_text_free_read_mo_1e_int(buffer, f, file, mo_1e_int);
+            return NULL;
+          }
+        }
+
+      } else if (strcmp(buffer, "mo_1e_int_dipole_x") == 0) {
+
+        /* Allocate arrays */
+        mo_1e_int->mo_1e_int_dipole_x = CALLOC(size_mo_1e_int_dipole_x, double);
+        if (mo_1e_int->mo_1e_int_dipole_x == NULL) {
+          trexio_text_free_read_mo_1e_int(buffer, f, file, mo_1e_int);
+          return NULL;
+        }
+
+        for (uint64_t i=0 ; i<size_mo_1e_int_dipole_x ; ++i) {
+          rc = fscanf(f, "%lf", &(mo_1e_int->mo_1e_int_dipole_x[i]));
+          if (rc != 1) {
+            trexio_text_free_read_mo_1e_int(buffer, f, file, mo_1e_int);
+            return NULL;
+          }
+        }
+
+      } else if (strcmp(buffer, "mo_1e_int_dipole_y") == 0) {
+
+        /* Allocate arrays */
+        mo_1e_int->mo_1e_int_dipole_y = CALLOC(size_mo_1e_int_dipole_y, double);
+        if (mo_1e_int->mo_1e_int_dipole_y == NULL) {
+          trexio_text_free_read_mo_1e_int(buffer, f, file, mo_1e_int);
+          return NULL;
+        }
+
+        for (uint64_t i=0 ; i<size_mo_1e_int_dipole_y ; ++i) {
+          rc = fscanf(f, "%lf", &(mo_1e_int->mo_1e_int_dipole_y[i]));
+          if (rc != 1) {
+            trexio_text_free_read_mo_1e_int(buffer, f, file, mo_1e_int);
+            return NULL;
+          }
+        }
+
+      } else if (strcmp(buffer, "mo_1e_int_dipole_z") == 0) {
+
+        /* Allocate arrays */
+        mo_1e_int->mo_1e_int_dipole_z = CALLOC(size_mo_1e_int_dipole_z, double);
+        if (mo_1e_int->mo_1e_int_dipole_z == NULL) {
+          trexio_text_free_read_mo_1e_int(buffer, f, file, mo_1e_int);
+          return NULL;
+        }
+
+        for (uint64_t i=0 ; i<size_mo_1e_int_dipole_z ; ++i) {
+          rc = fscanf(f, "%lf", &(mo_1e_int->mo_1e_int_dipole_z[i]));
           if (rc != 1) {
             trexio_text_free_read_mo_1e_int(buffer, f, file, mo_1e_int);
             return NULL;
@@ -7981,6 +8501,57 @@ trexio_text_read_mo_1e_int (trexio_text_t* const file)
           }
         }
 
+      } else if (strcmp(buffer, "mo_1e_int_dipole_x_im") == 0) {
+
+        /* Allocate arrays */
+        mo_1e_int->mo_1e_int_dipole_x_im = CALLOC(size_mo_1e_int_dipole_x_im, double);
+        if (mo_1e_int->mo_1e_int_dipole_x_im == NULL) {
+          trexio_text_free_read_mo_1e_int(buffer, f, file, mo_1e_int);
+          return NULL;
+        }
+
+        for (uint64_t i=0 ; i<size_mo_1e_int_dipole_x_im ; ++i) {
+          rc = fscanf(f, "%lf", &(mo_1e_int->mo_1e_int_dipole_x_im[i]));
+          if (rc != 1) {
+            trexio_text_free_read_mo_1e_int(buffer, f, file, mo_1e_int);
+            return NULL;
+          }
+        }
+
+      } else if (strcmp(buffer, "mo_1e_int_dipole_y_im") == 0) {
+
+        /* Allocate arrays */
+        mo_1e_int->mo_1e_int_dipole_y_im = CALLOC(size_mo_1e_int_dipole_y_im, double);
+        if (mo_1e_int->mo_1e_int_dipole_y_im == NULL) {
+          trexio_text_free_read_mo_1e_int(buffer, f, file, mo_1e_int);
+          return NULL;
+        }
+
+        for (uint64_t i=0 ; i<size_mo_1e_int_dipole_y_im ; ++i) {
+          rc = fscanf(f, "%lf", &(mo_1e_int->mo_1e_int_dipole_y_im[i]));
+          if (rc != 1) {
+            trexio_text_free_read_mo_1e_int(buffer, f, file, mo_1e_int);
+            return NULL;
+          }
+        }
+
+      } else if (strcmp(buffer, "mo_1e_int_dipole_z_im") == 0) {
+
+        /* Allocate arrays */
+        mo_1e_int->mo_1e_int_dipole_z_im = CALLOC(size_mo_1e_int_dipole_z_im, double);
+        if (mo_1e_int->mo_1e_int_dipole_z_im == NULL) {
+          trexio_text_free_read_mo_1e_int(buffer, f, file, mo_1e_int);
+          return NULL;
+        }
+
+        for (uint64_t i=0 ; i<size_mo_1e_int_dipole_z_im ; ++i) {
+          rc = fscanf(f, "%lf", &(mo_1e_int->mo_1e_int_dipole_z_im[i]));
+          if (rc != 1) {
+            trexio_text_free_read_mo_1e_int(buffer, f, file, mo_1e_int);
+            return NULL;
+          }
+        }
+
       } else {
         continue;
       }
@@ -8014,7 +8585,7 @@ trexio_text_read_mo_2e_int (trexio_text_t* const file)
   memset(mo_2e_int,0,sizeof(mo_2e_int_t));
 
   /* Build the file name */
-  const char* mo_2e_int_file_name = "/mo_2e_int.txt";
+  const char mo_2e_int_file_name[] = "/mo_2e_int.txt";
 
   strncpy (mo_2e_int->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   mo_2e_int->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -8141,7 +8712,7 @@ trexio_text_read_determinant (trexio_text_t* const file)
   memset(determinant,0,sizeof(determinant_t));
 
   /* Build the file name */
-  const char* determinant_file_name = "/determinant.txt";
+  const char determinant_file_name[] = "/determinant.txt";
 
   strncpy (determinant->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   determinant->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -8241,7 +8812,7 @@ trexio_text_read_csf (trexio_text_t* const file)
   memset(csf,0,sizeof(csf_t));
 
   /* Build the file name */
-  const char* csf_file_name = "/csf.txt";
+  const char csf_file_name[] = "/csf.txt";
 
   strncpy (csf->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   csf->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -8341,7 +8912,7 @@ trexio_text_read_amplitude (trexio_text_t* const file)
   memset(amplitude,0,sizeof(amplitude_t));
 
   /* Build the file name */
-  const char* amplitude_file_name = "/amplitude.txt";
+  const char amplitude_file_name[] = "/amplitude.txt";
 
   strncpy (amplitude->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   amplitude->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -8414,7 +8985,7 @@ trexio_text_read_rdm (trexio_text_t* const file)
   memset(rdm,0,sizeof(rdm_t));
 
   /* Build the file name */
-  const char* rdm_file_name = "/rdm.txt";
+  const char rdm_file_name[] = "/rdm.txt";
 
   strncpy (rdm->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   rdm->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -8779,7 +9350,7 @@ trexio_text_read_jastrow (trexio_text_t* const file)
   memset(jastrow,0,sizeof(jastrow_t));
 
   /* Build the file name */
-  const char* jastrow_file_name = "/jastrow.txt";
+  const char jastrow_file_name[] = "/jastrow.txt";
 
   strncpy (jastrow->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   jastrow->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -9268,7 +9839,7 @@ trexio_text_read_qmc (trexio_text_t* const file)
   memset(qmc,0,sizeof(qmc_t));
 
   /* Build the file name */
-  const char* qmc_file_name = "/qmc.txt";
+  const char qmc_file_name[] = "/qmc.txt";
 
   strncpy (qmc->file_name, file->parent.file_name, TREXIO_MAX_FILENAME_LENGTH);
   qmc->file_name[TREXIO_MAX_FILENAME_LENGTH-1] = '\0';
@@ -10634,6 +11205,33 @@ trexio_text_flush_ao_1e_int (trexio_text_t* const file)
     fprintf(f, "dims_ao_1e_int_core_hamiltonian %u %" PRIu64 "\n", i, ao_1e_int->dims_ao_1e_int_core_hamiltonian[i]);
     size_ao_1e_int_core_hamiltonian *= ao_1e_int->dims_ao_1e_int_core_hamiltonian[i];
   }
+  fprintf(f, "rank_ao_1e_int_dipole_x %u\n", ao_1e_int->rank_ao_1e_int_dipole_x);
+  // workaround for the case of missing blocks in the file
+  uint64_t size_ao_1e_int_dipole_x = 0;
+  if (ao_1e_int->rank_ao_1e_int_dipole_x != 0) size_ao_1e_int_dipole_x = 1;
+
+  for (unsigned int i=0; i<ao_1e_int->rank_ao_1e_int_dipole_x; ++i){
+    fprintf(f, "dims_ao_1e_int_dipole_x %u %" PRIu64 "\n", i, ao_1e_int->dims_ao_1e_int_dipole_x[i]);
+    size_ao_1e_int_dipole_x *= ao_1e_int->dims_ao_1e_int_dipole_x[i];
+  }
+  fprintf(f, "rank_ao_1e_int_dipole_y %u\n", ao_1e_int->rank_ao_1e_int_dipole_y);
+  // workaround for the case of missing blocks in the file
+  uint64_t size_ao_1e_int_dipole_y = 0;
+  if (ao_1e_int->rank_ao_1e_int_dipole_y != 0) size_ao_1e_int_dipole_y = 1;
+
+  for (unsigned int i=0; i<ao_1e_int->rank_ao_1e_int_dipole_y; ++i){
+    fprintf(f, "dims_ao_1e_int_dipole_y %u %" PRIu64 "\n", i, ao_1e_int->dims_ao_1e_int_dipole_y[i]);
+    size_ao_1e_int_dipole_y *= ao_1e_int->dims_ao_1e_int_dipole_y[i];
+  }
+  fprintf(f, "rank_ao_1e_int_dipole_z %u\n", ao_1e_int->rank_ao_1e_int_dipole_z);
+  // workaround for the case of missing blocks in the file
+  uint64_t size_ao_1e_int_dipole_z = 0;
+  if (ao_1e_int->rank_ao_1e_int_dipole_z != 0) size_ao_1e_int_dipole_z = 1;
+
+  for (unsigned int i=0; i<ao_1e_int->rank_ao_1e_int_dipole_z; ++i){
+    fprintf(f, "dims_ao_1e_int_dipole_z %u %" PRIu64 "\n", i, ao_1e_int->dims_ao_1e_int_dipole_z[i]);
+    size_ao_1e_int_dipole_z *= ao_1e_int->dims_ao_1e_int_dipole_z[i];
+  }
   fprintf(f, "rank_ao_1e_int_overlap_im %u\n", ao_1e_int->rank_ao_1e_int_overlap_im);
   // workaround for the case of missing blocks in the file
   uint64_t size_ao_1e_int_overlap_im = 0;
@@ -10679,6 +11277,33 @@ trexio_text_flush_ao_1e_int (trexio_text_t* const file)
     fprintf(f, "dims_ao_1e_int_core_hamiltonian_im %u %" PRIu64 "\n", i, ao_1e_int->dims_ao_1e_int_core_hamiltonian_im[i]);
     size_ao_1e_int_core_hamiltonian_im *= ao_1e_int->dims_ao_1e_int_core_hamiltonian_im[i];
   }
+  fprintf(f, "rank_ao_1e_int_dipole_x_im %u\n", ao_1e_int->rank_ao_1e_int_dipole_x_im);
+  // workaround for the case of missing blocks in the file
+  uint64_t size_ao_1e_int_dipole_x_im = 0;
+  if (ao_1e_int->rank_ao_1e_int_dipole_x_im != 0) size_ao_1e_int_dipole_x_im = 1;
+
+  for (unsigned int i=0; i<ao_1e_int->rank_ao_1e_int_dipole_x_im; ++i){
+    fprintf(f, "dims_ao_1e_int_dipole_x_im %u %" PRIu64 "\n", i, ao_1e_int->dims_ao_1e_int_dipole_x_im[i]);
+    size_ao_1e_int_dipole_x_im *= ao_1e_int->dims_ao_1e_int_dipole_x_im[i];
+  }
+  fprintf(f, "rank_ao_1e_int_dipole_y_im %u\n", ao_1e_int->rank_ao_1e_int_dipole_y_im);
+  // workaround for the case of missing blocks in the file
+  uint64_t size_ao_1e_int_dipole_y_im = 0;
+  if (ao_1e_int->rank_ao_1e_int_dipole_y_im != 0) size_ao_1e_int_dipole_y_im = 1;
+
+  for (unsigned int i=0; i<ao_1e_int->rank_ao_1e_int_dipole_y_im; ++i){
+    fprintf(f, "dims_ao_1e_int_dipole_y_im %u %" PRIu64 "\n", i, ao_1e_int->dims_ao_1e_int_dipole_y_im[i]);
+    size_ao_1e_int_dipole_y_im *= ao_1e_int->dims_ao_1e_int_dipole_y_im[i];
+  }
+  fprintf(f, "rank_ao_1e_int_dipole_z_im %u\n", ao_1e_int->rank_ao_1e_int_dipole_z_im);
+  // workaround for the case of missing blocks in the file
+  uint64_t size_ao_1e_int_dipole_z_im = 0;
+  if (ao_1e_int->rank_ao_1e_int_dipole_z_im != 0) size_ao_1e_int_dipole_z_im = 1;
+
+  for (unsigned int i=0; i<ao_1e_int->rank_ao_1e_int_dipole_z_im; ++i){
+    fprintf(f, "dims_ao_1e_int_dipole_z_im %u %" PRIu64 "\n", i, ao_1e_int->dims_ao_1e_int_dipole_z_im[i]);
+    size_ao_1e_int_dipole_z_im *= ao_1e_int->dims_ao_1e_int_dipole_z_im[i];
+  }
 
 
 
@@ -10709,6 +11334,21 @@ trexio_text_flush_ao_1e_int (trexio_text_t* const file)
     fprintf(f, "%24.16e\n", ao_1e_int->ao_1e_int_core_hamiltonian[i]);
   }
 
+  fprintf(f, "ao_1e_int_dipole_x\n");
+  for (uint64_t i=0 ; i<size_ao_1e_int_dipole_x ; ++i) {
+    fprintf(f, "%24.16e\n", ao_1e_int->ao_1e_int_dipole_x[i]);
+  }
+
+  fprintf(f, "ao_1e_int_dipole_y\n");
+  for (uint64_t i=0 ; i<size_ao_1e_int_dipole_y ; ++i) {
+    fprintf(f, "%24.16e\n", ao_1e_int->ao_1e_int_dipole_y[i]);
+  }
+
+  fprintf(f, "ao_1e_int_dipole_z\n");
+  for (uint64_t i=0 ; i<size_ao_1e_int_dipole_z ; ++i) {
+    fprintf(f, "%24.16e\n", ao_1e_int->ao_1e_int_dipole_z[i]);
+  }
+
   fprintf(f, "ao_1e_int_overlap_im\n");
   for (uint64_t i=0 ; i<size_ao_1e_int_overlap_im ; ++i) {
     fprintf(f, "%24.16e\n", ao_1e_int->ao_1e_int_overlap_im[i]);
@@ -10732,6 +11372,21 @@ trexio_text_flush_ao_1e_int (trexio_text_t* const file)
   fprintf(f, "ao_1e_int_core_hamiltonian_im\n");
   for (uint64_t i=0 ; i<size_ao_1e_int_core_hamiltonian_im ; ++i) {
     fprintf(f, "%24.16e\n", ao_1e_int->ao_1e_int_core_hamiltonian_im[i]);
+  }
+
+  fprintf(f, "ao_1e_int_dipole_x_im\n");
+  for (uint64_t i=0 ; i<size_ao_1e_int_dipole_x_im ; ++i) {
+    fprintf(f, "%24.16e\n", ao_1e_int->ao_1e_int_dipole_x_im[i]);
+  }
+
+  fprintf(f, "ao_1e_int_dipole_y_im\n");
+  for (uint64_t i=0 ; i<size_ao_1e_int_dipole_y_im ; ++i) {
+    fprintf(f, "%24.16e\n", ao_1e_int->ao_1e_int_dipole_y_im[i]);
+  }
+
+  fprintf(f, "ao_1e_int_dipole_z_im\n");
+  for (uint64_t i=0 ; i<size_ao_1e_int_dipole_z_im ; ++i) {
+    fprintf(f, "%24.16e\n", ao_1e_int->ao_1e_int_dipole_z_im[i]);
   }
 
   fclose(f);
@@ -10985,6 +11640,33 @@ trexio_text_flush_mo_1e_int (trexio_text_t* const file)
     fprintf(f, "dims_mo_1e_int_core_hamiltonian %u %" PRIu64 "\n", i, mo_1e_int->dims_mo_1e_int_core_hamiltonian[i]);
     size_mo_1e_int_core_hamiltonian *= mo_1e_int->dims_mo_1e_int_core_hamiltonian[i];
   }
+  fprintf(f, "rank_mo_1e_int_dipole_x %u\n", mo_1e_int->rank_mo_1e_int_dipole_x);
+  // workaround for the case of missing blocks in the file
+  uint64_t size_mo_1e_int_dipole_x = 0;
+  if (mo_1e_int->rank_mo_1e_int_dipole_x != 0) size_mo_1e_int_dipole_x = 1;
+
+  for (unsigned int i=0; i<mo_1e_int->rank_mo_1e_int_dipole_x; ++i){
+    fprintf(f, "dims_mo_1e_int_dipole_x %u %" PRIu64 "\n", i, mo_1e_int->dims_mo_1e_int_dipole_x[i]);
+    size_mo_1e_int_dipole_x *= mo_1e_int->dims_mo_1e_int_dipole_x[i];
+  }
+  fprintf(f, "rank_mo_1e_int_dipole_y %u\n", mo_1e_int->rank_mo_1e_int_dipole_y);
+  // workaround for the case of missing blocks in the file
+  uint64_t size_mo_1e_int_dipole_y = 0;
+  if (mo_1e_int->rank_mo_1e_int_dipole_y != 0) size_mo_1e_int_dipole_y = 1;
+
+  for (unsigned int i=0; i<mo_1e_int->rank_mo_1e_int_dipole_y; ++i){
+    fprintf(f, "dims_mo_1e_int_dipole_y %u %" PRIu64 "\n", i, mo_1e_int->dims_mo_1e_int_dipole_y[i]);
+    size_mo_1e_int_dipole_y *= mo_1e_int->dims_mo_1e_int_dipole_y[i];
+  }
+  fprintf(f, "rank_mo_1e_int_dipole_z %u\n", mo_1e_int->rank_mo_1e_int_dipole_z);
+  // workaround for the case of missing blocks in the file
+  uint64_t size_mo_1e_int_dipole_z = 0;
+  if (mo_1e_int->rank_mo_1e_int_dipole_z != 0) size_mo_1e_int_dipole_z = 1;
+
+  for (unsigned int i=0; i<mo_1e_int->rank_mo_1e_int_dipole_z; ++i){
+    fprintf(f, "dims_mo_1e_int_dipole_z %u %" PRIu64 "\n", i, mo_1e_int->dims_mo_1e_int_dipole_z[i]);
+    size_mo_1e_int_dipole_z *= mo_1e_int->dims_mo_1e_int_dipole_z[i];
+  }
   fprintf(f, "rank_mo_1e_int_overlap_im %u\n", mo_1e_int->rank_mo_1e_int_overlap_im);
   // workaround for the case of missing blocks in the file
   uint64_t size_mo_1e_int_overlap_im = 0;
@@ -11030,6 +11712,33 @@ trexio_text_flush_mo_1e_int (trexio_text_t* const file)
     fprintf(f, "dims_mo_1e_int_core_hamiltonian_im %u %" PRIu64 "\n", i, mo_1e_int->dims_mo_1e_int_core_hamiltonian_im[i]);
     size_mo_1e_int_core_hamiltonian_im *= mo_1e_int->dims_mo_1e_int_core_hamiltonian_im[i];
   }
+  fprintf(f, "rank_mo_1e_int_dipole_x_im %u\n", mo_1e_int->rank_mo_1e_int_dipole_x_im);
+  // workaround for the case of missing blocks in the file
+  uint64_t size_mo_1e_int_dipole_x_im = 0;
+  if (mo_1e_int->rank_mo_1e_int_dipole_x_im != 0) size_mo_1e_int_dipole_x_im = 1;
+
+  for (unsigned int i=0; i<mo_1e_int->rank_mo_1e_int_dipole_x_im; ++i){
+    fprintf(f, "dims_mo_1e_int_dipole_x_im %u %" PRIu64 "\n", i, mo_1e_int->dims_mo_1e_int_dipole_x_im[i]);
+    size_mo_1e_int_dipole_x_im *= mo_1e_int->dims_mo_1e_int_dipole_x_im[i];
+  }
+  fprintf(f, "rank_mo_1e_int_dipole_y_im %u\n", mo_1e_int->rank_mo_1e_int_dipole_y_im);
+  // workaround for the case of missing blocks in the file
+  uint64_t size_mo_1e_int_dipole_y_im = 0;
+  if (mo_1e_int->rank_mo_1e_int_dipole_y_im != 0) size_mo_1e_int_dipole_y_im = 1;
+
+  for (unsigned int i=0; i<mo_1e_int->rank_mo_1e_int_dipole_y_im; ++i){
+    fprintf(f, "dims_mo_1e_int_dipole_y_im %u %" PRIu64 "\n", i, mo_1e_int->dims_mo_1e_int_dipole_y_im[i]);
+    size_mo_1e_int_dipole_y_im *= mo_1e_int->dims_mo_1e_int_dipole_y_im[i];
+  }
+  fprintf(f, "rank_mo_1e_int_dipole_z_im %u\n", mo_1e_int->rank_mo_1e_int_dipole_z_im);
+  // workaround for the case of missing blocks in the file
+  uint64_t size_mo_1e_int_dipole_z_im = 0;
+  if (mo_1e_int->rank_mo_1e_int_dipole_z_im != 0) size_mo_1e_int_dipole_z_im = 1;
+
+  for (unsigned int i=0; i<mo_1e_int->rank_mo_1e_int_dipole_z_im; ++i){
+    fprintf(f, "dims_mo_1e_int_dipole_z_im %u %" PRIu64 "\n", i, mo_1e_int->dims_mo_1e_int_dipole_z_im[i]);
+    size_mo_1e_int_dipole_z_im *= mo_1e_int->dims_mo_1e_int_dipole_z_im[i];
+  }
 
 
 
@@ -11060,6 +11769,21 @@ trexio_text_flush_mo_1e_int (trexio_text_t* const file)
     fprintf(f, "%24.16e\n", mo_1e_int->mo_1e_int_core_hamiltonian[i]);
   }
 
+  fprintf(f, "mo_1e_int_dipole_x\n");
+  for (uint64_t i=0 ; i<size_mo_1e_int_dipole_x ; ++i) {
+    fprintf(f, "%24.16e\n", mo_1e_int->mo_1e_int_dipole_x[i]);
+  }
+
+  fprintf(f, "mo_1e_int_dipole_y\n");
+  for (uint64_t i=0 ; i<size_mo_1e_int_dipole_y ; ++i) {
+    fprintf(f, "%24.16e\n", mo_1e_int->mo_1e_int_dipole_y[i]);
+  }
+
+  fprintf(f, "mo_1e_int_dipole_z\n");
+  for (uint64_t i=0 ; i<size_mo_1e_int_dipole_z ; ++i) {
+    fprintf(f, "%24.16e\n", mo_1e_int->mo_1e_int_dipole_z[i]);
+  }
+
   fprintf(f, "mo_1e_int_overlap_im\n");
   for (uint64_t i=0 ; i<size_mo_1e_int_overlap_im ; ++i) {
     fprintf(f, "%24.16e\n", mo_1e_int->mo_1e_int_overlap_im[i]);
@@ -11083,6 +11807,21 @@ trexio_text_flush_mo_1e_int (trexio_text_t* const file)
   fprintf(f, "mo_1e_int_core_hamiltonian_im\n");
   for (uint64_t i=0 ; i<size_mo_1e_int_core_hamiltonian_im ; ++i) {
     fprintf(f, "%24.16e\n", mo_1e_int->mo_1e_int_core_hamiltonian_im[i]);
+  }
+
+  fprintf(f, "mo_1e_int_dipole_x_im\n");
+  for (uint64_t i=0 ; i<size_mo_1e_int_dipole_x_im ; ++i) {
+    fprintf(f, "%24.16e\n", mo_1e_int->mo_1e_int_dipole_x_im[i]);
+  }
+
+  fprintf(f, "mo_1e_int_dipole_y_im\n");
+  for (uint64_t i=0 ; i<size_mo_1e_int_dipole_y_im ; ++i) {
+    fprintf(f, "%24.16e\n", mo_1e_int->mo_1e_int_dipole_y_im[i]);
+  }
+
+  fprintf(f, "mo_1e_int_dipole_z_im\n");
+  for (uint64_t i=0 ; i<size_mo_1e_int_dipole_z_im ; ++i) {
+    fprintf(f, "%24.16e\n", mo_1e_int->mo_1e_int_dipole_z_im[i]);
   }
 
   fclose(f);
@@ -12804,6 +13543,57 @@ trexio_text_has_ao_1e_int_core_hamiltonian (trexio_t* const file)
 }
 
 trexio_exit_code
+trexio_text_has_ao_1e_int_dipole_x (trexio_t* const file)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+
+  ao_1e_int_t* const ao_1e_int = trexio_text_read_ao_1e_int((trexio_text_t*) file);
+  if (ao_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (ao_1e_int->rank_ao_1e_int_dipole_x > 0){
+    return TREXIO_SUCCESS;
+  } else {
+    return TREXIO_HAS_NOT;
+  }
+
+}
+
+trexio_exit_code
+trexio_text_has_ao_1e_int_dipole_y (trexio_t* const file)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+
+  ao_1e_int_t* const ao_1e_int = trexio_text_read_ao_1e_int((trexio_text_t*) file);
+  if (ao_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (ao_1e_int->rank_ao_1e_int_dipole_y > 0){
+    return TREXIO_SUCCESS;
+  } else {
+    return TREXIO_HAS_NOT;
+  }
+
+}
+
+trexio_exit_code
+trexio_text_has_ao_1e_int_dipole_z (trexio_t* const file)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+
+  ao_1e_int_t* const ao_1e_int = trexio_text_read_ao_1e_int((trexio_text_t*) file);
+  if (ao_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (ao_1e_int->rank_ao_1e_int_dipole_z > 0){
+    return TREXIO_SUCCESS;
+  } else {
+    return TREXIO_HAS_NOT;
+  }
+
+}
+
+trexio_exit_code
 trexio_text_has_ao_1e_int_overlap_im (trexio_t* const file)
 {
 
@@ -12881,6 +13671,57 @@ trexio_text_has_ao_1e_int_core_hamiltonian_im (trexio_t* const file)
   if (ao_1e_int == NULL) return TREXIO_FAILURE;
 
   if (ao_1e_int->rank_ao_1e_int_core_hamiltonian_im > 0){
+    return TREXIO_SUCCESS;
+  } else {
+    return TREXIO_HAS_NOT;
+  }
+
+}
+
+trexio_exit_code
+trexio_text_has_ao_1e_int_dipole_x_im (trexio_t* const file)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+
+  ao_1e_int_t* const ao_1e_int = trexio_text_read_ao_1e_int((trexio_text_t*) file);
+  if (ao_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (ao_1e_int->rank_ao_1e_int_dipole_x_im > 0){
+    return TREXIO_SUCCESS;
+  } else {
+    return TREXIO_HAS_NOT;
+  }
+
+}
+
+trexio_exit_code
+trexio_text_has_ao_1e_int_dipole_y_im (trexio_t* const file)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+
+  ao_1e_int_t* const ao_1e_int = trexio_text_read_ao_1e_int((trexio_text_t*) file);
+  if (ao_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (ao_1e_int->rank_ao_1e_int_dipole_y_im > 0){
+    return TREXIO_SUCCESS;
+  } else {
+    return TREXIO_HAS_NOT;
+  }
+
+}
+
+trexio_exit_code
+trexio_text_has_ao_1e_int_dipole_z_im (trexio_t* const file)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+
+  ao_1e_int_t* const ao_1e_int = trexio_text_read_ao_1e_int((trexio_text_t*) file);
+  if (ao_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (ao_1e_int->rank_ao_1e_int_dipole_z_im > 0){
     return TREXIO_SUCCESS;
   } else {
     return TREXIO_HAS_NOT;
@@ -13076,6 +13917,57 @@ trexio_text_has_mo_1e_int_core_hamiltonian (trexio_t* const file)
 }
 
 trexio_exit_code
+trexio_text_has_mo_1e_int_dipole_x (trexio_t* const file)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+
+  mo_1e_int_t* const mo_1e_int = trexio_text_read_mo_1e_int((trexio_text_t*) file);
+  if (mo_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (mo_1e_int->rank_mo_1e_int_dipole_x > 0){
+    return TREXIO_SUCCESS;
+  } else {
+    return TREXIO_HAS_NOT;
+  }
+
+}
+
+trexio_exit_code
+trexio_text_has_mo_1e_int_dipole_y (trexio_t* const file)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+
+  mo_1e_int_t* const mo_1e_int = trexio_text_read_mo_1e_int((trexio_text_t*) file);
+  if (mo_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (mo_1e_int->rank_mo_1e_int_dipole_y > 0){
+    return TREXIO_SUCCESS;
+  } else {
+    return TREXIO_HAS_NOT;
+  }
+
+}
+
+trexio_exit_code
+trexio_text_has_mo_1e_int_dipole_z (trexio_t* const file)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+
+  mo_1e_int_t* const mo_1e_int = trexio_text_read_mo_1e_int((trexio_text_t*) file);
+  if (mo_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (mo_1e_int->rank_mo_1e_int_dipole_z > 0){
+    return TREXIO_SUCCESS;
+  } else {
+    return TREXIO_HAS_NOT;
+  }
+
+}
+
+trexio_exit_code
 trexio_text_has_mo_1e_int_overlap_im (trexio_t* const file)
 {
 
@@ -13153,6 +14045,57 @@ trexio_text_has_mo_1e_int_core_hamiltonian_im (trexio_t* const file)
   if (mo_1e_int == NULL) return TREXIO_FAILURE;
 
   if (mo_1e_int->rank_mo_1e_int_core_hamiltonian_im > 0){
+    return TREXIO_SUCCESS;
+  } else {
+    return TREXIO_HAS_NOT;
+  }
+
+}
+
+trexio_exit_code
+trexio_text_has_mo_1e_int_dipole_x_im (trexio_t* const file)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+
+  mo_1e_int_t* const mo_1e_int = trexio_text_read_mo_1e_int((trexio_text_t*) file);
+  if (mo_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (mo_1e_int->rank_mo_1e_int_dipole_x_im > 0){
+    return TREXIO_SUCCESS;
+  } else {
+    return TREXIO_HAS_NOT;
+  }
+
+}
+
+trexio_exit_code
+trexio_text_has_mo_1e_int_dipole_y_im (trexio_t* const file)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+
+  mo_1e_int_t* const mo_1e_int = trexio_text_read_mo_1e_int((trexio_text_t*) file);
+  if (mo_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (mo_1e_int->rank_mo_1e_int_dipole_y_im > 0){
+    return TREXIO_SUCCESS;
+  } else {
+    return TREXIO_HAS_NOT;
+  }
+
+}
+
+trexio_exit_code
+trexio_text_has_mo_1e_int_dipole_z_im (trexio_t* const file)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+
+  mo_1e_int_t* const mo_1e_int = trexio_text_read_mo_1e_int((trexio_text_t*) file);
+  if (mo_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (mo_1e_int->rank_mo_1e_int_dipole_z_im > 0){
     return TREXIO_SUCCESS;
   } else {
     return TREXIO_HAS_NOT;
@@ -13507,7 +14450,7 @@ trexio_exit_code trexio_text_has_ao_2e_int_eri(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The ao_2e_int_eri.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char ao_2e_int_eri_file_name[256] = "/ao_2e_int_eri.txt";
+  const char ao_2e_int_eri_file_name[] = "/ao_2e_int_eri.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13533,7 +14476,7 @@ trexio_exit_code trexio_text_has_ao_2e_int_eri_lr(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The ao_2e_int_eri_lr.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char ao_2e_int_eri_lr_file_name[256] = "/ao_2e_int_eri_lr.txt";
+  const char ao_2e_int_eri_lr_file_name[] = "/ao_2e_int_eri_lr.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13559,7 +14502,7 @@ trexio_exit_code trexio_text_has_ao_2e_int_eri_cholesky(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The ao_2e_int_eri_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char ao_2e_int_eri_cholesky_file_name[256] = "/ao_2e_int_eri_cholesky.txt";
+  const char ao_2e_int_eri_cholesky_file_name[] = "/ao_2e_int_eri_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13585,7 +14528,7 @@ trexio_exit_code trexio_text_has_ao_2e_int_eri_lr_cholesky(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The ao_2e_int_eri_lr_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char ao_2e_int_eri_lr_cholesky_file_name[256] = "/ao_2e_int_eri_lr_cholesky.txt";
+  const char ao_2e_int_eri_lr_cholesky_file_name[] = "/ao_2e_int_eri_lr_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13611,7 +14554,7 @@ trexio_exit_code trexio_text_has_mo_2e_int_eri(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The mo_2e_int_eri.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char mo_2e_int_eri_file_name[256] = "/mo_2e_int_eri.txt";
+  const char mo_2e_int_eri_file_name[] = "/mo_2e_int_eri.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13637,7 +14580,7 @@ trexio_exit_code trexio_text_has_mo_2e_int_eri_lr(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The mo_2e_int_eri_lr.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char mo_2e_int_eri_lr_file_name[256] = "/mo_2e_int_eri_lr.txt";
+  const char mo_2e_int_eri_lr_file_name[] = "/mo_2e_int_eri_lr.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13663,7 +14606,7 @@ trexio_exit_code trexio_text_has_mo_2e_int_eri_cholesky(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The mo_2e_int_eri_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char mo_2e_int_eri_cholesky_file_name[256] = "/mo_2e_int_eri_cholesky.txt";
+  const char mo_2e_int_eri_cholesky_file_name[] = "/mo_2e_int_eri_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13689,7 +14632,7 @@ trexio_exit_code trexio_text_has_mo_2e_int_eri_lr_cholesky(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The mo_2e_int_eri_lr_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char mo_2e_int_eri_lr_cholesky_file_name[256] = "/mo_2e_int_eri_lr_cholesky.txt";
+  const char mo_2e_int_eri_lr_cholesky_file_name[] = "/mo_2e_int_eri_lr_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13715,7 +14658,7 @@ trexio_exit_code trexio_text_has_csf_det_coefficient(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The csf_det_coefficient.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char csf_det_coefficient_file_name[256] = "/csf_det_coefficient.txt";
+  const char csf_det_coefficient_file_name[] = "/csf_det_coefficient.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13741,7 +14684,7 @@ trexio_exit_code trexio_text_has_amplitude_single(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The amplitude_single.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_single_file_name[256] = "/amplitude_single.txt";
+  const char amplitude_single_file_name[] = "/amplitude_single.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13767,7 +14710,7 @@ trexio_exit_code trexio_text_has_amplitude_single_exp(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The amplitude_single_exp.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_single_exp_file_name[256] = "/amplitude_single_exp.txt";
+  const char amplitude_single_exp_file_name[] = "/amplitude_single_exp.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13793,7 +14736,7 @@ trexio_exit_code trexio_text_has_amplitude_double(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The amplitude_double.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_double_file_name[256] = "/amplitude_double.txt";
+  const char amplitude_double_file_name[] = "/amplitude_double.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13819,7 +14762,7 @@ trexio_exit_code trexio_text_has_amplitude_double_exp(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The amplitude_double_exp.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_double_exp_file_name[256] = "/amplitude_double_exp.txt";
+  const char amplitude_double_exp_file_name[] = "/amplitude_double_exp.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13845,7 +14788,7 @@ trexio_exit_code trexio_text_has_amplitude_triple(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The amplitude_triple.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_triple_file_name[256] = "/amplitude_triple.txt";
+  const char amplitude_triple_file_name[] = "/amplitude_triple.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13871,7 +14814,7 @@ trexio_exit_code trexio_text_has_amplitude_triple_exp(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The amplitude_triple_exp.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_triple_exp_file_name[256] = "/amplitude_triple_exp.txt";
+  const char amplitude_triple_exp_file_name[] = "/amplitude_triple_exp.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13897,7 +14840,7 @@ trexio_exit_code trexio_text_has_amplitude_quadruple(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The amplitude_quadruple.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_quadruple_file_name[256] = "/amplitude_quadruple.txt";
+  const char amplitude_quadruple_file_name[] = "/amplitude_quadruple.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13923,7 +14866,7 @@ trexio_exit_code trexio_text_has_amplitude_quadruple_exp(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The amplitude_quadruple_exp.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_quadruple_exp_file_name[256] = "/amplitude_quadruple_exp.txt";
+  const char amplitude_quadruple_exp_file_name[] = "/amplitude_quadruple_exp.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13949,7 +14892,7 @@ trexio_exit_code trexio_text_has_rdm_2e(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The rdm_2e.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_file_name[256] = "/rdm_2e.txt";
+  const char rdm_2e_file_name[] = "/rdm_2e.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -13975,7 +14918,7 @@ trexio_exit_code trexio_text_has_rdm_2e_upup(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The rdm_2e_upup.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_upup_file_name[256] = "/rdm_2e_upup.txt";
+  const char rdm_2e_upup_file_name[] = "/rdm_2e_upup.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -14001,7 +14944,7 @@ trexio_exit_code trexio_text_has_rdm_2e_dndn(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The rdm_2e_dndn.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_dndn_file_name[256] = "/rdm_2e_dndn.txt";
+  const char rdm_2e_dndn_file_name[] = "/rdm_2e_dndn.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -14027,7 +14970,7 @@ trexio_exit_code trexio_text_has_rdm_2e_updn(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The rdm_2e_updn.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_updn_file_name[256] = "/rdm_2e_updn.txt";
+  const char rdm_2e_updn_file_name[] = "/rdm_2e_updn.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -14053,7 +14996,7 @@ trexio_exit_code trexio_text_has_rdm_2e_transition(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The rdm_2e_transition.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_transition_file_name[256] = "/rdm_2e_transition.txt";
+  const char rdm_2e_transition_file_name[] = "/rdm_2e_transition.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -14079,7 +15022,7 @@ trexio_exit_code trexio_text_has_rdm_2e_cholesky(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The rdm_2e_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_cholesky_file_name[256] = "/rdm_2e_cholesky.txt";
+  const char rdm_2e_cholesky_file_name[] = "/rdm_2e_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -14105,7 +15048,7 @@ trexio_exit_code trexio_text_has_rdm_2e_upup_cholesky(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The rdm_2e_upup_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_upup_cholesky_file_name[256] = "/rdm_2e_upup_cholesky.txt";
+  const char rdm_2e_upup_cholesky_file_name[] = "/rdm_2e_upup_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -14131,7 +15074,7 @@ trexio_exit_code trexio_text_has_rdm_2e_dndn_cholesky(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The rdm_2e_dndn_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_dndn_cholesky_file_name[256] = "/rdm_2e_dndn_cholesky.txt";
+  const char rdm_2e_dndn_cholesky_file_name[] = "/rdm_2e_dndn_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -14157,7 +15100,7 @@ trexio_exit_code trexio_text_has_rdm_2e_updn_cholesky(trexio_t* const file)
   /* Build the name of the file with sparse data.
      The rdm_2e_updn_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_updn_cholesky_file_name[256] = "/rdm_2e_updn_cholesky.txt";
+  const char rdm_2e_updn_cholesky_file_name[] = "/rdm_2e_updn_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -15070,7 +16013,7 @@ trexio_exit_code trexio_text_has_determinant_coefficient(trexio_t* const file)
 {
   if (file == NULL) return TREXIO_INVALID_ARG_1;
 
-  const char file_name[256] = "/determinant_coefficient.txt";
+  const char file_name[] = "/determinant_coefficient.txt";
 
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
@@ -15092,7 +16035,7 @@ trexio_exit_code trexio_text_has_csf_coefficient(trexio_t* const file)
 {
   if (file == NULL) return TREXIO_INVALID_ARG_1;
 
-  const char file_name[256] = "/csf_coefficient.txt";
+  const char file_name[] = "/csf_coefficient.txt";
 
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
@@ -16561,6 +17504,93 @@ trexio_text_read_ao_1e_int_core_hamiltonian (trexio_t* const file, double* const
 }
 
 trexio_exit_code
+trexio_text_read_ao_1e_int_dipole_x (trexio_t* const file, double* const ao_1e_int_dipole_x,
+                               const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_x == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  ao_1e_int_t* const ao_1e_int = trexio_text_read_ao_1e_int((trexio_text_t*) file);
+  if (ao_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (rank != ao_1e_int->rank_ao_1e_int_dipole_x) return TREXIO_INVALID_ARG_3;
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    if (dims[i] != ao_1e_int->dims_ao_1e_int_dipole_x[i]) return TREXIO_INVALID_ARG_4;
+    dim_size *= dims[i];
+  }
+
+  for (uint64_t i=0 ; i<dim_size ; ++i) {
+    ao_1e_int_dipole_x[i] = ao_1e_int->ao_1e_int_dipole_x[i];
+  }
+
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
+trexio_text_read_ao_1e_int_dipole_y (trexio_t* const file, double* const ao_1e_int_dipole_y,
+                               const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_y == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  ao_1e_int_t* const ao_1e_int = trexio_text_read_ao_1e_int((trexio_text_t*) file);
+  if (ao_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (rank != ao_1e_int->rank_ao_1e_int_dipole_y) return TREXIO_INVALID_ARG_3;
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    if (dims[i] != ao_1e_int->dims_ao_1e_int_dipole_y[i]) return TREXIO_INVALID_ARG_4;
+    dim_size *= dims[i];
+  }
+
+  for (uint64_t i=0 ; i<dim_size ; ++i) {
+    ao_1e_int_dipole_y[i] = ao_1e_int->ao_1e_int_dipole_y[i];
+  }
+
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
+trexio_text_read_ao_1e_int_dipole_z (trexio_t* const file, double* const ao_1e_int_dipole_z,
+                               const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_z == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  ao_1e_int_t* const ao_1e_int = trexio_text_read_ao_1e_int((trexio_text_t*) file);
+  if (ao_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (rank != ao_1e_int->rank_ao_1e_int_dipole_z) return TREXIO_INVALID_ARG_3;
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    if (dims[i] != ao_1e_int->dims_ao_1e_int_dipole_z[i]) return TREXIO_INVALID_ARG_4;
+    dim_size *= dims[i];
+  }
+
+  for (uint64_t i=0 ; i<dim_size ; ++i) {
+    ao_1e_int_dipole_z[i] = ao_1e_int->ao_1e_int_dipole_z[i];
+  }
+
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
 trexio_text_read_ao_1e_int_overlap_im (trexio_t* const file, double* const ao_1e_int_overlap_im,
                                const uint32_t rank, const uint64_t* dims)
 {
@@ -16699,6 +17729,93 @@ trexio_text_read_ao_1e_int_core_hamiltonian_im (trexio_t* const file, double* co
 
   for (uint64_t i=0 ; i<dim_size ; ++i) {
     ao_1e_int_core_hamiltonian_im[i] = ao_1e_int->ao_1e_int_core_hamiltonian_im[i];
+  }
+
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
+trexio_text_read_ao_1e_int_dipole_x_im (trexio_t* const file, double* const ao_1e_int_dipole_x_im,
+                               const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_x_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  ao_1e_int_t* const ao_1e_int = trexio_text_read_ao_1e_int((trexio_text_t*) file);
+  if (ao_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (rank != ao_1e_int->rank_ao_1e_int_dipole_x_im) return TREXIO_INVALID_ARG_3;
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    if (dims[i] != ao_1e_int->dims_ao_1e_int_dipole_x_im[i]) return TREXIO_INVALID_ARG_4;
+    dim_size *= dims[i];
+  }
+
+  for (uint64_t i=0 ; i<dim_size ; ++i) {
+    ao_1e_int_dipole_x_im[i] = ao_1e_int->ao_1e_int_dipole_x_im[i];
+  }
+
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
+trexio_text_read_ao_1e_int_dipole_y_im (trexio_t* const file, double* const ao_1e_int_dipole_y_im,
+                               const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_y_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  ao_1e_int_t* const ao_1e_int = trexio_text_read_ao_1e_int((trexio_text_t*) file);
+  if (ao_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (rank != ao_1e_int->rank_ao_1e_int_dipole_y_im) return TREXIO_INVALID_ARG_3;
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    if (dims[i] != ao_1e_int->dims_ao_1e_int_dipole_y_im[i]) return TREXIO_INVALID_ARG_4;
+    dim_size *= dims[i];
+  }
+
+  for (uint64_t i=0 ; i<dim_size ; ++i) {
+    ao_1e_int_dipole_y_im[i] = ao_1e_int->ao_1e_int_dipole_y_im[i];
+  }
+
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
+trexio_text_read_ao_1e_int_dipole_z_im (trexio_t* const file, double* const ao_1e_int_dipole_z_im,
+                               const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_z_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  ao_1e_int_t* const ao_1e_int = trexio_text_read_ao_1e_int((trexio_text_t*) file);
+  if (ao_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (rank != ao_1e_int->rank_ao_1e_int_dipole_z_im) return TREXIO_INVALID_ARG_3;
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    if (dims[i] != ao_1e_int->dims_ao_1e_int_dipole_z_im[i]) return TREXIO_INVALID_ARG_4;
+    dim_size *= dims[i];
+  }
+
+  for (uint64_t i=0 ; i<dim_size ; ++i) {
+    ao_1e_int_dipole_z_im[i] = ao_1e_int->ao_1e_int_dipole_z_im[i];
   }
 
   return TREXIO_SUCCESS;
@@ -17025,6 +18142,93 @@ trexio_text_read_mo_1e_int_core_hamiltonian (trexio_t* const file, double* const
 }
 
 trexio_exit_code
+trexio_text_read_mo_1e_int_dipole_x (trexio_t* const file, double* const mo_1e_int_dipole_x,
+                               const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_x == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  mo_1e_int_t* const mo_1e_int = trexio_text_read_mo_1e_int((trexio_text_t*) file);
+  if (mo_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (rank != mo_1e_int->rank_mo_1e_int_dipole_x) return TREXIO_INVALID_ARG_3;
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    if (dims[i] != mo_1e_int->dims_mo_1e_int_dipole_x[i]) return TREXIO_INVALID_ARG_4;
+    dim_size *= dims[i];
+  }
+
+  for (uint64_t i=0 ; i<dim_size ; ++i) {
+    mo_1e_int_dipole_x[i] = mo_1e_int->mo_1e_int_dipole_x[i];
+  }
+
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
+trexio_text_read_mo_1e_int_dipole_y (trexio_t* const file, double* const mo_1e_int_dipole_y,
+                               const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_y == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  mo_1e_int_t* const mo_1e_int = trexio_text_read_mo_1e_int((trexio_text_t*) file);
+  if (mo_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (rank != mo_1e_int->rank_mo_1e_int_dipole_y) return TREXIO_INVALID_ARG_3;
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    if (dims[i] != mo_1e_int->dims_mo_1e_int_dipole_y[i]) return TREXIO_INVALID_ARG_4;
+    dim_size *= dims[i];
+  }
+
+  for (uint64_t i=0 ; i<dim_size ; ++i) {
+    mo_1e_int_dipole_y[i] = mo_1e_int->mo_1e_int_dipole_y[i];
+  }
+
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
+trexio_text_read_mo_1e_int_dipole_z (trexio_t* const file, double* const mo_1e_int_dipole_z,
+                               const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_z == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  mo_1e_int_t* const mo_1e_int = trexio_text_read_mo_1e_int((trexio_text_t*) file);
+  if (mo_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (rank != mo_1e_int->rank_mo_1e_int_dipole_z) return TREXIO_INVALID_ARG_3;
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    if (dims[i] != mo_1e_int->dims_mo_1e_int_dipole_z[i]) return TREXIO_INVALID_ARG_4;
+    dim_size *= dims[i];
+  }
+
+  for (uint64_t i=0 ; i<dim_size ; ++i) {
+    mo_1e_int_dipole_z[i] = mo_1e_int->mo_1e_int_dipole_z[i];
+  }
+
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
 trexio_text_read_mo_1e_int_overlap_im (trexio_t* const file, double* const mo_1e_int_overlap_im,
                                const uint32_t rank, const uint64_t* dims)
 {
@@ -17163,6 +18367,93 @@ trexio_text_read_mo_1e_int_core_hamiltonian_im (trexio_t* const file, double* co
 
   for (uint64_t i=0 ; i<dim_size ; ++i) {
     mo_1e_int_core_hamiltonian_im[i] = mo_1e_int->mo_1e_int_core_hamiltonian_im[i];
+  }
+
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
+trexio_text_read_mo_1e_int_dipole_x_im (trexio_t* const file, double* const mo_1e_int_dipole_x_im,
+                               const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_x_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  mo_1e_int_t* const mo_1e_int = trexio_text_read_mo_1e_int((trexio_text_t*) file);
+  if (mo_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (rank != mo_1e_int->rank_mo_1e_int_dipole_x_im) return TREXIO_INVALID_ARG_3;
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    if (dims[i] != mo_1e_int->dims_mo_1e_int_dipole_x_im[i]) return TREXIO_INVALID_ARG_4;
+    dim_size *= dims[i];
+  }
+
+  for (uint64_t i=0 ; i<dim_size ; ++i) {
+    mo_1e_int_dipole_x_im[i] = mo_1e_int->mo_1e_int_dipole_x_im[i];
+  }
+
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
+trexio_text_read_mo_1e_int_dipole_y_im (trexio_t* const file, double* const mo_1e_int_dipole_y_im,
+                               const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_y_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  mo_1e_int_t* const mo_1e_int = trexio_text_read_mo_1e_int((trexio_text_t*) file);
+  if (mo_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (rank != mo_1e_int->rank_mo_1e_int_dipole_y_im) return TREXIO_INVALID_ARG_3;
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    if (dims[i] != mo_1e_int->dims_mo_1e_int_dipole_y_im[i]) return TREXIO_INVALID_ARG_4;
+    dim_size *= dims[i];
+  }
+
+  for (uint64_t i=0 ; i<dim_size ; ++i) {
+    mo_1e_int_dipole_y_im[i] = mo_1e_int->mo_1e_int_dipole_y_im[i];
+  }
+
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
+trexio_text_read_mo_1e_int_dipole_z_im (trexio_t* const file, double* const mo_1e_int_dipole_z_im,
+                               const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_z_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  mo_1e_int_t* const mo_1e_int = trexio_text_read_mo_1e_int((trexio_text_t*) file);
+  if (mo_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (rank != mo_1e_int->rank_mo_1e_int_dipole_z_im) return TREXIO_INVALID_ARG_3;
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    if (dims[i] != mo_1e_int->dims_mo_1e_int_dipole_z_im[i]) return TREXIO_INVALID_ARG_4;
+    dim_size *= dims[i];
+  }
+
+  for (uint64_t i=0 ; i<dim_size ; ++i) {
+    mo_1e_int_dipole_z_im[i] = mo_1e_int->mo_1e_int_dipole_z_im[i];
   }
 
   return TREXIO_SUCCESS;
@@ -17742,7 +19033,7 @@ trexio_exit_code trexio_text_read_ao_2e_int_eri(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The ao_2e_int_eri.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char ao_2e_int_eri_file_name[256] = "/ao_2e_int_eri.txt";
+  const char ao_2e_int_eri_file_name[] = "/ao_2e_int_eri.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -17753,8 +19044,8 @@ trexio_exit_code trexio_text_read_ao_2e_int_eri(trexio_t* const file,
   strncat (file_full_path, ao_2e_int_eri_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_2e_int_eri_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -17815,7 +19106,7 @@ trexio_exit_code trexio_text_read_ao_2e_int_eri_size(trexio_t* const file, int64
   /* Build the name of the file with sparse data.
      The ao_2e_int_eri.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char ao_2e_int_eri_file_name[256] = "/ao_2e_int_eri.txt.size";
+  const char ao_2e_int_eri_file_name[] = "/ao_2e_int_eri.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -17826,8 +19117,8 @@ trexio_exit_code trexio_text_read_ao_2e_int_eri_size(trexio_t* const file, int64
   strncat (file_full_path, ao_2e_int_eri_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_2e_int_eri_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
 
@@ -17871,7 +19162,7 @@ trexio_exit_code trexio_text_read_ao_2e_int_eri_lr(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The ao_2e_int_eri_lr.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char ao_2e_int_eri_lr_file_name[256] = "/ao_2e_int_eri_lr.txt";
+  const char ao_2e_int_eri_lr_file_name[] = "/ao_2e_int_eri_lr.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -17882,8 +19173,8 @@ trexio_exit_code trexio_text_read_ao_2e_int_eri_lr(trexio_t* const file,
   strncat (file_full_path, ao_2e_int_eri_lr_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_2e_int_eri_lr_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -17944,7 +19235,7 @@ trexio_exit_code trexio_text_read_ao_2e_int_eri_lr_size(trexio_t* const file, in
   /* Build the name of the file with sparse data.
      The ao_2e_int_eri_lr.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char ao_2e_int_eri_lr_file_name[256] = "/ao_2e_int_eri_lr.txt.size";
+  const char ao_2e_int_eri_lr_file_name[] = "/ao_2e_int_eri_lr.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -17955,8 +19246,8 @@ trexio_exit_code trexio_text_read_ao_2e_int_eri_lr_size(trexio_t* const file, in
   strncat (file_full_path, ao_2e_int_eri_lr_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_2e_int_eri_lr_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
 
@@ -18000,7 +19291,7 @@ trexio_exit_code trexio_text_read_ao_2e_int_eri_cholesky(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The ao_2e_int_eri_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char ao_2e_int_eri_cholesky_file_name[256] = "/ao_2e_int_eri_cholesky.txt";
+  const char ao_2e_int_eri_cholesky_file_name[] = "/ao_2e_int_eri_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -18011,8 +19302,8 @@ trexio_exit_code trexio_text_read_ao_2e_int_eri_cholesky(trexio_t* const file,
   strncat (file_full_path, ao_2e_int_eri_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_2e_int_eri_cholesky_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -18073,7 +19364,7 @@ trexio_exit_code trexio_text_read_ao_2e_int_eri_cholesky_size(trexio_t* const fi
   /* Build the name of the file with sparse data.
      The ao_2e_int_eri_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char ao_2e_int_eri_cholesky_file_name[256] = "/ao_2e_int_eri_cholesky.txt.size";
+  const char ao_2e_int_eri_cholesky_file_name[] = "/ao_2e_int_eri_cholesky.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -18084,8 +19375,8 @@ trexio_exit_code trexio_text_read_ao_2e_int_eri_cholesky_size(trexio_t* const fi
   strncat (file_full_path, ao_2e_int_eri_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_2e_int_eri_cholesky_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
 
@@ -18129,7 +19420,7 @@ trexio_exit_code trexio_text_read_ao_2e_int_eri_lr_cholesky(trexio_t* const file
   /* Build the name of the file with sparse data.
      The ao_2e_int_eri_lr_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char ao_2e_int_eri_lr_cholesky_file_name[256] = "/ao_2e_int_eri_lr_cholesky.txt";
+  const char ao_2e_int_eri_lr_cholesky_file_name[] = "/ao_2e_int_eri_lr_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -18140,8 +19431,8 @@ trexio_exit_code trexio_text_read_ao_2e_int_eri_lr_cholesky(trexio_t* const file
   strncat (file_full_path, ao_2e_int_eri_lr_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_2e_int_eri_lr_cholesky_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -18202,7 +19493,7 @@ trexio_exit_code trexio_text_read_ao_2e_int_eri_lr_cholesky_size(trexio_t* const
   /* Build the name of the file with sparse data.
      The ao_2e_int_eri_lr_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char ao_2e_int_eri_lr_cholesky_file_name[256] = "/ao_2e_int_eri_lr_cholesky.txt.size";
+  const char ao_2e_int_eri_lr_cholesky_file_name[] = "/ao_2e_int_eri_lr_cholesky.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -18213,8 +19504,8 @@ trexio_exit_code trexio_text_read_ao_2e_int_eri_lr_cholesky_size(trexio_t* const
   strncat (file_full_path, ao_2e_int_eri_lr_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_2e_int_eri_lr_cholesky_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
 
@@ -18258,7 +19549,7 @@ trexio_exit_code trexio_text_read_mo_2e_int_eri(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The mo_2e_int_eri.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char mo_2e_int_eri_file_name[256] = "/mo_2e_int_eri.txt";
+  const char mo_2e_int_eri_file_name[] = "/mo_2e_int_eri.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -18269,8 +19560,8 @@ trexio_exit_code trexio_text_read_mo_2e_int_eri(trexio_t* const file,
   strncat (file_full_path, mo_2e_int_eri_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_2e_int_eri_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -18331,7 +19622,7 @@ trexio_exit_code trexio_text_read_mo_2e_int_eri_size(trexio_t* const file, int64
   /* Build the name of the file with sparse data.
      The mo_2e_int_eri.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char mo_2e_int_eri_file_name[256] = "/mo_2e_int_eri.txt.size";
+  const char mo_2e_int_eri_file_name[] = "/mo_2e_int_eri.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -18342,8 +19633,8 @@ trexio_exit_code trexio_text_read_mo_2e_int_eri_size(trexio_t* const file, int64
   strncat (file_full_path, mo_2e_int_eri_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_2e_int_eri_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
 
@@ -18387,7 +19678,7 @@ trexio_exit_code trexio_text_read_mo_2e_int_eri_lr(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The mo_2e_int_eri_lr.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char mo_2e_int_eri_lr_file_name[256] = "/mo_2e_int_eri_lr.txt";
+  const char mo_2e_int_eri_lr_file_name[] = "/mo_2e_int_eri_lr.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -18398,8 +19689,8 @@ trexio_exit_code trexio_text_read_mo_2e_int_eri_lr(trexio_t* const file,
   strncat (file_full_path, mo_2e_int_eri_lr_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_2e_int_eri_lr_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -18460,7 +19751,7 @@ trexio_exit_code trexio_text_read_mo_2e_int_eri_lr_size(trexio_t* const file, in
   /* Build the name of the file with sparse data.
      The mo_2e_int_eri_lr.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char mo_2e_int_eri_lr_file_name[256] = "/mo_2e_int_eri_lr.txt.size";
+  const char mo_2e_int_eri_lr_file_name[] = "/mo_2e_int_eri_lr.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -18471,8 +19762,8 @@ trexio_exit_code trexio_text_read_mo_2e_int_eri_lr_size(trexio_t* const file, in
   strncat (file_full_path, mo_2e_int_eri_lr_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_2e_int_eri_lr_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
 
@@ -18516,7 +19807,7 @@ trexio_exit_code trexio_text_read_mo_2e_int_eri_cholesky(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The mo_2e_int_eri_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char mo_2e_int_eri_cholesky_file_name[256] = "/mo_2e_int_eri_cholesky.txt";
+  const char mo_2e_int_eri_cholesky_file_name[] = "/mo_2e_int_eri_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -18527,8 +19818,8 @@ trexio_exit_code trexio_text_read_mo_2e_int_eri_cholesky(trexio_t* const file,
   strncat (file_full_path, mo_2e_int_eri_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_2e_int_eri_cholesky_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -18589,7 +19880,7 @@ trexio_exit_code trexio_text_read_mo_2e_int_eri_cholesky_size(trexio_t* const fi
   /* Build the name of the file with sparse data.
      The mo_2e_int_eri_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char mo_2e_int_eri_cholesky_file_name[256] = "/mo_2e_int_eri_cholesky.txt.size";
+  const char mo_2e_int_eri_cholesky_file_name[] = "/mo_2e_int_eri_cholesky.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -18600,8 +19891,8 @@ trexio_exit_code trexio_text_read_mo_2e_int_eri_cholesky_size(trexio_t* const fi
   strncat (file_full_path, mo_2e_int_eri_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_2e_int_eri_cholesky_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
 
@@ -18645,7 +19936,7 @@ trexio_exit_code trexio_text_read_mo_2e_int_eri_lr_cholesky(trexio_t* const file
   /* Build the name of the file with sparse data.
      The mo_2e_int_eri_lr_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char mo_2e_int_eri_lr_cholesky_file_name[256] = "/mo_2e_int_eri_lr_cholesky.txt";
+  const char mo_2e_int_eri_lr_cholesky_file_name[] = "/mo_2e_int_eri_lr_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -18656,8 +19947,8 @@ trexio_exit_code trexio_text_read_mo_2e_int_eri_lr_cholesky(trexio_t* const file
   strncat (file_full_path, mo_2e_int_eri_lr_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_2e_int_eri_lr_cholesky_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -18718,7 +20009,7 @@ trexio_exit_code trexio_text_read_mo_2e_int_eri_lr_cholesky_size(trexio_t* const
   /* Build the name of the file with sparse data.
      The mo_2e_int_eri_lr_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char mo_2e_int_eri_lr_cholesky_file_name[256] = "/mo_2e_int_eri_lr_cholesky.txt.size";
+  const char mo_2e_int_eri_lr_cholesky_file_name[] = "/mo_2e_int_eri_lr_cholesky.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -18729,8 +20020,8 @@ trexio_exit_code trexio_text_read_mo_2e_int_eri_lr_cholesky_size(trexio_t* const
   strncat (file_full_path, mo_2e_int_eri_lr_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_2e_int_eri_lr_cholesky_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
 
@@ -18774,7 +20065,7 @@ trexio_exit_code trexio_text_read_csf_det_coefficient(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The csf_det_coefficient.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char csf_det_coefficient_file_name[256] = "/csf_det_coefficient.txt";
+  const char csf_det_coefficient_file_name[] = "/csf_det_coefficient.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -18785,8 +20076,8 @@ trexio_exit_code trexio_text_read_csf_det_coefficient(trexio_t* const file,
   strncat (file_full_path, csf_det_coefficient_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(csf_det_coefficient_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -18847,7 +20138,7 @@ trexio_exit_code trexio_text_read_csf_det_coefficient_size(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The csf_det_coefficient.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char csf_det_coefficient_file_name[256] = "/csf_det_coefficient.txt.size";
+  const char csf_det_coefficient_file_name[] = "/csf_det_coefficient.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -18858,8 +20149,8 @@ trexio_exit_code trexio_text_read_csf_det_coefficient_size(trexio_t* const file,
   strncat (file_full_path, csf_det_coefficient_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(csf_det_coefficient_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
 
@@ -18903,7 +20194,7 @@ trexio_exit_code trexio_text_read_amplitude_single(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The amplitude_single.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_single_file_name[256] = "/amplitude_single.txt";
+  const char amplitude_single_file_name[] = "/amplitude_single.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -18914,8 +20205,8 @@ trexio_exit_code trexio_text_read_amplitude_single(trexio_t* const file,
   strncat (file_full_path, amplitude_single_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_single_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -18976,7 +20267,7 @@ trexio_exit_code trexio_text_read_amplitude_single_size(trexio_t* const file, in
   /* Build the name of the file with sparse data.
      The amplitude_single.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_single_file_name[256] = "/amplitude_single.txt.size";
+  const char amplitude_single_file_name[] = "/amplitude_single.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -18987,8 +20278,8 @@ trexio_exit_code trexio_text_read_amplitude_single_size(trexio_t* const file, in
   strncat (file_full_path, amplitude_single_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_single_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
 
@@ -19032,7 +20323,7 @@ trexio_exit_code trexio_text_read_amplitude_single_exp(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The amplitude_single_exp.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_single_exp_file_name[256] = "/amplitude_single_exp.txt";
+  const char amplitude_single_exp_file_name[] = "/amplitude_single_exp.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -19043,8 +20334,8 @@ trexio_exit_code trexio_text_read_amplitude_single_exp(trexio_t* const file,
   strncat (file_full_path, amplitude_single_exp_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_single_exp_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -19105,7 +20396,7 @@ trexio_exit_code trexio_text_read_amplitude_single_exp_size(trexio_t* const file
   /* Build the name of the file with sparse data.
      The amplitude_single_exp.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_single_exp_file_name[256] = "/amplitude_single_exp.txt.size";
+  const char amplitude_single_exp_file_name[] = "/amplitude_single_exp.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -19116,8 +20407,8 @@ trexio_exit_code trexio_text_read_amplitude_single_exp_size(trexio_t* const file
   strncat (file_full_path, amplitude_single_exp_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_single_exp_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
 
@@ -19161,7 +20452,7 @@ trexio_exit_code trexio_text_read_amplitude_double(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The amplitude_double.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_double_file_name[256] = "/amplitude_double.txt";
+  const char amplitude_double_file_name[] = "/amplitude_double.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -19172,8 +20463,8 @@ trexio_exit_code trexio_text_read_amplitude_double(trexio_t* const file,
   strncat (file_full_path, amplitude_double_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_double_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -19234,7 +20525,7 @@ trexio_exit_code trexio_text_read_amplitude_double_size(trexio_t* const file, in
   /* Build the name of the file with sparse data.
      The amplitude_double.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_double_file_name[256] = "/amplitude_double.txt.size";
+  const char amplitude_double_file_name[] = "/amplitude_double.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -19245,8 +20536,8 @@ trexio_exit_code trexio_text_read_amplitude_double_size(trexio_t* const file, in
   strncat (file_full_path, amplitude_double_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_double_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
 
@@ -19290,7 +20581,7 @@ trexio_exit_code trexio_text_read_amplitude_double_exp(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The amplitude_double_exp.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_double_exp_file_name[256] = "/amplitude_double_exp.txt";
+  const char amplitude_double_exp_file_name[] = "/amplitude_double_exp.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -19301,8 +20592,8 @@ trexio_exit_code trexio_text_read_amplitude_double_exp(trexio_t* const file,
   strncat (file_full_path, amplitude_double_exp_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_double_exp_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -19363,7 +20654,7 @@ trexio_exit_code trexio_text_read_amplitude_double_exp_size(trexio_t* const file
   /* Build the name of the file with sparse data.
      The amplitude_double_exp.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_double_exp_file_name[256] = "/amplitude_double_exp.txt.size";
+  const char amplitude_double_exp_file_name[] = "/amplitude_double_exp.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -19374,8 +20665,8 @@ trexio_exit_code trexio_text_read_amplitude_double_exp_size(trexio_t* const file
   strncat (file_full_path, amplitude_double_exp_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_double_exp_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
 
@@ -19419,7 +20710,7 @@ trexio_exit_code trexio_text_read_amplitude_triple(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The amplitude_triple.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_triple_file_name[256] = "/amplitude_triple.txt";
+  const char amplitude_triple_file_name[] = "/amplitude_triple.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -19430,8 +20721,8 @@ trexio_exit_code trexio_text_read_amplitude_triple(trexio_t* const file,
   strncat (file_full_path, amplitude_triple_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_triple_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -19492,7 +20783,7 @@ trexio_exit_code trexio_text_read_amplitude_triple_size(trexio_t* const file, in
   /* Build the name of the file with sparse data.
      The amplitude_triple.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_triple_file_name[256] = "/amplitude_triple.txt.size";
+  const char amplitude_triple_file_name[] = "/amplitude_triple.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -19503,8 +20794,8 @@ trexio_exit_code trexio_text_read_amplitude_triple_size(trexio_t* const file, in
   strncat (file_full_path, amplitude_triple_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_triple_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
 
@@ -19548,7 +20839,7 @@ trexio_exit_code trexio_text_read_amplitude_triple_exp(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The amplitude_triple_exp.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_triple_exp_file_name[256] = "/amplitude_triple_exp.txt";
+  const char amplitude_triple_exp_file_name[] = "/amplitude_triple_exp.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -19559,8 +20850,8 @@ trexio_exit_code trexio_text_read_amplitude_triple_exp(trexio_t* const file,
   strncat (file_full_path, amplitude_triple_exp_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_triple_exp_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -19621,7 +20912,7 @@ trexio_exit_code trexio_text_read_amplitude_triple_exp_size(trexio_t* const file
   /* Build the name of the file with sparse data.
      The amplitude_triple_exp.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_triple_exp_file_name[256] = "/amplitude_triple_exp.txt.size";
+  const char amplitude_triple_exp_file_name[] = "/amplitude_triple_exp.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -19632,8 +20923,8 @@ trexio_exit_code trexio_text_read_amplitude_triple_exp_size(trexio_t* const file
   strncat (file_full_path, amplitude_triple_exp_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_triple_exp_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
 
@@ -19677,7 +20968,7 @@ trexio_exit_code trexio_text_read_amplitude_quadruple(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The amplitude_quadruple.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_quadruple_file_name[256] = "/amplitude_quadruple.txt";
+  const char amplitude_quadruple_file_name[] = "/amplitude_quadruple.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -19688,8 +20979,8 @@ trexio_exit_code trexio_text_read_amplitude_quadruple(trexio_t* const file,
   strncat (file_full_path, amplitude_quadruple_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_quadruple_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -19750,7 +21041,7 @@ trexio_exit_code trexio_text_read_amplitude_quadruple_size(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The amplitude_quadruple.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_quadruple_file_name[256] = "/amplitude_quadruple.txt.size";
+  const char amplitude_quadruple_file_name[] = "/amplitude_quadruple.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -19761,8 +21052,8 @@ trexio_exit_code trexio_text_read_amplitude_quadruple_size(trexio_t* const file,
   strncat (file_full_path, amplitude_quadruple_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_quadruple_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
 
@@ -19806,7 +21097,7 @@ trexio_exit_code trexio_text_read_amplitude_quadruple_exp(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The amplitude_quadruple_exp.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_quadruple_exp_file_name[256] = "/amplitude_quadruple_exp.txt";
+  const char amplitude_quadruple_exp_file_name[] = "/amplitude_quadruple_exp.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -19817,8 +21108,8 @@ trexio_exit_code trexio_text_read_amplitude_quadruple_exp(trexio_t* const file,
   strncat (file_full_path, amplitude_quadruple_exp_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_quadruple_exp_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -19879,7 +21170,7 @@ trexio_exit_code trexio_text_read_amplitude_quadruple_exp_size(trexio_t* const f
   /* Build the name of the file with sparse data.
      The amplitude_quadruple_exp.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char amplitude_quadruple_exp_file_name[256] = "/amplitude_quadruple_exp.txt.size";
+  const char amplitude_quadruple_exp_file_name[] = "/amplitude_quadruple_exp.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -19890,8 +21181,8 @@ trexio_exit_code trexio_text_read_amplitude_quadruple_exp_size(trexio_t* const f
   strncat (file_full_path, amplitude_quadruple_exp_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_quadruple_exp_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
 
@@ -19935,7 +21226,7 @@ trexio_exit_code trexio_text_read_rdm_2e(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The rdm_2e.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_file_name[256] = "/rdm_2e.txt";
+  const char rdm_2e_file_name[] = "/rdm_2e.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -19946,8 +21237,8 @@ trexio_exit_code trexio_text_read_rdm_2e(trexio_t* const file,
   strncat (file_full_path, rdm_2e_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -20008,7 +21299,7 @@ trexio_exit_code trexio_text_read_rdm_2e_size(trexio_t* const file, int64_t* con
   /* Build the name of the file with sparse data.
      The rdm_2e.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_file_name[256] = "/rdm_2e.txt.size";
+  const char rdm_2e_file_name[] = "/rdm_2e.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -20019,8 +21310,8 @@ trexio_exit_code trexio_text_read_rdm_2e_size(trexio_t* const file, int64_t* con
   strncat (file_full_path, rdm_2e_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
 
@@ -20064,7 +21355,7 @@ trexio_exit_code trexio_text_read_rdm_2e_upup(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The rdm_2e_upup.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_upup_file_name[256] = "/rdm_2e_upup.txt";
+  const char rdm_2e_upup_file_name[] = "/rdm_2e_upup.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -20075,8 +21366,8 @@ trexio_exit_code trexio_text_read_rdm_2e_upup(trexio_t* const file,
   strncat (file_full_path, rdm_2e_upup_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_upup_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -20137,7 +21428,7 @@ trexio_exit_code trexio_text_read_rdm_2e_upup_size(trexio_t* const file, int64_t
   /* Build the name of the file with sparse data.
      The rdm_2e_upup.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_upup_file_name[256] = "/rdm_2e_upup.txt.size";
+  const char rdm_2e_upup_file_name[] = "/rdm_2e_upup.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -20148,8 +21439,8 @@ trexio_exit_code trexio_text_read_rdm_2e_upup_size(trexio_t* const file, int64_t
   strncat (file_full_path, rdm_2e_upup_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_upup_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
 
@@ -20193,7 +21484,7 @@ trexio_exit_code trexio_text_read_rdm_2e_dndn(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The rdm_2e_dndn.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_dndn_file_name[256] = "/rdm_2e_dndn.txt";
+  const char rdm_2e_dndn_file_name[] = "/rdm_2e_dndn.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -20204,8 +21495,8 @@ trexio_exit_code trexio_text_read_rdm_2e_dndn(trexio_t* const file,
   strncat (file_full_path, rdm_2e_dndn_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_dndn_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -20266,7 +21557,7 @@ trexio_exit_code trexio_text_read_rdm_2e_dndn_size(trexio_t* const file, int64_t
   /* Build the name of the file with sparse data.
      The rdm_2e_dndn.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_dndn_file_name[256] = "/rdm_2e_dndn.txt.size";
+  const char rdm_2e_dndn_file_name[] = "/rdm_2e_dndn.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -20277,8 +21568,8 @@ trexio_exit_code trexio_text_read_rdm_2e_dndn_size(trexio_t* const file, int64_t
   strncat (file_full_path, rdm_2e_dndn_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_dndn_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
 
@@ -20322,7 +21613,7 @@ trexio_exit_code trexio_text_read_rdm_2e_updn(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The rdm_2e_updn.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_updn_file_name[256] = "/rdm_2e_updn.txt";
+  const char rdm_2e_updn_file_name[] = "/rdm_2e_updn.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -20333,8 +21624,8 @@ trexio_exit_code trexio_text_read_rdm_2e_updn(trexio_t* const file,
   strncat (file_full_path, rdm_2e_updn_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_updn_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -20395,7 +21686,7 @@ trexio_exit_code trexio_text_read_rdm_2e_updn_size(trexio_t* const file, int64_t
   /* Build the name of the file with sparse data.
      The rdm_2e_updn.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_updn_file_name[256] = "/rdm_2e_updn.txt.size";
+  const char rdm_2e_updn_file_name[] = "/rdm_2e_updn.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -20406,8 +21697,8 @@ trexio_exit_code trexio_text_read_rdm_2e_updn_size(trexio_t* const file, int64_t
   strncat (file_full_path, rdm_2e_updn_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_updn_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
 
@@ -20451,7 +21742,7 @@ trexio_exit_code trexio_text_read_rdm_2e_transition(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The rdm_2e_transition.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_transition_file_name[256] = "/rdm_2e_transition.txt";
+  const char rdm_2e_transition_file_name[] = "/rdm_2e_transition.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -20462,8 +21753,8 @@ trexio_exit_code trexio_text_read_rdm_2e_transition(trexio_t* const file,
   strncat (file_full_path, rdm_2e_transition_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_transition_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -20524,7 +21815,7 @@ trexio_exit_code trexio_text_read_rdm_2e_transition_size(trexio_t* const file, i
   /* Build the name of the file with sparse data.
      The rdm_2e_transition.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_transition_file_name[256] = "/rdm_2e_transition.txt.size";
+  const char rdm_2e_transition_file_name[] = "/rdm_2e_transition.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -20535,8 +21826,8 @@ trexio_exit_code trexio_text_read_rdm_2e_transition_size(trexio_t* const file, i
   strncat (file_full_path, rdm_2e_transition_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_transition_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
 
@@ -20580,7 +21871,7 @@ trexio_exit_code trexio_text_read_rdm_2e_cholesky(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The rdm_2e_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_cholesky_file_name[256] = "/rdm_2e_cholesky.txt";
+  const char rdm_2e_cholesky_file_name[] = "/rdm_2e_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -20591,8 +21882,8 @@ trexio_exit_code trexio_text_read_rdm_2e_cholesky(trexio_t* const file,
   strncat (file_full_path, rdm_2e_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_cholesky_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -20653,7 +21944,7 @@ trexio_exit_code trexio_text_read_rdm_2e_cholesky_size(trexio_t* const file, int
   /* Build the name of the file with sparse data.
      The rdm_2e_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_cholesky_file_name[256] = "/rdm_2e_cholesky.txt.size";
+  const char rdm_2e_cholesky_file_name[] = "/rdm_2e_cholesky.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -20664,8 +21955,8 @@ trexio_exit_code trexio_text_read_rdm_2e_cholesky_size(trexio_t* const file, int
   strncat (file_full_path, rdm_2e_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_cholesky_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
 
@@ -20709,7 +22000,7 @@ trexio_exit_code trexio_text_read_rdm_2e_upup_cholesky(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The rdm_2e_upup_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_upup_cholesky_file_name[256] = "/rdm_2e_upup_cholesky.txt";
+  const char rdm_2e_upup_cholesky_file_name[] = "/rdm_2e_upup_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -20720,8 +22011,8 @@ trexio_exit_code trexio_text_read_rdm_2e_upup_cholesky(trexio_t* const file,
   strncat (file_full_path, rdm_2e_upup_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_upup_cholesky_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -20782,7 +22073,7 @@ trexio_exit_code trexio_text_read_rdm_2e_upup_cholesky_size(trexio_t* const file
   /* Build the name of the file with sparse data.
      The rdm_2e_upup_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_upup_cholesky_file_name[256] = "/rdm_2e_upup_cholesky.txt.size";
+  const char rdm_2e_upup_cholesky_file_name[] = "/rdm_2e_upup_cholesky.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -20793,8 +22084,8 @@ trexio_exit_code trexio_text_read_rdm_2e_upup_cholesky_size(trexio_t* const file
   strncat (file_full_path, rdm_2e_upup_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_upup_cholesky_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
 
@@ -20838,7 +22129,7 @@ trexio_exit_code trexio_text_read_rdm_2e_dndn_cholesky(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The rdm_2e_dndn_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_dndn_cholesky_file_name[256] = "/rdm_2e_dndn_cholesky.txt";
+  const char rdm_2e_dndn_cholesky_file_name[] = "/rdm_2e_dndn_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -20849,8 +22140,8 @@ trexio_exit_code trexio_text_read_rdm_2e_dndn_cholesky(trexio_t* const file,
   strncat (file_full_path, rdm_2e_dndn_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_dndn_cholesky_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -20911,7 +22202,7 @@ trexio_exit_code trexio_text_read_rdm_2e_dndn_cholesky_size(trexio_t* const file
   /* Build the name of the file with sparse data.
      The rdm_2e_dndn_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_dndn_cholesky_file_name[256] = "/rdm_2e_dndn_cholesky.txt.size";
+  const char rdm_2e_dndn_cholesky_file_name[] = "/rdm_2e_dndn_cholesky.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -20922,8 +22213,8 @@ trexio_exit_code trexio_text_read_rdm_2e_dndn_cholesky_size(trexio_t* const file
   strncat (file_full_path, rdm_2e_dndn_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_dndn_cholesky_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
 
@@ -20967,7 +22258,7 @@ trexio_exit_code trexio_text_read_rdm_2e_updn_cholesky(trexio_t* const file,
   /* Build the name of the file with sparse data.
      The rdm_2e_updn_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_updn_cholesky_file_name[256] = "/rdm_2e_updn_cholesky.txt";
+  const char rdm_2e_updn_cholesky_file_name[] = "/rdm_2e_updn_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -20978,8 +22269,8 @@ trexio_exit_code trexio_text_read_rdm_2e_updn_cholesky(trexio_t* const file,
   strncat (file_full_path, rdm_2e_updn_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_updn_cholesky_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -21040,7 +22331,7 @@ trexio_exit_code trexio_text_read_rdm_2e_updn_cholesky_size(trexio_t* const file
   /* Build the name of the file with sparse data.
      The rdm_2e_updn_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed?
    */
-  const char rdm_2e_updn_cholesky_file_name[256] = "/rdm_2e_updn_cholesky.txt.size";
+  const char rdm_2e_updn_cholesky_file_name[] = "/rdm_2e_updn_cholesky.txt.size";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -21051,8 +22342,8 @@ trexio_exit_code trexio_text_read_rdm_2e_updn_cholesky_size(trexio_t* const file
   strncat (file_full_path, rdm_2e_updn_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_updn_cholesky_file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
 
@@ -21986,7 +23277,7 @@ trexio_exit_code trexio_text_read_determinant_coefficient(trexio_t* const file,
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
   if (dset == NULL) return TREXIO_INVALID_ARG_6;
 
-  const char file_name[256] = "/determinant_coefficient.txt";
+  const char file_name[] = "/determinant_coefficient.txt";
 
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
@@ -21996,8 +23287,8 @@ trexio_exit_code trexio_text_read_determinant_coefficient(trexio_t* const file,
   /* Append name of the file with sparse data */
   strncat (file_full_path, file_name, TREXIO_MAX_FILENAME_LENGTH - sizeof(file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly.
@@ -22049,7 +23340,7 @@ trexio_text_read_determinant_coefficient_size(trexio_t* const file, int64_t* con
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (size_max == NULL) return TREXIO_INVALID_ARG_2;
 
-  const char file_name[256] = "/determinant_coefficient.txt.size";
+  const char file_name[] = "/determinant_coefficient.txt.size";
 
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
@@ -22059,8 +23350,8 @@ trexio_text_read_determinant_coefficient_size(trexio_t* const file, int64_t* con
   /* Append name of the file with sparse data */
   strncat (file_full_path, file_name, TREXIO_MAX_FILENAME_LENGTH - sizeof(file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Read the data from the file and check the return code of fprintf to verify that > 0 bytes have been read or reached EOF */
@@ -22102,7 +23393,7 @@ trexio_exit_code trexio_text_read_csf_coefficient(trexio_t* const file,
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
   if (dset == NULL) return TREXIO_INVALID_ARG_6;
 
-  const char file_name[256] = "/csf_coefficient.txt";
+  const char file_name[] = "/csf_coefficient.txt";
 
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
@@ -22112,8 +23403,8 @@ trexio_exit_code trexio_text_read_csf_coefficient(trexio_t* const file,
   /* Append name of the file with sparse data */
   strncat (file_full_path, file_name, TREXIO_MAX_FILENAME_LENGTH - sizeof(file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly.
@@ -22165,7 +23456,7 @@ trexio_text_read_csf_coefficient_size(trexio_t* const file, int64_t* const size_
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (size_max == NULL) return TREXIO_INVALID_ARG_2;
 
-  const char file_name[256] = "/csf_coefficient.txt.size";
+  const char file_name[] = "/csf_coefficient.txt.size";
 
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
@@ -22175,8 +23466,8 @@ trexio_text_read_csf_coefficient_size(trexio_t* const file, int64_t* const size_
   /* Append name of the file with sparse data */
   strncat (file_full_path, file_name, TREXIO_MAX_FILENAME_LENGTH - sizeof(file_name));
 
-  /* Open the file in "r" (read) mode to guarantee that no truncation happens upon consecutive reads */
-  FILE* f = fopen(file_full_path, "r");
+  /* Open the file in "rb" (read binary) mode to guarantee consistent file positions across platforms */
+  FILE* f = fopen(file_full_path, "rb");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Read the data from the file and check the return code of fprintf to verify that > 0 bytes have been read or reached EOF */
@@ -24105,6 +25396,120 @@ trexio_text_write_ao_1e_int_core_hamiltonian (trexio_t* const file, const double
 }
 
 trexio_exit_code
+trexio_text_write_ao_1e_int_dipole_x (trexio_t* const file, const double* ao_1e_int_dipole_x,
+                                const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file  == NULL)  return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_x == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  if (file->mode == 'r') return TREXIO_READONLY;
+
+  ao_1e_int_t* const ao_1e_int = trexio_text_read_ao_1e_int((trexio_text_t*) file);
+  if (ao_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (ao_1e_int->ao_1e_int_dipole_x != NULL) {
+    FREE(ao_1e_int->ao_1e_int_dipole_x);
+  }
+
+  ao_1e_int->rank_ao_1e_int_dipole_x = rank;
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<ao_1e_int->rank_ao_1e_int_dipole_x; ++i){
+    ao_1e_int->dims_ao_1e_int_dipole_x[i] = dims[i];
+    dim_size *= dims[i];
+  }
+
+  ao_1e_int->ao_1e_int_dipole_x = CALLOC(dim_size, double);
+
+  for (uint64_t i=0 ; i<dim_size ; ++i) {
+    ao_1e_int->ao_1e_int_dipole_x[i] = ao_1e_int_dipole_x[i];
+  }
+
+  ao_1e_int->to_flush = 1;
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
+trexio_text_write_ao_1e_int_dipole_y (trexio_t* const file, const double* ao_1e_int_dipole_y,
+                                const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file  == NULL)  return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_y == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  if (file->mode == 'r') return TREXIO_READONLY;
+
+  ao_1e_int_t* const ao_1e_int = trexio_text_read_ao_1e_int((trexio_text_t*) file);
+  if (ao_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (ao_1e_int->ao_1e_int_dipole_y != NULL) {
+    FREE(ao_1e_int->ao_1e_int_dipole_y);
+  }
+
+  ao_1e_int->rank_ao_1e_int_dipole_y = rank;
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<ao_1e_int->rank_ao_1e_int_dipole_y; ++i){
+    ao_1e_int->dims_ao_1e_int_dipole_y[i] = dims[i];
+    dim_size *= dims[i];
+  }
+
+  ao_1e_int->ao_1e_int_dipole_y = CALLOC(dim_size, double);
+
+  for (uint64_t i=0 ; i<dim_size ; ++i) {
+    ao_1e_int->ao_1e_int_dipole_y[i] = ao_1e_int_dipole_y[i];
+  }
+
+  ao_1e_int->to_flush = 1;
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
+trexio_text_write_ao_1e_int_dipole_z (trexio_t* const file, const double* ao_1e_int_dipole_z,
+                                const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file  == NULL)  return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_z == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  if (file->mode == 'r') return TREXIO_READONLY;
+
+  ao_1e_int_t* const ao_1e_int = trexio_text_read_ao_1e_int((trexio_text_t*) file);
+  if (ao_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (ao_1e_int->ao_1e_int_dipole_z != NULL) {
+    FREE(ao_1e_int->ao_1e_int_dipole_z);
+  }
+
+  ao_1e_int->rank_ao_1e_int_dipole_z = rank;
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<ao_1e_int->rank_ao_1e_int_dipole_z; ++i){
+    ao_1e_int->dims_ao_1e_int_dipole_z[i] = dims[i];
+    dim_size *= dims[i];
+  }
+
+  ao_1e_int->ao_1e_int_dipole_z = CALLOC(dim_size, double);
+
+  for (uint64_t i=0 ; i<dim_size ; ++i) {
+    ao_1e_int->ao_1e_int_dipole_z[i] = ao_1e_int_dipole_z[i];
+  }
+
+  ao_1e_int->to_flush = 1;
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
 trexio_text_write_ao_1e_int_overlap_im (trexio_t* const file, const double* ao_1e_int_overlap_im,
                                 const uint32_t rank, const uint64_t* dims)
 {
@@ -24287,6 +25692,120 @@ trexio_text_write_ao_1e_int_core_hamiltonian_im (trexio_t* const file, const dou
 
   for (uint64_t i=0 ; i<dim_size ; ++i) {
     ao_1e_int->ao_1e_int_core_hamiltonian_im[i] = ao_1e_int_core_hamiltonian_im[i];
+  }
+
+  ao_1e_int->to_flush = 1;
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
+trexio_text_write_ao_1e_int_dipole_x_im (trexio_t* const file, const double* ao_1e_int_dipole_x_im,
+                                const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file  == NULL)  return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_x_im == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  if (file->mode == 'r') return TREXIO_READONLY;
+
+  ao_1e_int_t* const ao_1e_int = trexio_text_read_ao_1e_int((trexio_text_t*) file);
+  if (ao_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (ao_1e_int->ao_1e_int_dipole_x_im != NULL) {
+    FREE(ao_1e_int->ao_1e_int_dipole_x_im);
+  }
+
+  ao_1e_int->rank_ao_1e_int_dipole_x_im = rank;
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<ao_1e_int->rank_ao_1e_int_dipole_x_im; ++i){
+    ao_1e_int->dims_ao_1e_int_dipole_x_im[i] = dims[i];
+    dim_size *= dims[i];
+  }
+
+  ao_1e_int->ao_1e_int_dipole_x_im = CALLOC(dim_size, double);
+
+  for (uint64_t i=0 ; i<dim_size ; ++i) {
+    ao_1e_int->ao_1e_int_dipole_x_im[i] = ao_1e_int_dipole_x_im[i];
+  }
+
+  ao_1e_int->to_flush = 1;
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
+trexio_text_write_ao_1e_int_dipole_y_im (trexio_t* const file, const double* ao_1e_int_dipole_y_im,
+                                const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file  == NULL)  return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_y_im == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  if (file->mode == 'r') return TREXIO_READONLY;
+
+  ao_1e_int_t* const ao_1e_int = trexio_text_read_ao_1e_int((trexio_text_t*) file);
+  if (ao_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (ao_1e_int->ao_1e_int_dipole_y_im != NULL) {
+    FREE(ao_1e_int->ao_1e_int_dipole_y_im);
+  }
+
+  ao_1e_int->rank_ao_1e_int_dipole_y_im = rank;
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<ao_1e_int->rank_ao_1e_int_dipole_y_im; ++i){
+    ao_1e_int->dims_ao_1e_int_dipole_y_im[i] = dims[i];
+    dim_size *= dims[i];
+  }
+
+  ao_1e_int->ao_1e_int_dipole_y_im = CALLOC(dim_size, double);
+
+  for (uint64_t i=0 ; i<dim_size ; ++i) {
+    ao_1e_int->ao_1e_int_dipole_y_im[i] = ao_1e_int_dipole_y_im[i];
+  }
+
+  ao_1e_int->to_flush = 1;
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
+trexio_text_write_ao_1e_int_dipole_z_im (trexio_t* const file, const double* ao_1e_int_dipole_z_im,
+                                const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file  == NULL)  return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_z_im == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  if (file->mode == 'r') return TREXIO_READONLY;
+
+  ao_1e_int_t* const ao_1e_int = trexio_text_read_ao_1e_int((trexio_text_t*) file);
+  if (ao_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (ao_1e_int->ao_1e_int_dipole_z_im != NULL) {
+    FREE(ao_1e_int->ao_1e_int_dipole_z_im);
+  }
+
+  ao_1e_int->rank_ao_1e_int_dipole_z_im = rank;
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<ao_1e_int->rank_ao_1e_int_dipole_z_im; ++i){
+    ao_1e_int->dims_ao_1e_int_dipole_z_im[i] = dims[i];
+    dim_size *= dims[i];
+  }
+
+  ao_1e_int->ao_1e_int_dipole_z_im = CALLOC(dim_size, double);
+
+  for (uint64_t i=0 ; i<dim_size ; ++i) {
+    ao_1e_int->ao_1e_int_dipole_z_im[i] = ao_1e_int_dipole_z_im[i];
   }
 
   ao_1e_int->to_flush = 1;
@@ -24713,6 +26232,120 @@ trexio_text_write_mo_1e_int_core_hamiltonian (trexio_t* const file, const double
 }
 
 trexio_exit_code
+trexio_text_write_mo_1e_int_dipole_x (trexio_t* const file, const double* mo_1e_int_dipole_x,
+                                const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file  == NULL)  return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_x == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  if (file->mode == 'r') return TREXIO_READONLY;
+
+  mo_1e_int_t* const mo_1e_int = trexio_text_read_mo_1e_int((trexio_text_t*) file);
+  if (mo_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (mo_1e_int->mo_1e_int_dipole_x != NULL) {
+    FREE(mo_1e_int->mo_1e_int_dipole_x);
+  }
+
+  mo_1e_int->rank_mo_1e_int_dipole_x = rank;
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<mo_1e_int->rank_mo_1e_int_dipole_x; ++i){
+    mo_1e_int->dims_mo_1e_int_dipole_x[i] = dims[i];
+    dim_size *= dims[i];
+  }
+
+  mo_1e_int->mo_1e_int_dipole_x = CALLOC(dim_size, double);
+
+  for (uint64_t i=0 ; i<dim_size ; ++i) {
+    mo_1e_int->mo_1e_int_dipole_x[i] = mo_1e_int_dipole_x[i];
+  }
+
+  mo_1e_int->to_flush = 1;
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
+trexio_text_write_mo_1e_int_dipole_y (trexio_t* const file, const double* mo_1e_int_dipole_y,
+                                const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file  == NULL)  return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_y == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  if (file->mode == 'r') return TREXIO_READONLY;
+
+  mo_1e_int_t* const mo_1e_int = trexio_text_read_mo_1e_int((trexio_text_t*) file);
+  if (mo_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (mo_1e_int->mo_1e_int_dipole_y != NULL) {
+    FREE(mo_1e_int->mo_1e_int_dipole_y);
+  }
+
+  mo_1e_int->rank_mo_1e_int_dipole_y = rank;
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<mo_1e_int->rank_mo_1e_int_dipole_y; ++i){
+    mo_1e_int->dims_mo_1e_int_dipole_y[i] = dims[i];
+    dim_size *= dims[i];
+  }
+
+  mo_1e_int->mo_1e_int_dipole_y = CALLOC(dim_size, double);
+
+  for (uint64_t i=0 ; i<dim_size ; ++i) {
+    mo_1e_int->mo_1e_int_dipole_y[i] = mo_1e_int_dipole_y[i];
+  }
+
+  mo_1e_int->to_flush = 1;
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
+trexio_text_write_mo_1e_int_dipole_z (trexio_t* const file, const double* mo_1e_int_dipole_z,
+                                const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file  == NULL)  return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_z == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  if (file->mode == 'r') return TREXIO_READONLY;
+
+  mo_1e_int_t* const mo_1e_int = trexio_text_read_mo_1e_int((trexio_text_t*) file);
+  if (mo_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (mo_1e_int->mo_1e_int_dipole_z != NULL) {
+    FREE(mo_1e_int->mo_1e_int_dipole_z);
+  }
+
+  mo_1e_int->rank_mo_1e_int_dipole_z = rank;
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<mo_1e_int->rank_mo_1e_int_dipole_z; ++i){
+    mo_1e_int->dims_mo_1e_int_dipole_z[i] = dims[i];
+    dim_size *= dims[i];
+  }
+
+  mo_1e_int->mo_1e_int_dipole_z = CALLOC(dim_size, double);
+
+  for (uint64_t i=0 ; i<dim_size ; ++i) {
+    mo_1e_int->mo_1e_int_dipole_z[i] = mo_1e_int_dipole_z[i];
+  }
+
+  mo_1e_int->to_flush = 1;
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
 trexio_text_write_mo_1e_int_overlap_im (trexio_t* const file, const double* mo_1e_int_overlap_im,
                                 const uint32_t rank, const uint64_t* dims)
 {
@@ -24895,6 +26528,120 @@ trexio_text_write_mo_1e_int_core_hamiltonian_im (trexio_t* const file, const dou
 
   for (uint64_t i=0 ; i<dim_size ; ++i) {
     mo_1e_int->mo_1e_int_core_hamiltonian_im[i] = mo_1e_int_core_hamiltonian_im[i];
+  }
+
+  mo_1e_int->to_flush = 1;
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
+trexio_text_write_mo_1e_int_dipole_x_im (trexio_t* const file, const double* mo_1e_int_dipole_x_im,
+                                const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file  == NULL)  return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_x_im == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  if (file->mode == 'r') return TREXIO_READONLY;
+
+  mo_1e_int_t* const mo_1e_int = trexio_text_read_mo_1e_int((trexio_text_t*) file);
+  if (mo_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (mo_1e_int->mo_1e_int_dipole_x_im != NULL) {
+    FREE(mo_1e_int->mo_1e_int_dipole_x_im);
+  }
+
+  mo_1e_int->rank_mo_1e_int_dipole_x_im = rank;
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<mo_1e_int->rank_mo_1e_int_dipole_x_im; ++i){
+    mo_1e_int->dims_mo_1e_int_dipole_x_im[i] = dims[i];
+    dim_size *= dims[i];
+  }
+
+  mo_1e_int->mo_1e_int_dipole_x_im = CALLOC(dim_size, double);
+
+  for (uint64_t i=0 ; i<dim_size ; ++i) {
+    mo_1e_int->mo_1e_int_dipole_x_im[i] = mo_1e_int_dipole_x_im[i];
+  }
+
+  mo_1e_int->to_flush = 1;
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
+trexio_text_write_mo_1e_int_dipole_y_im (trexio_t* const file, const double* mo_1e_int_dipole_y_im,
+                                const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file  == NULL)  return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_y_im == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  if (file->mode == 'r') return TREXIO_READONLY;
+
+  mo_1e_int_t* const mo_1e_int = trexio_text_read_mo_1e_int((trexio_text_t*) file);
+  if (mo_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (mo_1e_int->mo_1e_int_dipole_y_im != NULL) {
+    FREE(mo_1e_int->mo_1e_int_dipole_y_im);
+  }
+
+  mo_1e_int->rank_mo_1e_int_dipole_y_im = rank;
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<mo_1e_int->rank_mo_1e_int_dipole_y_im; ++i){
+    mo_1e_int->dims_mo_1e_int_dipole_y_im[i] = dims[i];
+    dim_size *= dims[i];
+  }
+
+  mo_1e_int->mo_1e_int_dipole_y_im = CALLOC(dim_size, double);
+
+  for (uint64_t i=0 ; i<dim_size ; ++i) {
+    mo_1e_int->mo_1e_int_dipole_y_im[i] = mo_1e_int_dipole_y_im[i];
+  }
+
+  mo_1e_int->to_flush = 1;
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
+trexio_text_write_mo_1e_int_dipole_z_im (trexio_t* const file, const double* mo_1e_int_dipole_z_im,
+                                const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file  == NULL)  return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_z_im == NULL)  return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  if (file->mode == 'r') return TREXIO_READONLY;
+
+  mo_1e_int_t* const mo_1e_int = trexio_text_read_mo_1e_int((trexio_text_t*) file);
+  if (mo_1e_int == NULL) return TREXIO_FAILURE;
+
+  if (mo_1e_int->mo_1e_int_dipole_z_im != NULL) {
+    FREE(mo_1e_int->mo_1e_int_dipole_z_im);
+  }
+
+  mo_1e_int->rank_mo_1e_int_dipole_z_im = rank;
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<mo_1e_int->rank_mo_1e_int_dipole_z_im; ++i){
+    mo_1e_int->dims_mo_1e_int_dipole_z_im[i] = dims[i];
+    dim_size *= dims[i];
+  }
+
+  mo_1e_int->mo_1e_int_dipole_z_im = CALLOC(dim_size, double);
+
+  for (uint64_t i=0 ; i<dim_size ; ++i) {
+    mo_1e_int->mo_1e_int_dipole_z_im[i] = mo_1e_int_dipole_z_im[i];
   }
 
   mo_1e_int->to_flush = 1;
@@ -25709,7 +27456,7 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The ao_2e_int_eri.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char ao_2e_int_eri_file_name[256] = "/ao_2e_int_eri.txt";
+  const char ao_2e_int_eri_file_name[] = "/ao_2e_int_eri.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -25720,8 +27467,8 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri(trexio_t* const file,
   strncat (file_full_path, ao_2e_int_eri_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_2e_int_eri_file_name));
 
-  /* Open the file in "a" (append) mode to guarantee that no truncation happens upon consecutive writes */
-  FILE* f = fopen(file_full_path, "a");
+  /* Open the file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE* f = fopen(file_full_path, "ab");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -25775,8 +27522,8 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri(trexio_t* const file,
   /* Append .size to the file_full_path in order to write additional info about the written buffer of data */
   strncat(file_full_path, ".size", 6);
 
-  /* Open the new file in "a" (append) mode to append info about the buffer that has been just written */
-  FILE *f_wSize = fopen(file_full_path, "a");
+  /* Open the new file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE *f_wSize = fopen(file_full_path, "ab");
   if (f_wSize == NULL) return TREXIO_FILE_ERROR;
 
   /* Write the buffer_size */
@@ -25790,7 +27537,7 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char ao_2e_int_file_name[256] = "/ao_2e_int.txt";
+  const char ao_2e_int_file_name[] = "/ao_2e_int.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -25824,7 +27571,7 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri_lr(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The ao_2e_int_eri_lr.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char ao_2e_int_eri_lr_file_name[256] = "/ao_2e_int_eri_lr.txt";
+  const char ao_2e_int_eri_lr_file_name[] = "/ao_2e_int_eri_lr.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -25835,8 +27582,8 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri_lr(trexio_t* const file,
   strncat (file_full_path, ao_2e_int_eri_lr_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_2e_int_eri_lr_file_name));
 
-  /* Open the file in "a" (append) mode to guarantee that no truncation happens upon consecutive writes */
-  FILE* f = fopen(file_full_path, "a");
+  /* Open the file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE* f = fopen(file_full_path, "ab");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -25890,8 +27637,8 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri_lr(trexio_t* const file,
   /* Append .size to the file_full_path in order to write additional info about the written buffer of data */
   strncat(file_full_path, ".size", 6);
 
-  /* Open the new file in "a" (append) mode to append info about the buffer that has been just written */
-  FILE *f_wSize = fopen(file_full_path, "a");
+  /* Open the new file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE *f_wSize = fopen(file_full_path, "ab");
   if (f_wSize == NULL) return TREXIO_FILE_ERROR;
 
   /* Write the buffer_size */
@@ -25905,7 +27652,7 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri_lr(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char ao_2e_int_file_name[256] = "/ao_2e_int.txt";
+  const char ao_2e_int_file_name[] = "/ao_2e_int.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -25939,7 +27686,7 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri_cholesky(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The ao_2e_int_eri_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char ao_2e_int_eri_cholesky_file_name[256] = "/ao_2e_int_eri_cholesky.txt";
+  const char ao_2e_int_eri_cholesky_file_name[] = "/ao_2e_int_eri_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -25950,8 +27697,8 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri_cholesky(trexio_t* const file,
   strncat (file_full_path, ao_2e_int_eri_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_2e_int_eri_cholesky_file_name));
 
-  /* Open the file in "a" (append) mode to guarantee that no truncation happens upon consecutive writes */
-  FILE* f = fopen(file_full_path, "a");
+  /* Open the file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE* f = fopen(file_full_path, "ab");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -26005,8 +27752,8 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri_cholesky(trexio_t* const file,
   /* Append .size to the file_full_path in order to write additional info about the written buffer of data */
   strncat(file_full_path, ".size", 6);
 
-  /* Open the new file in "a" (append) mode to append info about the buffer that has been just written */
-  FILE *f_wSize = fopen(file_full_path, "a");
+  /* Open the new file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE *f_wSize = fopen(file_full_path, "ab");
   if (f_wSize == NULL) return TREXIO_FILE_ERROR;
 
   /* Write the buffer_size */
@@ -26020,7 +27767,7 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri_cholesky(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char ao_2e_int_file_name[256] = "/ao_2e_int.txt";
+  const char ao_2e_int_file_name[] = "/ao_2e_int.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -26054,7 +27801,7 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri_lr_cholesky(trexio_t* const fil
 
   /* Build the name of the file with sparse data*/
   /* The ao_2e_int_eri_lr_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char ao_2e_int_eri_lr_cholesky_file_name[256] = "/ao_2e_int_eri_lr_cholesky.txt";
+  const char ao_2e_int_eri_lr_cholesky_file_name[] = "/ao_2e_int_eri_lr_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -26065,8 +27812,8 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri_lr_cholesky(trexio_t* const fil
   strncat (file_full_path, ao_2e_int_eri_lr_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(ao_2e_int_eri_lr_cholesky_file_name));
 
-  /* Open the file in "a" (append) mode to guarantee that no truncation happens upon consecutive writes */
-  FILE* f = fopen(file_full_path, "a");
+  /* Open the file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE* f = fopen(file_full_path, "ab");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -26120,8 +27867,8 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri_lr_cholesky(trexio_t* const fil
   /* Append .size to the file_full_path in order to write additional info about the written buffer of data */
   strncat(file_full_path, ".size", 6);
 
-  /* Open the new file in "a" (append) mode to append info about the buffer that has been just written */
-  FILE *f_wSize = fopen(file_full_path, "a");
+  /* Open the new file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE *f_wSize = fopen(file_full_path, "ab");
   if (f_wSize == NULL) return TREXIO_FILE_ERROR;
 
   /* Write the buffer_size */
@@ -26135,7 +27882,7 @@ trexio_exit_code trexio_text_write_ao_2e_int_eri_lr_cholesky(trexio_t* const fil
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char ao_2e_int_file_name[256] = "/ao_2e_int.txt";
+  const char ao_2e_int_file_name[] = "/ao_2e_int.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -26169,7 +27916,7 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The mo_2e_int_eri.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char mo_2e_int_eri_file_name[256] = "/mo_2e_int_eri.txt";
+  const char mo_2e_int_eri_file_name[] = "/mo_2e_int_eri.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -26180,8 +27927,8 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri(trexio_t* const file,
   strncat (file_full_path, mo_2e_int_eri_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_2e_int_eri_file_name));
 
-  /* Open the file in "a" (append) mode to guarantee that no truncation happens upon consecutive writes */
-  FILE* f = fopen(file_full_path, "a");
+  /* Open the file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE* f = fopen(file_full_path, "ab");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -26235,8 +27982,8 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri(trexio_t* const file,
   /* Append .size to the file_full_path in order to write additional info about the written buffer of data */
   strncat(file_full_path, ".size", 6);
 
-  /* Open the new file in "a" (append) mode to append info about the buffer that has been just written */
-  FILE *f_wSize = fopen(file_full_path, "a");
+  /* Open the new file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE *f_wSize = fopen(file_full_path, "ab");
   if (f_wSize == NULL) return TREXIO_FILE_ERROR;
 
   /* Write the buffer_size */
@@ -26250,7 +27997,7 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char mo_2e_int_file_name[256] = "/mo_2e_int.txt";
+  const char mo_2e_int_file_name[] = "/mo_2e_int.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -26284,7 +28031,7 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri_lr(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The mo_2e_int_eri_lr.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char mo_2e_int_eri_lr_file_name[256] = "/mo_2e_int_eri_lr.txt";
+  const char mo_2e_int_eri_lr_file_name[] = "/mo_2e_int_eri_lr.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -26295,8 +28042,8 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri_lr(trexio_t* const file,
   strncat (file_full_path, mo_2e_int_eri_lr_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_2e_int_eri_lr_file_name));
 
-  /* Open the file in "a" (append) mode to guarantee that no truncation happens upon consecutive writes */
-  FILE* f = fopen(file_full_path, "a");
+  /* Open the file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE* f = fopen(file_full_path, "ab");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -26350,8 +28097,8 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri_lr(trexio_t* const file,
   /* Append .size to the file_full_path in order to write additional info about the written buffer of data */
   strncat(file_full_path, ".size", 6);
 
-  /* Open the new file in "a" (append) mode to append info about the buffer that has been just written */
-  FILE *f_wSize = fopen(file_full_path, "a");
+  /* Open the new file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE *f_wSize = fopen(file_full_path, "ab");
   if (f_wSize == NULL) return TREXIO_FILE_ERROR;
 
   /* Write the buffer_size */
@@ -26365,7 +28112,7 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri_lr(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char mo_2e_int_file_name[256] = "/mo_2e_int.txt";
+  const char mo_2e_int_file_name[] = "/mo_2e_int.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -26399,7 +28146,7 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri_cholesky(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The mo_2e_int_eri_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char mo_2e_int_eri_cholesky_file_name[256] = "/mo_2e_int_eri_cholesky.txt";
+  const char mo_2e_int_eri_cholesky_file_name[] = "/mo_2e_int_eri_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -26410,8 +28157,8 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri_cholesky(trexio_t* const file,
   strncat (file_full_path, mo_2e_int_eri_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_2e_int_eri_cholesky_file_name));
 
-  /* Open the file in "a" (append) mode to guarantee that no truncation happens upon consecutive writes */
-  FILE* f = fopen(file_full_path, "a");
+  /* Open the file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE* f = fopen(file_full_path, "ab");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -26465,8 +28212,8 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri_cholesky(trexio_t* const file,
   /* Append .size to the file_full_path in order to write additional info about the written buffer of data */
   strncat(file_full_path, ".size", 6);
 
-  /* Open the new file in "a" (append) mode to append info about the buffer that has been just written */
-  FILE *f_wSize = fopen(file_full_path, "a");
+  /* Open the new file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE *f_wSize = fopen(file_full_path, "ab");
   if (f_wSize == NULL) return TREXIO_FILE_ERROR;
 
   /* Write the buffer_size */
@@ -26480,7 +28227,7 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri_cholesky(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char mo_2e_int_file_name[256] = "/mo_2e_int.txt";
+  const char mo_2e_int_file_name[] = "/mo_2e_int.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -26514,7 +28261,7 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri_lr_cholesky(trexio_t* const fil
 
   /* Build the name of the file with sparse data*/
   /* The mo_2e_int_eri_lr_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char mo_2e_int_eri_lr_cholesky_file_name[256] = "/mo_2e_int_eri_lr_cholesky.txt";
+  const char mo_2e_int_eri_lr_cholesky_file_name[] = "/mo_2e_int_eri_lr_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -26525,8 +28272,8 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri_lr_cholesky(trexio_t* const fil
   strncat (file_full_path, mo_2e_int_eri_lr_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(mo_2e_int_eri_lr_cholesky_file_name));
 
-  /* Open the file in "a" (append) mode to guarantee that no truncation happens upon consecutive writes */
-  FILE* f = fopen(file_full_path, "a");
+  /* Open the file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE* f = fopen(file_full_path, "ab");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -26580,8 +28327,8 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri_lr_cholesky(trexio_t* const fil
   /* Append .size to the file_full_path in order to write additional info about the written buffer of data */
   strncat(file_full_path, ".size", 6);
 
-  /* Open the new file in "a" (append) mode to append info about the buffer that has been just written */
-  FILE *f_wSize = fopen(file_full_path, "a");
+  /* Open the new file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE *f_wSize = fopen(file_full_path, "ab");
   if (f_wSize == NULL) return TREXIO_FILE_ERROR;
 
   /* Write the buffer_size */
@@ -26595,7 +28342,7 @@ trexio_exit_code trexio_text_write_mo_2e_int_eri_lr_cholesky(trexio_t* const fil
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char mo_2e_int_file_name[256] = "/mo_2e_int.txt";
+  const char mo_2e_int_file_name[] = "/mo_2e_int.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -26629,7 +28376,7 @@ trexio_exit_code trexio_text_write_csf_det_coefficient(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The csf_det_coefficient.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char csf_det_coefficient_file_name[256] = "/csf_det_coefficient.txt";
+  const char csf_det_coefficient_file_name[] = "/csf_det_coefficient.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -26640,8 +28387,8 @@ trexio_exit_code trexio_text_write_csf_det_coefficient(trexio_t* const file,
   strncat (file_full_path, csf_det_coefficient_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(csf_det_coefficient_file_name));
 
-  /* Open the file in "a" (append) mode to guarantee that no truncation happens upon consecutive writes */
-  FILE* f = fopen(file_full_path, "a");
+  /* Open the file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE* f = fopen(file_full_path, "ab");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -26695,8 +28442,8 @@ trexio_exit_code trexio_text_write_csf_det_coefficient(trexio_t* const file,
   /* Append .size to the file_full_path in order to write additional info about the written buffer of data */
   strncat(file_full_path, ".size", 6);
 
-  /* Open the new file in "a" (append) mode to append info about the buffer that has been just written */
-  FILE *f_wSize = fopen(file_full_path, "a");
+  /* Open the new file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE *f_wSize = fopen(file_full_path, "ab");
   if (f_wSize == NULL) return TREXIO_FILE_ERROR;
 
   /* Write the buffer_size */
@@ -26710,7 +28457,7 @@ trexio_exit_code trexio_text_write_csf_det_coefficient(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char csf_file_name[256] = "/csf.txt";
+  const char csf_file_name[] = "/csf.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -26744,7 +28491,7 @@ trexio_exit_code trexio_text_write_amplitude_single(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The amplitude_single.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char amplitude_single_file_name[256] = "/amplitude_single.txt";
+  const char amplitude_single_file_name[] = "/amplitude_single.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -26755,8 +28502,8 @@ trexio_exit_code trexio_text_write_amplitude_single(trexio_t* const file,
   strncat (file_full_path, amplitude_single_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_single_file_name));
 
-  /* Open the file in "a" (append) mode to guarantee that no truncation happens upon consecutive writes */
-  FILE* f = fopen(file_full_path, "a");
+  /* Open the file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE* f = fopen(file_full_path, "ab");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -26810,8 +28557,8 @@ trexio_exit_code trexio_text_write_amplitude_single(trexio_t* const file,
   /* Append .size to the file_full_path in order to write additional info about the written buffer of data */
   strncat(file_full_path, ".size", 6);
 
-  /* Open the new file in "a" (append) mode to append info about the buffer that has been just written */
-  FILE *f_wSize = fopen(file_full_path, "a");
+  /* Open the new file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE *f_wSize = fopen(file_full_path, "ab");
   if (f_wSize == NULL) return TREXIO_FILE_ERROR;
 
   /* Write the buffer_size */
@@ -26825,7 +28572,7 @@ trexio_exit_code trexio_text_write_amplitude_single(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char amplitude_file_name[256] = "/amplitude.txt";
+  const char amplitude_file_name[] = "/amplitude.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -26859,7 +28606,7 @@ trexio_exit_code trexio_text_write_amplitude_single_exp(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The amplitude_single_exp.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char amplitude_single_exp_file_name[256] = "/amplitude_single_exp.txt";
+  const char amplitude_single_exp_file_name[] = "/amplitude_single_exp.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -26870,8 +28617,8 @@ trexio_exit_code trexio_text_write_amplitude_single_exp(trexio_t* const file,
   strncat (file_full_path, amplitude_single_exp_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_single_exp_file_name));
 
-  /* Open the file in "a" (append) mode to guarantee that no truncation happens upon consecutive writes */
-  FILE* f = fopen(file_full_path, "a");
+  /* Open the file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE* f = fopen(file_full_path, "ab");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -26925,8 +28672,8 @@ trexio_exit_code trexio_text_write_amplitude_single_exp(trexio_t* const file,
   /* Append .size to the file_full_path in order to write additional info about the written buffer of data */
   strncat(file_full_path, ".size", 6);
 
-  /* Open the new file in "a" (append) mode to append info about the buffer that has been just written */
-  FILE *f_wSize = fopen(file_full_path, "a");
+  /* Open the new file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE *f_wSize = fopen(file_full_path, "ab");
   if (f_wSize == NULL) return TREXIO_FILE_ERROR;
 
   /* Write the buffer_size */
@@ -26940,7 +28687,7 @@ trexio_exit_code trexio_text_write_amplitude_single_exp(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char amplitude_file_name[256] = "/amplitude.txt";
+  const char amplitude_file_name[] = "/amplitude.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -26974,7 +28721,7 @@ trexio_exit_code trexio_text_write_amplitude_double(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The amplitude_double.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char amplitude_double_file_name[256] = "/amplitude_double.txt";
+  const char amplitude_double_file_name[] = "/amplitude_double.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -26985,8 +28732,8 @@ trexio_exit_code trexio_text_write_amplitude_double(trexio_t* const file,
   strncat (file_full_path, amplitude_double_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_double_file_name));
 
-  /* Open the file in "a" (append) mode to guarantee that no truncation happens upon consecutive writes */
-  FILE* f = fopen(file_full_path, "a");
+  /* Open the file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE* f = fopen(file_full_path, "ab");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -27040,8 +28787,8 @@ trexio_exit_code trexio_text_write_amplitude_double(trexio_t* const file,
   /* Append .size to the file_full_path in order to write additional info about the written buffer of data */
   strncat(file_full_path, ".size", 6);
 
-  /* Open the new file in "a" (append) mode to append info about the buffer that has been just written */
-  FILE *f_wSize = fopen(file_full_path, "a");
+  /* Open the new file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE *f_wSize = fopen(file_full_path, "ab");
   if (f_wSize == NULL) return TREXIO_FILE_ERROR;
 
   /* Write the buffer_size */
@@ -27055,7 +28802,7 @@ trexio_exit_code trexio_text_write_amplitude_double(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char amplitude_file_name[256] = "/amplitude.txt";
+  const char amplitude_file_name[] = "/amplitude.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -27089,7 +28836,7 @@ trexio_exit_code trexio_text_write_amplitude_double_exp(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The amplitude_double_exp.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char amplitude_double_exp_file_name[256] = "/amplitude_double_exp.txt";
+  const char amplitude_double_exp_file_name[] = "/amplitude_double_exp.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -27100,8 +28847,8 @@ trexio_exit_code trexio_text_write_amplitude_double_exp(trexio_t* const file,
   strncat (file_full_path, amplitude_double_exp_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_double_exp_file_name));
 
-  /* Open the file in "a" (append) mode to guarantee that no truncation happens upon consecutive writes */
-  FILE* f = fopen(file_full_path, "a");
+  /* Open the file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE* f = fopen(file_full_path, "ab");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -27155,8 +28902,8 @@ trexio_exit_code trexio_text_write_amplitude_double_exp(trexio_t* const file,
   /* Append .size to the file_full_path in order to write additional info about the written buffer of data */
   strncat(file_full_path, ".size", 6);
 
-  /* Open the new file in "a" (append) mode to append info about the buffer that has been just written */
-  FILE *f_wSize = fopen(file_full_path, "a");
+  /* Open the new file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE *f_wSize = fopen(file_full_path, "ab");
   if (f_wSize == NULL) return TREXIO_FILE_ERROR;
 
   /* Write the buffer_size */
@@ -27170,7 +28917,7 @@ trexio_exit_code trexio_text_write_amplitude_double_exp(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char amplitude_file_name[256] = "/amplitude.txt";
+  const char amplitude_file_name[] = "/amplitude.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -27204,7 +28951,7 @@ trexio_exit_code trexio_text_write_amplitude_triple(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The amplitude_triple.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char amplitude_triple_file_name[256] = "/amplitude_triple.txt";
+  const char amplitude_triple_file_name[] = "/amplitude_triple.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -27215,8 +28962,8 @@ trexio_exit_code trexio_text_write_amplitude_triple(trexio_t* const file,
   strncat (file_full_path, amplitude_triple_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_triple_file_name));
 
-  /* Open the file in "a" (append) mode to guarantee that no truncation happens upon consecutive writes */
-  FILE* f = fopen(file_full_path, "a");
+  /* Open the file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE* f = fopen(file_full_path, "ab");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -27270,8 +29017,8 @@ trexio_exit_code trexio_text_write_amplitude_triple(trexio_t* const file,
   /* Append .size to the file_full_path in order to write additional info about the written buffer of data */
   strncat(file_full_path, ".size", 6);
 
-  /* Open the new file in "a" (append) mode to append info about the buffer that has been just written */
-  FILE *f_wSize = fopen(file_full_path, "a");
+  /* Open the new file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE *f_wSize = fopen(file_full_path, "ab");
   if (f_wSize == NULL) return TREXIO_FILE_ERROR;
 
   /* Write the buffer_size */
@@ -27285,7 +29032,7 @@ trexio_exit_code trexio_text_write_amplitude_triple(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char amplitude_file_name[256] = "/amplitude.txt";
+  const char amplitude_file_name[] = "/amplitude.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -27319,7 +29066,7 @@ trexio_exit_code trexio_text_write_amplitude_triple_exp(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The amplitude_triple_exp.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char amplitude_triple_exp_file_name[256] = "/amplitude_triple_exp.txt";
+  const char amplitude_triple_exp_file_name[] = "/amplitude_triple_exp.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -27330,8 +29077,8 @@ trexio_exit_code trexio_text_write_amplitude_triple_exp(trexio_t* const file,
   strncat (file_full_path, amplitude_triple_exp_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_triple_exp_file_name));
 
-  /* Open the file in "a" (append) mode to guarantee that no truncation happens upon consecutive writes */
-  FILE* f = fopen(file_full_path, "a");
+  /* Open the file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE* f = fopen(file_full_path, "ab");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -27385,8 +29132,8 @@ trexio_exit_code trexio_text_write_amplitude_triple_exp(trexio_t* const file,
   /* Append .size to the file_full_path in order to write additional info about the written buffer of data */
   strncat(file_full_path, ".size", 6);
 
-  /* Open the new file in "a" (append) mode to append info about the buffer that has been just written */
-  FILE *f_wSize = fopen(file_full_path, "a");
+  /* Open the new file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE *f_wSize = fopen(file_full_path, "ab");
   if (f_wSize == NULL) return TREXIO_FILE_ERROR;
 
   /* Write the buffer_size */
@@ -27400,7 +29147,7 @@ trexio_exit_code trexio_text_write_amplitude_triple_exp(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char amplitude_file_name[256] = "/amplitude.txt";
+  const char amplitude_file_name[] = "/amplitude.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -27434,7 +29181,7 @@ trexio_exit_code trexio_text_write_amplitude_quadruple(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The amplitude_quadruple.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char amplitude_quadruple_file_name[256] = "/amplitude_quadruple.txt";
+  const char amplitude_quadruple_file_name[] = "/amplitude_quadruple.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -27445,8 +29192,8 @@ trexio_exit_code trexio_text_write_amplitude_quadruple(trexio_t* const file,
   strncat (file_full_path, amplitude_quadruple_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_quadruple_file_name));
 
-  /* Open the file in "a" (append) mode to guarantee that no truncation happens upon consecutive writes */
-  FILE* f = fopen(file_full_path, "a");
+  /* Open the file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE* f = fopen(file_full_path, "ab");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -27500,8 +29247,8 @@ trexio_exit_code trexio_text_write_amplitude_quadruple(trexio_t* const file,
   /* Append .size to the file_full_path in order to write additional info about the written buffer of data */
   strncat(file_full_path, ".size", 6);
 
-  /* Open the new file in "a" (append) mode to append info about the buffer that has been just written */
-  FILE *f_wSize = fopen(file_full_path, "a");
+  /* Open the new file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE *f_wSize = fopen(file_full_path, "ab");
   if (f_wSize == NULL) return TREXIO_FILE_ERROR;
 
   /* Write the buffer_size */
@@ -27515,7 +29262,7 @@ trexio_exit_code trexio_text_write_amplitude_quadruple(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char amplitude_file_name[256] = "/amplitude.txt";
+  const char amplitude_file_name[] = "/amplitude.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -27549,7 +29296,7 @@ trexio_exit_code trexio_text_write_amplitude_quadruple_exp(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The amplitude_quadruple_exp.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char amplitude_quadruple_exp_file_name[256] = "/amplitude_quadruple_exp.txt";
+  const char amplitude_quadruple_exp_file_name[] = "/amplitude_quadruple_exp.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -27560,8 +29307,8 @@ trexio_exit_code trexio_text_write_amplitude_quadruple_exp(trexio_t* const file,
   strncat (file_full_path, amplitude_quadruple_exp_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(amplitude_quadruple_exp_file_name));
 
-  /* Open the file in "a" (append) mode to guarantee that no truncation happens upon consecutive writes */
-  FILE* f = fopen(file_full_path, "a");
+  /* Open the file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE* f = fopen(file_full_path, "ab");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -27615,8 +29362,8 @@ trexio_exit_code trexio_text_write_amplitude_quadruple_exp(trexio_t* const file,
   /* Append .size to the file_full_path in order to write additional info about the written buffer of data */
   strncat(file_full_path, ".size", 6);
 
-  /* Open the new file in "a" (append) mode to append info about the buffer that has been just written */
-  FILE *f_wSize = fopen(file_full_path, "a");
+  /* Open the new file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE *f_wSize = fopen(file_full_path, "ab");
   if (f_wSize == NULL) return TREXIO_FILE_ERROR;
 
   /* Write the buffer_size */
@@ -27630,7 +29377,7 @@ trexio_exit_code trexio_text_write_amplitude_quadruple_exp(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char amplitude_file_name[256] = "/amplitude.txt";
+  const char amplitude_file_name[] = "/amplitude.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -27664,7 +29411,7 @@ trexio_exit_code trexio_text_write_rdm_2e(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The rdm_2e.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char rdm_2e_file_name[256] = "/rdm_2e.txt";
+  const char rdm_2e_file_name[] = "/rdm_2e.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -27675,8 +29422,8 @@ trexio_exit_code trexio_text_write_rdm_2e(trexio_t* const file,
   strncat (file_full_path, rdm_2e_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_file_name));
 
-  /* Open the file in "a" (append) mode to guarantee that no truncation happens upon consecutive writes */
-  FILE* f = fopen(file_full_path, "a");
+  /* Open the file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE* f = fopen(file_full_path, "ab");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -27730,8 +29477,8 @@ trexio_exit_code trexio_text_write_rdm_2e(trexio_t* const file,
   /* Append .size to the file_full_path in order to write additional info about the written buffer of data */
   strncat(file_full_path, ".size", 6);
 
-  /* Open the new file in "a" (append) mode to append info about the buffer that has been just written */
-  FILE *f_wSize = fopen(file_full_path, "a");
+  /* Open the new file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE *f_wSize = fopen(file_full_path, "ab");
   if (f_wSize == NULL) return TREXIO_FILE_ERROR;
 
   /* Write the buffer_size */
@@ -27745,7 +29492,7 @@ trexio_exit_code trexio_text_write_rdm_2e(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char rdm_file_name[256] = "/rdm.txt";
+  const char rdm_file_name[] = "/rdm.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -27779,7 +29526,7 @@ trexio_exit_code trexio_text_write_rdm_2e_upup(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The rdm_2e_upup.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char rdm_2e_upup_file_name[256] = "/rdm_2e_upup.txt";
+  const char rdm_2e_upup_file_name[] = "/rdm_2e_upup.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -27790,8 +29537,8 @@ trexio_exit_code trexio_text_write_rdm_2e_upup(trexio_t* const file,
   strncat (file_full_path, rdm_2e_upup_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_upup_file_name));
 
-  /* Open the file in "a" (append) mode to guarantee that no truncation happens upon consecutive writes */
-  FILE* f = fopen(file_full_path, "a");
+  /* Open the file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE* f = fopen(file_full_path, "ab");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -27845,8 +29592,8 @@ trexio_exit_code trexio_text_write_rdm_2e_upup(trexio_t* const file,
   /* Append .size to the file_full_path in order to write additional info about the written buffer of data */
   strncat(file_full_path, ".size", 6);
 
-  /* Open the new file in "a" (append) mode to append info about the buffer that has been just written */
-  FILE *f_wSize = fopen(file_full_path, "a");
+  /* Open the new file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE *f_wSize = fopen(file_full_path, "ab");
   if (f_wSize == NULL) return TREXIO_FILE_ERROR;
 
   /* Write the buffer_size */
@@ -27860,7 +29607,7 @@ trexio_exit_code trexio_text_write_rdm_2e_upup(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char rdm_file_name[256] = "/rdm.txt";
+  const char rdm_file_name[] = "/rdm.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -27894,7 +29641,7 @@ trexio_exit_code trexio_text_write_rdm_2e_dndn(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The rdm_2e_dndn.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char rdm_2e_dndn_file_name[256] = "/rdm_2e_dndn.txt";
+  const char rdm_2e_dndn_file_name[] = "/rdm_2e_dndn.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -27905,8 +29652,8 @@ trexio_exit_code trexio_text_write_rdm_2e_dndn(trexio_t* const file,
   strncat (file_full_path, rdm_2e_dndn_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_dndn_file_name));
 
-  /* Open the file in "a" (append) mode to guarantee that no truncation happens upon consecutive writes */
-  FILE* f = fopen(file_full_path, "a");
+  /* Open the file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE* f = fopen(file_full_path, "ab");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -27960,8 +29707,8 @@ trexio_exit_code trexio_text_write_rdm_2e_dndn(trexio_t* const file,
   /* Append .size to the file_full_path in order to write additional info about the written buffer of data */
   strncat(file_full_path, ".size", 6);
 
-  /* Open the new file in "a" (append) mode to append info about the buffer that has been just written */
-  FILE *f_wSize = fopen(file_full_path, "a");
+  /* Open the new file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE *f_wSize = fopen(file_full_path, "ab");
   if (f_wSize == NULL) return TREXIO_FILE_ERROR;
 
   /* Write the buffer_size */
@@ -27975,7 +29722,7 @@ trexio_exit_code trexio_text_write_rdm_2e_dndn(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char rdm_file_name[256] = "/rdm.txt";
+  const char rdm_file_name[] = "/rdm.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -28009,7 +29756,7 @@ trexio_exit_code trexio_text_write_rdm_2e_updn(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The rdm_2e_updn.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char rdm_2e_updn_file_name[256] = "/rdm_2e_updn.txt";
+  const char rdm_2e_updn_file_name[] = "/rdm_2e_updn.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -28020,8 +29767,8 @@ trexio_exit_code trexio_text_write_rdm_2e_updn(trexio_t* const file,
   strncat (file_full_path, rdm_2e_updn_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_updn_file_name));
 
-  /* Open the file in "a" (append) mode to guarantee that no truncation happens upon consecutive writes */
-  FILE* f = fopen(file_full_path, "a");
+  /* Open the file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE* f = fopen(file_full_path, "ab");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -28075,8 +29822,8 @@ trexio_exit_code trexio_text_write_rdm_2e_updn(trexio_t* const file,
   /* Append .size to the file_full_path in order to write additional info about the written buffer of data */
   strncat(file_full_path, ".size", 6);
 
-  /* Open the new file in "a" (append) mode to append info about the buffer that has been just written */
-  FILE *f_wSize = fopen(file_full_path, "a");
+  /* Open the new file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE *f_wSize = fopen(file_full_path, "ab");
   if (f_wSize == NULL) return TREXIO_FILE_ERROR;
 
   /* Write the buffer_size */
@@ -28090,7 +29837,7 @@ trexio_exit_code trexio_text_write_rdm_2e_updn(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char rdm_file_name[256] = "/rdm.txt";
+  const char rdm_file_name[] = "/rdm.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -28124,7 +29871,7 @@ trexio_exit_code trexio_text_write_rdm_2e_transition(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The rdm_2e_transition.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char rdm_2e_transition_file_name[256] = "/rdm_2e_transition.txt";
+  const char rdm_2e_transition_file_name[] = "/rdm_2e_transition.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -28135,8 +29882,8 @@ trexio_exit_code trexio_text_write_rdm_2e_transition(trexio_t* const file,
   strncat (file_full_path, rdm_2e_transition_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_transition_file_name));
 
-  /* Open the file in "a" (append) mode to guarantee that no truncation happens upon consecutive writes */
-  FILE* f = fopen(file_full_path, "a");
+  /* Open the file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE* f = fopen(file_full_path, "ab");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -28190,8 +29937,8 @@ trexio_exit_code trexio_text_write_rdm_2e_transition(trexio_t* const file,
   /* Append .size to the file_full_path in order to write additional info about the written buffer of data */
   strncat(file_full_path, ".size", 6);
 
-  /* Open the new file in "a" (append) mode to append info about the buffer that has been just written */
-  FILE *f_wSize = fopen(file_full_path, "a");
+  /* Open the new file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE *f_wSize = fopen(file_full_path, "ab");
   if (f_wSize == NULL) return TREXIO_FILE_ERROR;
 
   /* Write the buffer_size */
@@ -28205,7 +29952,7 @@ trexio_exit_code trexio_text_write_rdm_2e_transition(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char rdm_file_name[256] = "/rdm.txt";
+  const char rdm_file_name[] = "/rdm.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -28239,7 +29986,7 @@ trexio_exit_code trexio_text_write_rdm_2e_cholesky(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The rdm_2e_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char rdm_2e_cholesky_file_name[256] = "/rdm_2e_cholesky.txt";
+  const char rdm_2e_cholesky_file_name[] = "/rdm_2e_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -28250,8 +29997,8 @@ trexio_exit_code trexio_text_write_rdm_2e_cholesky(trexio_t* const file,
   strncat (file_full_path, rdm_2e_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_cholesky_file_name));
 
-  /* Open the file in "a" (append) mode to guarantee that no truncation happens upon consecutive writes */
-  FILE* f = fopen(file_full_path, "a");
+  /* Open the file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE* f = fopen(file_full_path, "ab");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -28305,8 +30052,8 @@ trexio_exit_code trexio_text_write_rdm_2e_cholesky(trexio_t* const file,
   /* Append .size to the file_full_path in order to write additional info about the written buffer of data */
   strncat(file_full_path, ".size", 6);
 
-  /* Open the new file in "a" (append) mode to append info about the buffer that has been just written */
-  FILE *f_wSize = fopen(file_full_path, "a");
+  /* Open the new file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE *f_wSize = fopen(file_full_path, "ab");
   if (f_wSize == NULL) return TREXIO_FILE_ERROR;
 
   /* Write the buffer_size */
@@ -28320,7 +30067,7 @@ trexio_exit_code trexio_text_write_rdm_2e_cholesky(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char rdm_file_name[256] = "/rdm.txt";
+  const char rdm_file_name[] = "/rdm.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -28354,7 +30101,7 @@ trexio_exit_code trexio_text_write_rdm_2e_upup_cholesky(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The rdm_2e_upup_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char rdm_2e_upup_cholesky_file_name[256] = "/rdm_2e_upup_cholesky.txt";
+  const char rdm_2e_upup_cholesky_file_name[] = "/rdm_2e_upup_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -28365,8 +30112,8 @@ trexio_exit_code trexio_text_write_rdm_2e_upup_cholesky(trexio_t* const file,
   strncat (file_full_path, rdm_2e_upup_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_upup_cholesky_file_name));
 
-  /* Open the file in "a" (append) mode to guarantee that no truncation happens upon consecutive writes */
-  FILE* f = fopen(file_full_path, "a");
+  /* Open the file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE* f = fopen(file_full_path, "ab");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -28420,8 +30167,8 @@ trexio_exit_code trexio_text_write_rdm_2e_upup_cholesky(trexio_t* const file,
   /* Append .size to the file_full_path in order to write additional info about the written buffer of data */
   strncat(file_full_path, ".size", 6);
 
-  /* Open the new file in "a" (append) mode to append info about the buffer that has been just written */
-  FILE *f_wSize = fopen(file_full_path, "a");
+  /* Open the new file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE *f_wSize = fopen(file_full_path, "ab");
   if (f_wSize == NULL) return TREXIO_FILE_ERROR;
 
   /* Write the buffer_size */
@@ -28435,7 +30182,7 @@ trexio_exit_code trexio_text_write_rdm_2e_upup_cholesky(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char rdm_file_name[256] = "/rdm.txt";
+  const char rdm_file_name[] = "/rdm.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -28469,7 +30216,7 @@ trexio_exit_code trexio_text_write_rdm_2e_dndn_cholesky(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The rdm_2e_dndn_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char rdm_2e_dndn_cholesky_file_name[256] = "/rdm_2e_dndn_cholesky.txt";
+  const char rdm_2e_dndn_cholesky_file_name[] = "/rdm_2e_dndn_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -28480,8 +30227,8 @@ trexio_exit_code trexio_text_write_rdm_2e_dndn_cholesky(trexio_t* const file,
   strncat (file_full_path, rdm_2e_dndn_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_dndn_cholesky_file_name));
 
-  /* Open the file in "a" (append) mode to guarantee that no truncation happens upon consecutive writes */
-  FILE* f = fopen(file_full_path, "a");
+  /* Open the file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE* f = fopen(file_full_path, "ab");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -28535,8 +30282,8 @@ trexio_exit_code trexio_text_write_rdm_2e_dndn_cholesky(trexio_t* const file,
   /* Append .size to the file_full_path in order to write additional info about the written buffer of data */
   strncat(file_full_path, ".size", 6);
 
-  /* Open the new file in "a" (append) mode to append info about the buffer that has been just written */
-  FILE *f_wSize = fopen(file_full_path, "a");
+  /* Open the new file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE *f_wSize = fopen(file_full_path, "ab");
   if (f_wSize == NULL) return TREXIO_FILE_ERROR;
 
   /* Write the buffer_size */
@@ -28550,7 +30297,7 @@ trexio_exit_code trexio_text_write_rdm_2e_dndn_cholesky(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char rdm_file_name[256] = "/rdm.txt";
+  const char rdm_file_name[] = "/rdm.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -28584,7 +30331,7 @@ trexio_exit_code trexio_text_write_rdm_2e_updn_cholesky(trexio_t* const file,
 
   /* Build the name of the file with sparse data*/
   /* The rdm_2e_updn_cholesky.txt is limited to 256 symbols for the moment. What are the chances that it will exceed? */
-  const char rdm_2e_updn_cholesky_file_name[256] = "/rdm_2e_updn_cholesky.txt";
+  const char rdm_2e_updn_cholesky_file_name[] = "/rdm_2e_updn_cholesky.txt";
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
   char file_full_path[TREXIO_MAX_FILENAME_LENGTH];
 
@@ -28595,8 +30342,8 @@ trexio_exit_code trexio_text_write_rdm_2e_updn_cholesky(trexio_t* const file,
   strncat (file_full_path, rdm_2e_updn_cholesky_file_name,
            TREXIO_MAX_FILENAME_LENGTH-strlen(rdm_2e_updn_cholesky_file_name));
 
-  /* Open the file in "a" (append) mode to guarantee that no truncation happens upon consecutive writes */
-  FILE* f = fopen(file_full_path, "a");
+  /* Open the file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE* f = fopen(file_full_path, "ab");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Specify the line length in order to offset properly. For example, for 4-index quantities
@@ -28650,8 +30397,8 @@ trexio_exit_code trexio_text_write_rdm_2e_updn_cholesky(trexio_t* const file,
   /* Append .size to the file_full_path in order to write additional info about the written buffer of data */
   strncat(file_full_path, ".size", 6);
 
-  /* Open the new file in "a" (append) mode to append info about the buffer that has been just written */
-  FILE *f_wSize = fopen(file_full_path, "a");
+  /* Open the new file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE *f_wSize = fopen(file_full_path, "ab");
   if (f_wSize == NULL) return TREXIO_FILE_ERROR;
 
   /* Write the buffer_size */
@@ -28665,7 +30412,7 @@ trexio_exit_code trexio_text_write_rdm_2e_updn_cholesky(trexio_t* const file,
   rc = fclose(f_wSize);
   if (rc != 0) return TREXIO_FILE_ERROR;
 
-  const char rdm_file_name[256] = "/rdm.txt";
+  const char rdm_file_name[] = "/rdm.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -29809,7 +31556,7 @@ trexio_exit_code trexio_text_write_determinant_coefficient(trexio_t* const file,
   if (dims == NULL) return TREXIO_INVALID_ARG_4;
   if (dset == NULL) return TREXIO_INVALID_ARG_5;
 
-  const char file_name[256] = "/determinant_coefficient.txt";
+  const char file_name[] = "/determinant_coefficient.txt";
   const int append_str_len = 6;
 
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
@@ -29820,8 +31567,8 @@ trexio_exit_code trexio_text_write_determinant_coefficient(trexio_t* const file,
   /* Append name of the file with sparse data */
   strncat (file_full_path, file_name, TREXIO_MAX_FILENAME_LENGTH - sizeof(file_name));
 
-  /* Open the file in "a" (append) mode to guarantee that no truncation happens upon consecutive writes */
-  FILE* f = fopen(file_full_path, "a");
+  /* Open the file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE* f = fopen(file_full_path, "ab");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Write the data in the file and check the return code of fprintf to verify that > 0 bytes have been written */
@@ -29843,8 +31590,8 @@ trexio_exit_code trexio_text_write_determinant_coefficient(trexio_t* const file,
   /* Append .size to the file_full_path in order to write additional info about the written buffer of data */
   strncat(file_full_path, ".size", append_str_len);
 
-  /* Open the new file in "a" (append) mode to append info about the buffer that has been just written */
-  FILE *f_wSize = fopen(file_full_path, "a");
+  /* Open the new file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE *f_wSize = fopen(file_full_path, "ab");
   if (f_wSize == NULL) return TREXIO_FILE_ERROR;
 
   /* Write the buffer_size */
@@ -29859,7 +31606,7 @@ trexio_exit_code trexio_text_write_determinant_coefficient(trexio_t* const file,
   if (rc != 0) return TREXIO_FILE_ERROR;
 
   /* Additional part for the trexio_text_has_group to work */
-  const char group_file_name[256] = "/determinant.txt";
+  const char group_file_name[] = "/determinant.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */
@@ -29892,7 +31639,7 @@ trexio_exit_code trexio_text_write_csf_coefficient(trexio_t* const file,
   if (dims == NULL) return TREXIO_INVALID_ARG_4;
   if (dset == NULL) return TREXIO_INVALID_ARG_5;
 
-  const char file_name[256] = "/csf_coefficient.txt";
+  const char file_name[] = "/csf_coefficient.txt";
   const int append_str_len = 6;
 
   /* The full path to the destination TXT file with sparse data. This will include TREXIO directory name. */
@@ -29903,8 +31650,8 @@ trexio_exit_code trexio_text_write_csf_coefficient(trexio_t* const file,
   /* Append name of the file with sparse data */
   strncat (file_full_path, file_name, TREXIO_MAX_FILENAME_LENGTH - sizeof(file_name));
 
-  /* Open the file in "a" (append) mode to guarantee that no truncation happens upon consecutive writes */
-  FILE* f = fopen(file_full_path, "a");
+  /* Open the file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE* f = fopen(file_full_path, "ab");
   if (f == NULL) return TREXIO_FILE_ERROR;
 
   /* Write the data in the file and check the return code of fprintf to verify that > 0 bytes have been written */
@@ -29926,8 +31673,8 @@ trexio_exit_code trexio_text_write_csf_coefficient(trexio_t* const file,
   /* Append .size to the file_full_path in order to write additional info about the written buffer of data */
   strncat(file_full_path, ".size", append_str_len);
 
-  /* Open the new file in "a" (append) mode to append info about the buffer that has been just written */
-  FILE *f_wSize = fopen(file_full_path, "a");
+  /* Open the new file in "ab" (append binary) mode to guarantee consistent line endings across platforms */
+  FILE *f_wSize = fopen(file_full_path, "ab");
   if (f_wSize == NULL) return TREXIO_FILE_ERROR;
 
   /* Write the buffer_size */
@@ -29942,7 +31689,7 @@ trexio_exit_code trexio_text_write_csf_coefficient(trexio_t* const file,
   if (rc != 0) return TREXIO_FILE_ERROR;
 
   /* Additional part for the trexio_text_has_group to work */
-  const char group_file_name[256] = "/csf.txt";
+  const char group_file_name[] = "/csf.txt";
 
   memset (file_full_path, 0, TREXIO_MAX_FILENAME_LENGTH);
   /* Copy directory name in file_full_path */

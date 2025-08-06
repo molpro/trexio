@@ -14,14 +14,33 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
-#ifndef __MINGW32__
+#include <stdio.h>
+#include <limits.h>
+
+#ifndef _WIN32
 #include <err.h>
-#endif
 #include <sys/types.h>
-#ifndef __MINGW32__
 #include <sys/wait.h>
+#include <sys/stat.h>
+#include <dirent.h>
+#include <unistd.h>
+#include <errno.h>
 #endif
 
+#ifdef _WIN32
+#include <windows.h>
+#include <io.h>
+#include <direct.h>
+#endif
+
+/* Fallback definition for PATH_MAX if not available */
+#ifndef PATH_MAX
+#ifdef _WIN32
+#define PATH_MAX 260
+#else
+#define PATH_MAX 4096
+#endif
+#endif
 
 #include "trexio.h"
 #include "trexio_private.h"
@@ -670,6 +689,282 @@ trexio_inquire (const char* file_name)
 #endif
 }
 
+/* Portable file removal */
+trexio_exit_code
+trexio_remove_file(const char* path)
+{
+  if (path == NULL || path[0] == '\0') {
+    return TREXIO_INVALID_ARG_1;
+  }
+
+#ifdef _WIN32
+  if (DeleteFileA(path) == 0) {
+    DWORD error = GetLastError();
+    if (error != ERROR_FILE_NOT_FOUND) {
+      return TREXIO_FILE_ERROR;
+    }
+  }
+#else
+  if (unlink(path) != 0 && errno != ENOENT) {
+    return TREXIO_FILE_ERROR;
+  }
+#endif
+
+  return TREXIO_SUCCESS;
+}
+
+/* Portable recursive directory removal */
+trexio_exit_code
+trexio_remove_directory_recursive(const char* path)
+{
+  if (path == NULL || path[0] == '\0') {
+    return TREXIO_INVALID_ARG_1;
+  }
+
+#ifdef _WIN32
+  WIN32_FIND_DATAA findData;
+  HANDLE hFind;
+  char searchPath[MAX_PATH];
+  char fullPath[MAX_PATH];
+  
+  int ret = snprintf(searchPath, sizeof(searchPath), "%s\\*", path);
+  if (ret < 0 || ret >= (int) sizeof(searchPath)) return TREXIO_FILE_ERROR;
+  
+  hFind = FindFirstFileA(searchPath, &findData);
+  if (hFind != INVALID_HANDLE_VALUE) {
+    do {
+      if (strcmp(findData.cFileName, ".") != 0 && strcmp(findData.cFileName, "..") != 0) {
+        ret = snprintf(fullPath, sizeof(fullPath), "%s\\%s", path, findData.cFileName);
+        if (ret < 0 || ret >= (int) sizeof(fullPath)) {
+          FindClose(hFind);
+          return TREXIO_FILE_ERROR;
+        }
+        
+        if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+          trexio_exit_code rc = trexio_remove_directory_recursive(fullPath);
+          if (rc != TREXIO_SUCCESS) {
+            FindClose(hFind);
+            return rc;
+          }
+        } else {
+          trexio_exit_code rc = trexio_remove_file(fullPath);
+          if (rc != TREXIO_SUCCESS) {
+            FindClose(hFind);
+            return rc;
+          }
+        }
+      }
+    } while (FindNextFileA(hFind, &findData) != 0);
+    FindClose(hFind);
+  }
+  
+  if (RemoveDirectoryA(path) == 0) {
+    DWORD error = GetLastError();
+    if (error != ERROR_FILE_NOT_FOUND && error != ERROR_PATH_NOT_FOUND) {
+      return TREXIO_FILE_ERROR;
+    }
+  }
+#else
+  DIR *dir = opendir(path);
+  if (dir) {
+    struct dirent *entry;
+    while ((entry = readdir(dir)) != NULL) {
+      if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
+        char fullPath[PATH_MAX];
+        int ret = snprintf(fullPath, sizeof(fullPath), "%s/%s", path, entry->d_name);
+        if (ret < 0 || ret >= (int) sizeof(fullPath)) {
+          closedir(dir);
+          return TREXIO_FILE_ERROR;
+        }
+        
+        struct stat statbuf;
+        if (stat(fullPath, &statbuf) == 0) {
+          if (S_ISDIR(statbuf.st_mode)) {
+            trexio_exit_code rc = trexio_remove_directory_recursive(fullPath);
+            if (rc != TREXIO_SUCCESS) {
+              closedir(dir);
+              return rc;
+            }
+          } else {
+            trexio_exit_code rc = trexio_remove_file(fullPath);
+            if (rc != TREXIO_SUCCESS) {
+              closedir(dir);
+              return rc;
+            }
+          }
+        }
+      }
+    }
+    closedir(dir);
+  }
+  
+  if (rmdir(path) != 0 && errno != ENOENT) {
+    return TREXIO_FILE_ERROR;
+  }
+#endif
+
+  return TREXIO_SUCCESS;
+}
+
+/* Portable file copy */
+trexio_exit_code
+trexio_copy_file(const char* source, const char* dest)
+{
+  if (source == NULL || source[0] == '\0') {
+    return TREXIO_INVALID_ARG_1;
+  }
+  
+  if (dest == NULL || dest[0] == '\0') {
+    return TREXIO_INVALID_ARG_2;
+  }
+
+#ifdef _WIN32
+  if (!CopyFileA(source, dest, FALSE)) {
+    return TREXIO_FILE_ERROR;
+  }
+#else
+  FILE *src = fopen(source, "rb");
+  if (!src) return TREXIO_FILE_ERROR;
+  
+  FILE *dst = fopen(dest, "wb");
+  if (!dst) {
+    fclose(src);
+    return TREXIO_FILE_ERROR;
+  }
+  
+  char buffer[8192];
+  size_t bytes;
+  while ((bytes = fread(buffer, 1, sizeof(buffer), src)) > 0) {
+    if (fwrite(buffer, 1, bytes, dst) != bytes) {
+      fclose(src);
+      fclose(dst);
+      unlink(dest);
+      return TREXIO_FILE_ERROR;
+    }
+  }
+  
+  fclose(src);
+  fclose(dst);
+#endif
+
+  return TREXIO_SUCCESS;
+}
+
+/* Portable recursive directory copy */
+trexio_exit_code
+trexio_copy_directory_recursive(const char* source, const char* dest)
+{
+  if (source == NULL || source[0] == '\0') {
+    return TREXIO_INVALID_ARG_1;
+  }
+  
+  if (dest == NULL || dest[0] == '\0') {
+    return TREXIO_INVALID_ARG_2;
+  }
+
+#ifdef _WIN32
+  if (CreateDirectoryA(dest, NULL) == 0) {
+    DWORD error = GetLastError();
+    if (error != ERROR_ALREADY_EXISTS) {
+      return TREXIO_FILE_ERROR;
+    }
+  }
+  
+  WIN32_FIND_DATAA findData;
+  HANDLE hFind;
+  char searchPath[MAX_PATH];
+  char sourcePath[MAX_PATH];
+  char destPath[MAX_PATH];
+  
+  int ret = snprintf(searchPath, sizeof(searchPath), "%s\\*", source);
+  if (ret < 0 || ret >= (int) sizeof(searchPath)) return TREXIO_FILE_ERROR;
+  
+  hFind = FindFirstFileA(searchPath, &findData);
+  if (hFind == INVALID_HANDLE_VALUE) {
+    return TREXIO_FILE_ERROR;
+  }
+  
+  do {
+    if (strcmp(findData.cFileName, ".") != 0 && strcmp(findData.cFileName, "..") != 0) {
+      ret = snprintf(sourcePath, sizeof(sourcePath), "%s\\%s", source, findData.cFileName);
+      if (ret < 0 || ret >= (int) sizeof(sourcePath)) {
+        FindClose(hFind);
+        return TREXIO_FILE_ERROR;
+      }
+      
+      ret = snprintf(destPath, sizeof(destPath), "%s\\%s", dest, findData.cFileName);
+      if (ret < 0 || ret >= (int) sizeof(destPath)) {
+        FindClose(hFind);
+        return TREXIO_FILE_ERROR;
+      }
+      
+      if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+        trexio_exit_code rc = trexio_copy_directory_recursive(sourcePath, destPath);
+        if (rc != TREXIO_SUCCESS) {
+          FindClose(hFind);
+          return rc;
+        }
+      } else {
+        trexio_exit_code rc = trexio_copy_file(sourcePath, destPath);
+        if (rc != TREXIO_SUCCESS) {
+          FindClose(hFind);
+          return rc;
+        }
+      }
+    }
+  } while (FindNextFileA(hFind, &findData) != 0);
+  
+  FindClose(hFind);
+#else
+  if (mkdir(dest, 0755) != 0 && errno != EEXIST) {
+    return TREXIO_FILE_ERROR;
+  }
+  
+  DIR *dir = opendir(source);
+  if (!dir) return TREXIO_FILE_ERROR;
+  
+  struct dirent *entry;
+  while ((entry = readdir(dir)) != NULL) {
+    if (strcmp(entry->d_name, ".") != 0 && strcmp(entry->d_name, "..") != 0) {
+      char sourcePath[PATH_MAX];
+      char destPath[PATH_MAX];
+      
+      int ret = snprintf(sourcePath, sizeof(sourcePath), "%s/%s", source, entry->d_name);
+      if (ret < 0 || ret >= (int) sizeof(sourcePath)) {
+        closedir(dir);
+        return TREXIO_FILE_ERROR;
+      }
+      
+      ret = snprintf(destPath, sizeof(destPath), "%s/%s", dest, entry->d_name);
+      if (ret < 0 || ret >= (int) sizeof(destPath)) {
+        closedir(dir);
+        return TREXIO_FILE_ERROR;
+      }
+      
+      struct stat statbuf;
+      if (stat(sourcePath, &statbuf) == 0) {
+        if (S_ISDIR(statbuf.st_mode)) {
+          trexio_exit_code rc = trexio_copy_directory_recursive(sourcePath, destPath);
+          if (rc != TREXIO_SUCCESS) {
+            closedir(dir);
+            return rc;
+          }
+        } else {
+          trexio_exit_code rc = trexio_copy_file(sourcePath, destPath);
+          if (rc != TREXIO_SUCCESS) {
+            closedir(dir);
+            return rc;
+          }
+        }
+      }
+    }
+  }
+  closedir(dir);
+#endif
+
+  return TREXIO_SUCCESS;
+}
+
 trexio_exit_code
 trexio_cp(const char* source, const char* dest)
 {
@@ -713,30 +1008,14 @@ trexio_cp(const char* source, const char* dest)
     return TREXIO_FILE_ERROR;
   }
 
-  /* Call cp */
-
-#ifndef CP_COMMAND
-#define CP_COMMAND "cp", "-r"
-#endif
-
-
-#ifdef __MINGW32__
-  return TREXIO_FAILURE;
-#else
-  pid_t pid = fork();
-  if (pid == 0) {
-    execlp("cp", CP_COMMAND, source, dest, (char *)0);
-  } else if (pid < 0) {
-    return TREXIO_FILE_ERROR;
+  /* Pure C implementation for copying files and directories */
+  if (back_end_local == TREXIO_TEXT) {
+    /* Directory -> use recursive directory copy */
+    return trexio_copy_directory_recursive(source, dest);
   } else {
-    int wstatus;
-    pid_t ws = waitpid( pid, &wstatus, 0);
-    if (ws != pid || !WIFEXITED(wstatus) )
-      return TREXIO_FILE_ERROR;
+    /* File -> use file copy */
+    return trexio_copy_file(source, dest);
   }
-
-  return TREXIO_SUCCESS;
-#endif
 }
 
 trexio_exit_code
@@ -1030,6 +1309,95 @@ trexio_safe_to_orbital_list_up_dn (const int32_t N_int,
   }
   if (dim_dn_out < count) return TREXIO_INVALID_ARG_7;
   return trexio_to_orbital_list_up_dn(N_int, dset_in, dset_up_out, dset_dn_out, num_up, num_dn);
+}
+
+trexio_exit_code trexio_phase_aabb_to_abab_list (const int32_t* list_up,
+                                                 const int32_t* list_dn,
+                                                 const int32_t occ_num_up,
+                                                 const int32_t occ_num_dn)
+{
+  if (list_up == NULL) return TREXIO_INVALID_ARG_1;
+  if (list_dn == NULL) return TREXIO_INVALID_ARG_2;
+  if (occ_num_up <= 0) return TREXIO_INVALID_ARG_3;
+  if (occ_num_dn <= 0) return TREXIO_INVALID_ARG_4;
+
+  int32_t* new_list = malloc( (occ_num_up+occ_num_dn)*sizeof(int32_t) );
+  if (new_list == NULL) return TREXIO_ALLOCATION_FAILED;
+
+  const int32_t occupied_num = occ_num_up+occ_num_dn;
+  
+  for (int i=0 ; i<occ_num_up ; ++i) {
+    new_list[i] = 2*list_up[i];
+  }
+
+  for (int i=0 ; i<occ_num_dn ; ++i) {
+    new_list[i+occ_num_up] = 2*list_dn[i]+1;
+  }
+
+  int32_t momax = 0;
+  for (int i=0 ; i<occupied_num ; ++i) {
+    if (new_list[i] > momax) {
+      momax = new_list[i];
+    }
+  }
+
+  const int32_t N_int = momax/TREXIO_NORB_PER_INT + 1;
+
+  bitfield_t* bit_list = malloc( N_int * sizeof(bitfield_t) );
+  if (bit_list == NULL) {
+    free(new_list);
+    return TREXIO_ALLOCATION_FAILED;
+  }
+  
+  trexio_exit_code rc = trexio_to_bitfield_list (new_list, occupied_num, bit_list, N_int);
+
+  free(bit_list);
+  free(new_list);
+
+  return rc;
+}
+
+    
+trexio_exit_code trexio_safe_phase_aabb_to_abab_list (const int32_t* list_up,
+                                                      const int64_t dim_up,
+                                                      const int32_t* list_dn,
+                                                      const int64_t dim_dn,
+                                                      const int32_t occ_num_up,
+                                                      const int32_t occ_num_dn)
+{
+  if (list_up == NULL) return TREXIO_INVALID_ARG_1;
+  if (occ_num_up > dim_up) return TREXIO_INVALID_ARG_2;
+  if (list_dn == NULL) return TREXIO_INVALID_ARG_3;
+  if (occ_num_dn > dim_dn) return TREXIO_INVALID_ARG_2;
+  if (occ_num_up <= 0) return TREXIO_INVALID_ARG_5;
+  if (occ_num_dn <= 0) return TREXIO_INVALID_ARG_6;
+  return trexio_phase_aabb_to_abab_list (list_up, list_dn, occ_num_up, occ_num_dn);
+}
+
+trexio_exit_code trexio_phase_aabb_to_abab (const int32_t N_int, const bitfield_t* dset_in)
+{
+  if (N_int <= 0) return TREXIO_INVALID_ARG_1;
+  if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
+
+  int32_t list_up[N_int*TREXIO_NORB_PER_INT];
+  int32_t occ_num_up;
+  int32_t list_dn[N_int*TREXIO_NORB_PER_INT];
+  int32_t occ_num_dn;
+
+  trexio_exit_code rc = trexio_to_orbital_list_up_dn(N_int, dset_in, &list_up[0], &list_dn[0],
+                                                     &occ_num_up, &occ_num_dn);
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  return trexio_phase_aabb_to_abab_list(&list_up[0], &list_dn[0], occ_num_up, occ_num_dn);
+}
+
+trexio_exit_code trexio_safe_phase_aabb_to_abab (const int32_t N_int, const bitfield_t* dset_in, const int64_t dim_in)
+{
+  if (N_int <= 0) return TREXIO_INVALID_ARG_1;
+  if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
+  if (dim_in <= 0) return TREXIO_INVALID_ARG_3;
+  if (N_int > dim_in) return TREXIO_INVALID_ARG_3;
+  return trexio_phase_aabb_to_abab(N_int, dset_in);
 }
 
 trexio_exit_code
@@ -4840,6 +5208,87 @@ trexio_has_ao_1e_int_core_hamiltonian (trexio_t* const file)
 }
 
 trexio_exit_code
+trexio_has_ao_1e_int_dipole_x (trexio_t* const file)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    return trexio_text_has_ao_1e_int_dipole_x(file);
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    return trexio_hdf5_has_ao_1e_int_dipole_x(file);
+#else
+    return TREXIO_BACK_END_MISSING;
+#endif
+/*
+  case TREXIO_JSON:
+    return trexio_json_has_ao_1e_int_dipole_x(file);
+*/
+  }
+  return TREXIO_FAILURE;
+}
+
+trexio_exit_code
+trexio_has_ao_1e_int_dipole_y (trexio_t* const file)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    return trexio_text_has_ao_1e_int_dipole_y(file);
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    return trexio_hdf5_has_ao_1e_int_dipole_y(file);
+#else
+    return TREXIO_BACK_END_MISSING;
+#endif
+/*
+  case TREXIO_JSON:
+    return trexio_json_has_ao_1e_int_dipole_y(file);
+*/
+  }
+  return TREXIO_FAILURE;
+}
+
+trexio_exit_code
+trexio_has_ao_1e_int_dipole_z (trexio_t* const file)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    return trexio_text_has_ao_1e_int_dipole_z(file);
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    return trexio_hdf5_has_ao_1e_int_dipole_z(file);
+#else
+    return TREXIO_BACK_END_MISSING;
+#endif
+/*
+  case TREXIO_JSON:
+    return trexio_json_has_ao_1e_int_dipole_z(file);
+*/
+  }
+  return TREXIO_FAILURE;
+}
+
+trexio_exit_code
 trexio_has_ao_1e_int_overlap_im (trexio_t* const file)
 {
 
@@ -4969,6 +5418,87 @@ trexio_has_ao_1e_int_core_hamiltonian_im (trexio_t* const file)
 /*
   case TREXIO_JSON:
     return trexio_json_has_ao_1e_int_core_hamiltonian_im(file);
+*/
+  }
+  return TREXIO_FAILURE;
+}
+
+trexio_exit_code
+trexio_has_ao_1e_int_dipole_x_im (trexio_t* const file)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    return trexio_text_has_ao_1e_int_dipole_x_im(file);
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    return trexio_hdf5_has_ao_1e_int_dipole_x_im(file);
+#else
+    return TREXIO_BACK_END_MISSING;
+#endif
+/*
+  case TREXIO_JSON:
+    return trexio_json_has_ao_1e_int_dipole_x_im(file);
+*/
+  }
+  return TREXIO_FAILURE;
+}
+
+trexio_exit_code
+trexio_has_ao_1e_int_dipole_y_im (trexio_t* const file)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    return trexio_text_has_ao_1e_int_dipole_y_im(file);
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    return trexio_hdf5_has_ao_1e_int_dipole_y_im(file);
+#else
+    return TREXIO_BACK_END_MISSING;
+#endif
+/*
+  case TREXIO_JSON:
+    return trexio_json_has_ao_1e_int_dipole_y_im(file);
+*/
+  }
+  return TREXIO_FAILURE;
+}
+
+trexio_exit_code
+trexio_has_ao_1e_int_dipole_z_im (trexio_t* const file)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    return trexio_text_has_ao_1e_int_dipole_z_im(file);
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    return trexio_hdf5_has_ao_1e_int_dipole_z_im(file);
+#else
+    return TREXIO_BACK_END_MISSING;
+#endif
+/*
+  case TREXIO_JSON:
+    return trexio_json_has_ao_1e_int_dipole_z_im(file);
 */
   }
   return TREXIO_FAILURE;
@@ -5272,6 +5802,87 @@ trexio_has_mo_1e_int_core_hamiltonian (trexio_t* const file)
 }
 
 trexio_exit_code
+trexio_has_mo_1e_int_dipole_x (trexio_t* const file)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    return trexio_text_has_mo_1e_int_dipole_x(file);
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    return trexio_hdf5_has_mo_1e_int_dipole_x(file);
+#else
+    return TREXIO_BACK_END_MISSING;
+#endif
+/*
+  case TREXIO_JSON:
+    return trexio_json_has_mo_1e_int_dipole_x(file);
+*/
+  }
+  return TREXIO_FAILURE;
+}
+
+trexio_exit_code
+trexio_has_mo_1e_int_dipole_y (trexio_t* const file)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    return trexio_text_has_mo_1e_int_dipole_y(file);
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    return trexio_hdf5_has_mo_1e_int_dipole_y(file);
+#else
+    return TREXIO_BACK_END_MISSING;
+#endif
+/*
+  case TREXIO_JSON:
+    return trexio_json_has_mo_1e_int_dipole_y(file);
+*/
+  }
+  return TREXIO_FAILURE;
+}
+
+trexio_exit_code
+trexio_has_mo_1e_int_dipole_z (trexio_t* const file)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    return trexio_text_has_mo_1e_int_dipole_z(file);
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    return trexio_hdf5_has_mo_1e_int_dipole_z(file);
+#else
+    return TREXIO_BACK_END_MISSING;
+#endif
+/*
+  case TREXIO_JSON:
+    return trexio_json_has_mo_1e_int_dipole_z(file);
+*/
+  }
+  return TREXIO_FAILURE;
+}
+
+trexio_exit_code
 trexio_has_mo_1e_int_overlap_im (trexio_t* const file)
 {
 
@@ -5401,6 +6012,87 @@ trexio_has_mo_1e_int_core_hamiltonian_im (trexio_t* const file)
 /*
   case TREXIO_JSON:
     return trexio_json_has_mo_1e_int_core_hamiltonian_im(file);
+*/
+  }
+  return TREXIO_FAILURE;
+}
+
+trexio_exit_code
+trexio_has_mo_1e_int_dipole_x_im (trexio_t* const file)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    return trexio_text_has_mo_1e_int_dipole_x_im(file);
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    return trexio_hdf5_has_mo_1e_int_dipole_x_im(file);
+#else
+    return TREXIO_BACK_END_MISSING;
+#endif
+/*
+  case TREXIO_JSON:
+    return trexio_json_has_mo_1e_int_dipole_x_im(file);
+*/
+  }
+  return TREXIO_FAILURE;
+}
+
+trexio_exit_code
+trexio_has_mo_1e_int_dipole_y_im (trexio_t* const file)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    return trexio_text_has_mo_1e_int_dipole_y_im(file);
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    return trexio_hdf5_has_mo_1e_int_dipole_y_im(file);
+#else
+    return TREXIO_BACK_END_MISSING;
+#endif
+/*
+  case TREXIO_JSON:
+    return trexio_json_has_mo_1e_int_dipole_y_im(file);
+*/
+  }
+  return TREXIO_FAILURE;
+}
+
+trexio_exit_code
+trexio_has_mo_1e_int_dipole_z_im (trexio_t* const file)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    return trexio_text_has_mo_1e_int_dipole_z_im(file);
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    return trexio_hdf5_has_mo_1e_int_dipole_z_im(file);
+#else
+    return TREXIO_BACK_END_MISSING;
+#endif
+/*
+  case TREXIO_JSON:
+    return trexio_json_has_mo_1e_int_dipole_z_im(file);
 */
   }
   return TREXIO_FAILURE;
@@ -12278,14 +12970,18 @@ trexio_read_pbc_k_point_32 (trexio_t* const file, float* const pbc_k_point)
   if (pbc_k_point == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_pbc_k_point(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
+  int64_t pbc_k_point_num = 0;
 
   trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
+  rc = trexio_read_pbc_k_point_num_64(file, &(pbc_k_point_num));
+  if (rc != TREXIO_SUCCESS) return rc;
 
+  if (pbc_k_point_num == 0L) return TREXIO_INVALID_NUM;
 
-  uint32_t rank = 1;
-  uint64_t dims[1] = {3};
+  uint32_t rank = 2;
+  uint64_t dims[2] = {pbc_k_point_num, 3};
 
   uint64_t dim_size = 1;
   for (uint32_t i=0; i<rank; ++i){
@@ -15345,6 +16041,225 @@ trexio_read_ao_1e_int_core_hamiltonian_32 (trexio_t* const file, float* const ao
 }
 
 trexio_exit_code
+trexio_read_ao_1e_int_dipole_x_32 (trexio_t* const file, float* const ao_1e_int_dipole_x)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_x == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_x(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+  int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_ao_num_64(file, &(ao_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {ao_num, ao_num};
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+  }
+
+  double* ao_1e_int_dipole_x_64 = CALLOC(dim_size, double);
+  if (ao_1e_int_dipole_x_64 == NULL) return TREXIO_ALLOCATION_FAILED;
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_read_ao_1e_int_dipole_x(file, ao_1e_int_dipole_x_64, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_read_ao_1e_int_dipole_x(file, ao_1e_int_dipole_x_64, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_read_ao_1e_int_dipole_x(file, ao_1e_int_dipole_x_64, rank, dims);
+    break;
+*/
+  }
+
+  if (rc != TREXIO_SUCCESS){
+    FREE(ao_1e_int_dipole_x_64);
+    return rc;
+  }
+
+  if ((false)) {
+    for (uint64_t i=0; i<dim_size; ++i){
+      ao_1e_int_dipole_x[i] = (float) ao_1e_int_dipole_x_64[i] + 1;
+    }
+  } else {
+    for (uint64_t i=0; i<dim_size; ++i){
+      ao_1e_int_dipole_x[i] = (float) ao_1e_int_dipole_x_64[i];
+    }
+  }
+
+  FREE(ao_1e_int_dipole_x_64);
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_read_ao_1e_int_dipole_y_32 (trexio_t* const file, float* const ao_1e_int_dipole_y)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_y == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_y(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+  int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_ao_num_64(file, &(ao_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {ao_num, ao_num};
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+  }
+
+  double* ao_1e_int_dipole_y_64 = CALLOC(dim_size, double);
+  if (ao_1e_int_dipole_y_64 == NULL) return TREXIO_ALLOCATION_FAILED;
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_read_ao_1e_int_dipole_y(file, ao_1e_int_dipole_y_64, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_read_ao_1e_int_dipole_y(file, ao_1e_int_dipole_y_64, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_read_ao_1e_int_dipole_y(file, ao_1e_int_dipole_y_64, rank, dims);
+    break;
+*/
+  }
+
+  if (rc != TREXIO_SUCCESS){
+    FREE(ao_1e_int_dipole_y_64);
+    return rc;
+  }
+
+  if ((false)) {
+    for (uint64_t i=0; i<dim_size; ++i){
+      ao_1e_int_dipole_y[i] = (float) ao_1e_int_dipole_y_64[i] + 1;
+    }
+  } else {
+    for (uint64_t i=0; i<dim_size; ++i){
+      ao_1e_int_dipole_y[i] = (float) ao_1e_int_dipole_y_64[i];
+    }
+  }
+
+  FREE(ao_1e_int_dipole_y_64);
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_read_ao_1e_int_dipole_z_32 (trexio_t* const file, float* const ao_1e_int_dipole_z)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_z == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_z(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+  int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_ao_num_64(file, &(ao_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {ao_num, ao_num};
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+  }
+
+  double* ao_1e_int_dipole_z_64 = CALLOC(dim_size, double);
+  if (ao_1e_int_dipole_z_64 == NULL) return TREXIO_ALLOCATION_FAILED;
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_read_ao_1e_int_dipole_z(file, ao_1e_int_dipole_z_64, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_read_ao_1e_int_dipole_z(file, ao_1e_int_dipole_z_64, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_read_ao_1e_int_dipole_z(file, ao_1e_int_dipole_z_64, rank, dims);
+    break;
+*/
+  }
+
+  if (rc != TREXIO_SUCCESS){
+    FREE(ao_1e_int_dipole_z_64);
+    return rc;
+  }
+
+  if ((false)) {
+    for (uint64_t i=0; i<dim_size; ++i){
+      ao_1e_int_dipole_z[i] = (float) ao_1e_int_dipole_z_64[i] + 1;
+    }
+  } else {
+    for (uint64_t i=0; i<dim_size; ++i){
+      ao_1e_int_dipole_z[i] = (float) ao_1e_int_dipole_z_64[i];
+    }
+  }
+
+  FREE(ao_1e_int_dipole_z_64);
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
 trexio_read_ao_1e_int_overlap_im_32 (trexio_t* const file, float* const ao_1e_int_overlap_im)
 {
 
@@ -15706,6 +16621,225 @@ trexio_read_ao_1e_int_core_hamiltonian_im_32 (trexio_t* const file, float* const
   }
 
   FREE(ao_1e_int_core_hamiltonian_im_64);
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_read_ao_1e_int_dipole_x_im_32 (trexio_t* const file, float* const ao_1e_int_dipole_x_im)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_x_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_x_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+  int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_ao_num_64(file, &(ao_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {ao_num, ao_num};
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+  }
+
+  double* ao_1e_int_dipole_x_im_64 = CALLOC(dim_size, double);
+  if (ao_1e_int_dipole_x_im_64 == NULL) return TREXIO_ALLOCATION_FAILED;
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_read_ao_1e_int_dipole_x_im(file, ao_1e_int_dipole_x_im_64, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_read_ao_1e_int_dipole_x_im(file, ao_1e_int_dipole_x_im_64, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_read_ao_1e_int_dipole_x_im(file, ao_1e_int_dipole_x_im_64, rank, dims);
+    break;
+*/
+  }
+
+  if (rc != TREXIO_SUCCESS){
+    FREE(ao_1e_int_dipole_x_im_64);
+    return rc;
+  }
+
+  if ((false)) {
+    for (uint64_t i=0; i<dim_size; ++i){
+      ao_1e_int_dipole_x_im[i] = (float) ao_1e_int_dipole_x_im_64[i] + 1;
+    }
+  } else {
+    for (uint64_t i=0; i<dim_size; ++i){
+      ao_1e_int_dipole_x_im[i] = (float) ao_1e_int_dipole_x_im_64[i];
+    }
+  }
+
+  FREE(ao_1e_int_dipole_x_im_64);
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_read_ao_1e_int_dipole_y_im_32 (trexio_t* const file, float* const ao_1e_int_dipole_y_im)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_y_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_y_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+  int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_ao_num_64(file, &(ao_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {ao_num, ao_num};
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+  }
+
+  double* ao_1e_int_dipole_y_im_64 = CALLOC(dim_size, double);
+  if (ao_1e_int_dipole_y_im_64 == NULL) return TREXIO_ALLOCATION_FAILED;
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_read_ao_1e_int_dipole_y_im(file, ao_1e_int_dipole_y_im_64, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_read_ao_1e_int_dipole_y_im(file, ao_1e_int_dipole_y_im_64, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_read_ao_1e_int_dipole_y_im(file, ao_1e_int_dipole_y_im_64, rank, dims);
+    break;
+*/
+  }
+
+  if (rc != TREXIO_SUCCESS){
+    FREE(ao_1e_int_dipole_y_im_64);
+    return rc;
+  }
+
+  if ((false)) {
+    for (uint64_t i=0; i<dim_size; ++i){
+      ao_1e_int_dipole_y_im[i] = (float) ao_1e_int_dipole_y_im_64[i] + 1;
+    }
+  } else {
+    for (uint64_t i=0; i<dim_size; ++i){
+      ao_1e_int_dipole_y_im[i] = (float) ao_1e_int_dipole_y_im_64[i];
+    }
+  }
+
+  FREE(ao_1e_int_dipole_y_im_64);
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_read_ao_1e_int_dipole_z_im_32 (trexio_t* const file, float* const ao_1e_int_dipole_z_im)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_z_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_z_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+  int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_ao_num_64(file, &(ao_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {ao_num, ao_num};
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+  }
+
+  double* ao_1e_int_dipole_z_im_64 = CALLOC(dim_size, double);
+  if (ao_1e_int_dipole_z_im_64 == NULL) return TREXIO_ALLOCATION_FAILED;
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_read_ao_1e_int_dipole_z_im(file, ao_1e_int_dipole_z_im_64, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_read_ao_1e_int_dipole_z_im(file, ao_1e_int_dipole_z_im_64, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_read_ao_1e_int_dipole_z_im(file, ao_1e_int_dipole_z_im_64, rank, dims);
+    break;
+*/
+  }
+
+  if (rc != TREXIO_SUCCESS){
+    FREE(ao_1e_int_dipole_z_im_64);
+    return rc;
+  }
+
+  if ((false)) {
+    for (uint64_t i=0; i<dim_size; ++i){
+      ao_1e_int_dipole_z_im[i] = (float) ao_1e_int_dipole_z_im_64[i] + 1;
+    }
+  } else {
+    for (uint64_t i=0; i<dim_size; ++i){
+      ao_1e_int_dipole_z_im[i] = (float) ao_1e_int_dipole_z_im_64[i];
+    }
+  }
+
+  FREE(ao_1e_int_dipole_z_im_64);
   return TREXIO_SUCCESS;
 }
 
@@ -16521,6 +17655,225 @@ trexio_read_mo_1e_int_core_hamiltonian_32 (trexio_t* const file, float* const mo
 }
 
 trexio_exit_code
+trexio_read_mo_1e_int_dipole_x_32 (trexio_t* const file, float* const mo_1e_int_dipole_x)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_x == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_x(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+  int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_mo_num_64(file, &(mo_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {mo_num, mo_num};
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+  }
+
+  double* mo_1e_int_dipole_x_64 = CALLOC(dim_size, double);
+  if (mo_1e_int_dipole_x_64 == NULL) return TREXIO_ALLOCATION_FAILED;
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_read_mo_1e_int_dipole_x(file, mo_1e_int_dipole_x_64, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_read_mo_1e_int_dipole_x(file, mo_1e_int_dipole_x_64, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_read_mo_1e_int_dipole_x(file, mo_1e_int_dipole_x_64, rank, dims);
+    break;
+*/
+  }
+
+  if (rc != TREXIO_SUCCESS){
+    FREE(mo_1e_int_dipole_x_64);
+    return rc;
+  }
+
+  if ((false)) {
+    for (uint64_t i=0; i<dim_size; ++i){
+      mo_1e_int_dipole_x[i] = (float) mo_1e_int_dipole_x_64[i] + 1;
+    }
+  } else {
+    for (uint64_t i=0; i<dim_size; ++i){
+      mo_1e_int_dipole_x[i] = (float) mo_1e_int_dipole_x_64[i];
+    }
+  }
+
+  FREE(mo_1e_int_dipole_x_64);
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_read_mo_1e_int_dipole_y_32 (trexio_t* const file, float* const mo_1e_int_dipole_y)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_y == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_y(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+  int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_mo_num_64(file, &(mo_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {mo_num, mo_num};
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+  }
+
+  double* mo_1e_int_dipole_y_64 = CALLOC(dim_size, double);
+  if (mo_1e_int_dipole_y_64 == NULL) return TREXIO_ALLOCATION_FAILED;
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_read_mo_1e_int_dipole_y(file, mo_1e_int_dipole_y_64, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_read_mo_1e_int_dipole_y(file, mo_1e_int_dipole_y_64, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_read_mo_1e_int_dipole_y(file, mo_1e_int_dipole_y_64, rank, dims);
+    break;
+*/
+  }
+
+  if (rc != TREXIO_SUCCESS){
+    FREE(mo_1e_int_dipole_y_64);
+    return rc;
+  }
+
+  if ((false)) {
+    for (uint64_t i=0; i<dim_size; ++i){
+      mo_1e_int_dipole_y[i] = (float) mo_1e_int_dipole_y_64[i] + 1;
+    }
+  } else {
+    for (uint64_t i=0; i<dim_size; ++i){
+      mo_1e_int_dipole_y[i] = (float) mo_1e_int_dipole_y_64[i];
+    }
+  }
+
+  FREE(mo_1e_int_dipole_y_64);
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_read_mo_1e_int_dipole_z_32 (trexio_t* const file, float* const mo_1e_int_dipole_z)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_z == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_z(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+  int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_mo_num_64(file, &(mo_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {mo_num, mo_num};
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+  }
+
+  double* mo_1e_int_dipole_z_64 = CALLOC(dim_size, double);
+  if (mo_1e_int_dipole_z_64 == NULL) return TREXIO_ALLOCATION_FAILED;
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_read_mo_1e_int_dipole_z(file, mo_1e_int_dipole_z_64, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_read_mo_1e_int_dipole_z(file, mo_1e_int_dipole_z_64, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_read_mo_1e_int_dipole_z(file, mo_1e_int_dipole_z_64, rank, dims);
+    break;
+*/
+  }
+
+  if (rc != TREXIO_SUCCESS){
+    FREE(mo_1e_int_dipole_z_64);
+    return rc;
+  }
+
+  if ((false)) {
+    for (uint64_t i=0; i<dim_size; ++i){
+      mo_1e_int_dipole_z[i] = (float) mo_1e_int_dipole_z_64[i] + 1;
+    }
+  } else {
+    for (uint64_t i=0; i<dim_size; ++i){
+      mo_1e_int_dipole_z[i] = (float) mo_1e_int_dipole_z_64[i];
+    }
+  }
+
+  FREE(mo_1e_int_dipole_z_64);
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
 trexio_read_mo_1e_int_overlap_im_32 (trexio_t* const file, float* const mo_1e_int_overlap_im)
 {
 
@@ -16882,6 +18235,225 @@ trexio_read_mo_1e_int_core_hamiltonian_im_32 (trexio_t* const file, float* const
   }
 
   FREE(mo_1e_int_core_hamiltonian_im_64);
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_read_mo_1e_int_dipole_x_im_32 (trexio_t* const file, float* const mo_1e_int_dipole_x_im)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_x_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_x_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+  int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_mo_num_64(file, &(mo_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {mo_num, mo_num};
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+  }
+
+  double* mo_1e_int_dipole_x_im_64 = CALLOC(dim_size, double);
+  if (mo_1e_int_dipole_x_im_64 == NULL) return TREXIO_ALLOCATION_FAILED;
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_read_mo_1e_int_dipole_x_im(file, mo_1e_int_dipole_x_im_64, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_read_mo_1e_int_dipole_x_im(file, mo_1e_int_dipole_x_im_64, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_read_mo_1e_int_dipole_x_im(file, mo_1e_int_dipole_x_im_64, rank, dims);
+    break;
+*/
+  }
+
+  if (rc != TREXIO_SUCCESS){
+    FREE(mo_1e_int_dipole_x_im_64);
+    return rc;
+  }
+
+  if ((false)) {
+    for (uint64_t i=0; i<dim_size; ++i){
+      mo_1e_int_dipole_x_im[i] = (float) mo_1e_int_dipole_x_im_64[i] + 1;
+    }
+  } else {
+    for (uint64_t i=0; i<dim_size; ++i){
+      mo_1e_int_dipole_x_im[i] = (float) mo_1e_int_dipole_x_im_64[i];
+    }
+  }
+
+  FREE(mo_1e_int_dipole_x_im_64);
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_read_mo_1e_int_dipole_y_im_32 (trexio_t* const file, float* const mo_1e_int_dipole_y_im)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_y_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_y_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+  int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_mo_num_64(file, &(mo_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {mo_num, mo_num};
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+  }
+
+  double* mo_1e_int_dipole_y_im_64 = CALLOC(dim_size, double);
+  if (mo_1e_int_dipole_y_im_64 == NULL) return TREXIO_ALLOCATION_FAILED;
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_read_mo_1e_int_dipole_y_im(file, mo_1e_int_dipole_y_im_64, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_read_mo_1e_int_dipole_y_im(file, mo_1e_int_dipole_y_im_64, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_read_mo_1e_int_dipole_y_im(file, mo_1e_int_dipole_y_im_64, rank, dims);
+    break;
+*/
+  }
+
+  if (rc != TREXIO_SUCCESS){
+    FREE(mo_1e_int_dipole_y_im_64);
+    return rc;
+  }
+
+  if ((false)) {
+    for (uint64_t i=0; i<dim_size; ++i){
+      mo_1e_int_dipole_y_im[i] = (float) mo_1e_int_dipole_y_im_64[i] + 1;
+    }
+  } else {
+    for (uint64_t i=0; i<dim_size; ++i){
+      mo_1e_int_dipole_y_im[i] = (float) mo_1e_int_dipole_y_im_64[i];
+    }
+  }
+
+  FREE(mo_1e_int_dipole_y_im_64);
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_read_mo_1e_int_dipole_z_im_32 (trexio_t* const file, float* const mo_1e_int_dipole_z_im)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_z_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_z_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+  int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_mo_num_64(file, &(mo_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {mo_num, mo_num};
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+  }
+
+  double* mo_1e_int_dipole_z_im_64 = CALLOC(dim_size, double);
+  if (mo_1e_int_dipole_z_im_64 == NULL) return TREXIO_ALLOCATION_FAILED;
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_read_mo_1e_int_dipole_z_im(file, mo_1e_int_dipole_z_im_64, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_read_mo_1e_int_dipole_z_im(file, mo_1e_int_dipole_z_im_64, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_read_mo_1e_int_dipole_z_im(file, mo_1e_int_dipole_z_im_64, rank, dims);
+    break;
+*/
+  }
+
+  if (rc != TREXIO_SUCCESS){
+    FREE(mo_1e_int_dipole_z_im_64);
+    return rc;
+  }
+
+  if ((false)) {
+    for (uint64_t i=0; i<dim_size; ++i){
+      mo_1e_int_dipole_z_im[i] = (float) mo_1e_int_dipole_z_im_64[i] + 1;
+    }
+  } else {
+    for (uint64_t i=0; i<dim_size; ++i){
+      mo_1e_int_dipole_z_im[i] = (float) mo_1e_int_dipole_z_im_64[i];
+    }
+  }
+
+  FREE(mo_1e_int_dipole_z_im_64);
   return TREXIO_SUCCESS;
 }
 
@@ -18090,15 +19662,19 @@ trexio_read_safe_pbc_k_point_32 (trexio_t* const file, float* const dset_out, co
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_pbc_k_point(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
+int64_t pbc_k_point_num = 0;
 
 trexio_exit_code rc = TREXIO_FAILURE;
 (void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
+rc = trexio_read_pbc_k_point_num_64(file, &(pbc_k_point_num));
+if (rc != TREXIO_SUCCESS) return rc;
 
+if (pbc_k_point_num == 0L) return TREXIO_INVALID_NUM;
 
-uint32_t rank = 1;
-uint64_t dims[1] = {3};
+uint32_t rank = 2;
+uint64_t dims[2] = {pbc_k_point_num, 3};
 
 /* The block below is specific to safe API as it checks the boundaries */
 uint64_t dim_size = 1;
@@ -19477,6 +21053,105 @@ for (uint32_t i=0; i<rank; ++i){
 }
 
 trexio_exit_code
+trexio_read_safe_ao_1e_int_dipole_x_32 (trexio_t* const file, float* const dset_out, const int64_t dim_out)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_x(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_ao_num_64(file, &(ao_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {ao_num, ao_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_out > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_read_ao_1e_int_dipole_x_32(file, dset_out);
+}
+
+trexio_exit_code
+trexio_read_safe_ao_1e_int_dipole_y_32 (trexio_t* const file, float* const dset_out, const int64_t dim_out)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_y(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_ao_num_64(file, &(ao_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {ao_num, ao_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_out > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_read_ao_1e_int_dipole_y_32(file, dset_out);
+}
+
+trexio_exit_code
+trexio_read_safe_ao_1e_int_dipole_z_32 (trexio_t* const file, float* const dset_out, const int64_t dim_out)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_z(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_ao_num_64(file, &(ao_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {ao_num, ao_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_out > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_read_ao_1e_int_dipole_z_32(file, dset_out);
+}
+
+trexio_exit_code
 trexio_read_safe_ao_1e_int_overlap_im_32 (trexio_t* const file, float* const dset_out, const int64_t dim_out)
 {
 
@@ -19639,6 +21314,105 @@ for (uint32_t i=0; i<rank; ++i){
   if (dim_out > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
 
   return trexio_read_ao_1e_int_core_hamiltonian_im_32(file, dset_out);
+}
+
+trexio_exit_code
+trexio_read_safe_ao_1e_int_dipole_x_im_32 (trexio_t* const file, float* const dset_out, const int64_t dim_out)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_x_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_ao_num_64(file, &(ao_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {ao_num, ao_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_out > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_read_ao_1e_int_dipole_x_im_32(file, dset_out);
+}
+
+trexio_exit_code
+trexio_read_safe_ao_1e_int_dipole_y_im_32 (trexio_t* const file, float* const dset_out, const int64_t dim_out)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_y_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_ao_num_64(file, &(ao_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {ao_num, ao_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_out > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_read_ao_1e_int_dipole_y_im_32(file, dset_out);
+}
+
+trexio_exit_code
+trexio_read_safe_ao_1e_int_dipole_z_im_32 (trexio_t* const file, float* const dset_out, const int64_t dim_out)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_z_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_ao_num_64(file, &(ao_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {ao_num, ao_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_out > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_read_ao_1e_int_dipole_z_im_32(file, dset_out);
 }
 
 trexio_exit_code
@@ -20013,6 +21787,105 @@ for (uint32_t i=0; i<rank; ++i){
 }
 
 trexio_exit_code
+trexio_read_safe_mo_1e_int_dipole_x_32 (trexio_t* const file, float* const dset_out, const int64_t dim_out)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_x(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_mo_num_64(file, &(mo_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {mo_num, mo_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_out > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_read_mo_1e_int_dipole_x_32(file, dset_out);
+}
+
+trexio_exit_code
+trexio_read_safe_mo_1e_int_dipole_y_32 (trexio_t* const file, float* const dset_out, const int64_t dim_out)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_y(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_mo_num_64(file, &(mo_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {mo_num, mo_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_out > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_read_mo_1e_int_dipole_y_32(file, dset_out);
+}
+
+trexio_exit_code
+trexio_read_safe_mo_1e_int_dipole_z_32 (trexio_t* const file, float* const dset_out, const int64_t dim_out)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_z(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_mo_num_64(file, &(mo_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {mo_num, mo_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_out > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_read_mo_1e_int_dipole_z_32(file, dset_out);
+}
+
+trexio_exit_code
 trexio_read_safe_mo_1e_int_overlap_im_32 (trexio_t* const file, float* const dset_out, const int64_t dim_out)
 {
 
@@ -20175,6 +22048,105 @@ for (uint32_t i=0; i<rank; ++i){
   if (dim_out > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
 
   return trexio_read_mo_1e_int_core_hamiltonian_im_32(file, dset_out);
+}
+
+trexio_exit_code
+trexio_read_safe_mo_1e_int_dipole_x_im_32 (trexio_t* const file, float* const dset_out, const int64_t dim_out)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_x_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_mo_num_64(file, &(mo_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {mo_num, mo_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_out > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_read_mo_1e_int_dipole_x_im_32(file, dset_out);
+}
+
+trexio_exit_code
+trexio_read_safe_mo_1e_int_dipole_y_im_32 (trexio_t* const file, float* const dset_out, const int64_t dim_out)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_y_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_mo_num_64(file, &(mo_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {mo_num, mo_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_out > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_read_mo_1e_int_dipole_y_im_32(file, dset_out);
+}
+
+trexio_exit_code
+trexio_read_safe_mo_1e_int_dipole_z_im_32 (trexio_t* const file, float* const dset_out, const int64_t dim_out)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_z_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_mo_num_64(file, &(mo_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {mo_num, mo_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_out > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_read_mo_1e_int_dipole_z_im_32(file, dset_out);
 }
 
 trexio_exit_code
@@ -21078,14 +23050,18 @@ trexio_read_pbc_k_point_64 (trexio_t* const file, double* const pbc_k_point)
   if (pbc_k_point == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_pbc_k_point(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
+  int64_t pbc_k_point_num = 0;
 
   trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
+  rc = trexio_read_pbc_k_point_num_64(file, &(pbc_k_point_num));
+  if (rc != TREXIO_SUCCESS) return rc;
 
+  if (pbc_k_point_num == 0L) return TREXIO_INVALID_NUM;
 
-  uint32_t rank = 1;
-  uint64_t dims[1] = {3};
+  uint32_t rank = 2;
+  uint64_t dims[2] = {pbc_k_point_num, 3};
 
   assert(file->back_end < TREXIO_INVALID_BACK_END);
 
@@ -23599,6 +25575,186 @@ trexio_read_ao_1e_int_core_hamiltonian_64 (trexio_t* const file, double* const a
 }
 
 trexio_exit_code
+trexio_read_ao_1e_int_dipole_x_64 (trexio_t* const file, double* const ao_1e_int_dipole_x)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_x == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_x(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+  int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_ao_num_64(file, &(ao_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {ao_num, ao_num};
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_read_ao_1e_int_dipole_x(file, ao_1e_int_dipole_x, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_read_ao_1e_int_dipole_x(file, ao_1e_int_dipole_x, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_read_ao_1e_int_dipole_x(file, ao_1e_int_dipole_x, rank, dims);
+    break;
+*/
+  }
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  /* Handle index type */
+  if ((false)) {
+    uint64_t dim_size = 1;
+    for (uint32_t i=0; i<rank; ++i){
+        dim_size *= dims[i];
+    }
+    for (uint64_t i=0; i<dim_size; ++i){
+       ao_1e_int_dipole_x[i] += (double) 1;
+    }
+  }
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_read_ao_1e_int_dipole_y_64 (trexio_t* const file, double* const ao_1e_int_dipole_y)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_y == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_y(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+  int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_ao_num_64(file, &(ao_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {ao_num, ao_num};
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_read_ao_1e_int_dipole_y(file, ao_1e_int_dipole_y, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_read_ao_1e_int_dipole_y(file, ao_1e_int_dipole_y, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_read_ao_1e_int_dipole_y(file, ao_1e_int_dipole_y, rank, dims);
+    break;
+*/
+  }
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  /* Handle index type */
+  if ((false)) {
+    uint64_t dim_size = 1;
+    for (uint32_t i=0; i<rank; ++i){
+        dim_size *= dims[i];
+    }
+    for (uint64_t i=0; i<dim_size; ++i){
+       ao_1e_int_dipole_y[i] += (double) 1;
+    }
+  }
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_read_ao_1e_int_dipole_z_64 (trexio_t* const file, double* const ao_1e_int_dipole_z)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_z == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_z(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+  int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_ao_num_64(file, &(ao_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {ao_num, ao_num};
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_read_ao_1e_int_dipole_z(file, ao_1e_int_dipole_z, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_read_ao_1e_int_dipole_z(file, ao_1e_int_dipole_z, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_read_ao_1e_int_dipole_z(file, ao_1e_int_dipole_z, rank, dims);
+    break;
+*/
+  }
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  /* Handle index type */
+  if ((false)) {
+    uint64_t dim_size = 1;
+    for (uint32_t i=0; i<rank; ++i){
+        dim_size *= dims[i];
+    }
+    for (uint64_t i=0; i<dim_size; ++i){
+       ao_1e_int_dipole_z[i] += (double) 1;
+    }
+  }
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
 trexio_read_ao_1e_int_overlap_im_64 (trexio_t* const file, double* const ao_1e_int_overlap_im)
 {
 
@@ -23892,6 +26048,186 @@ trexio_read_ao_1e_int_core_hamiltonian_im_64 (trexio_t* const file, double* cons
     }
     for (uint64_t i=0; i<dim_size; ++i){
        ao_1e_int_core_hamiltonian_im[i] += (double) 1;
+    }
+  }
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_read_ao_1e_int_dipole_x_im_64 (trexio_t* const file, double* const ao_1e_int_dipole_x_im)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_x_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_x_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+  int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_ao_num_64(file, &(ao_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {ao_num, ao_num};
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_read_ao_1e_int_dipole_x_im(file, ao_1e_int_dipole_x_im, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_read_ao_1e_int_dipole_x_im(file, ao_1e_int_dipole_x_im, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_read_ao_1e_int_dipole_x_im(file, ao_1e_int_dipole_x_im, rank, dims);
+    break;
+*/
+  }
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  /* Handle index type */
+  if ((false)) {
+    uint64_t dim_size = 1;
+    for (uint32_t i=0; i<rank; ++i){
+        dim_size *= dims[i];
+    }
+    for (uint64_t i=0; i<dim_size; ++i){
+       ao_1e_int_dipole_x_im[i] += (double) 1;
+    }
+  }
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_read_ao_1e_int_dipole_y_im_64 (trexio_t* const file, double* const ao_1e_int_dipole_y_im)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_y_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_y_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+  int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_ao_num_64(file, &(ao_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {ao_num, ao_num};
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_read_ao_1e_int_dipole_y_im(file, ao_1e_int_dipole_y_im, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_read_ao_1e_int_dipole_y_im(file, ao_1e_int_dipole_y_im, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_read_ao_1e_int_dipole_y_im(file, ao_1e_int_dipole_y_im, rank, dims);
+    break;
+*/
+  }
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  /* Handle index type */
+  if ((false)) {
+    uint64_t dim_size = 1;
+    for (uint32_t i=0; i<rank; ++i){
+        dim_size *= dims[i];
+    }
+    for (uint64_t i=0; i<dim_size; ++i){
+       ao_1e_int_dipole_y_im[i] += (double) 1;
+    }
+  }
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_read_ao_1e_int_dipole_z_im_64 (trexio_t* const file, double* const ao_1e_int_dipole_z_im)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_z_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_z_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+  int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_ao_num_64(file, &(ao_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {ao_num, ao_num};
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_read_ao_1e_int_dipole_z_im(file, ao_1e_int_dipole_z_im, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_read_ao_1e_int_dipole_z_im(file, ao_1e_int_dipole_z_im, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_read_ao_1e_int_dipole_z_im(file, ao_1e_int_dipole_z_im, rank, dims);
+    break;
+*/
+  }
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  /* Handle index type */
+  if ((false)) {
+    uint64_t dim_size = 1;
+    for (uint32_t i=0; i<rank; ++i){
+        dim_size *= dims[i];
+    }
+    for (uint64_t i=0; i<dim_size; ++i){
+       ao_1e_int_dipole_z_im[i] += (double) 1;
     }
   }
 
@@ -24567,6 +26903,186 @@ trexio_read_mo_1e_int_core_hamiltonian_64 (trexio_t* const file, double* const m
 }
 
 trexio_exit_code
+trexio_read_mo_1e_int_dipole_x_64 (trexio_t* const file, double* const mo_1e_int_dipole_x)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_x == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_x(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+  int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_mo_num_64(file, &(mo_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {mo_num, mo_num};
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_read_mo_1e_int_dipole_x(file, mo_1e_int_dipole_x, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_read_mo_1e_int_dipole_x(file, mo_1e_int_dipole_x, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_read_mo_1e_int_dipole_x(file, mo_1e_int_dipole_x, rank, dims);
+    break;
+*/
+  }
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  /* Handle index type */
+  if ((false)) {
+    uint64_t dim_size = 1;
+    for (uint32_t i=0; i<rank; ++i){
+        dim_size *= dims[i];
+    }
+    for (uint64_t i=0; i<dim_size; ++i){
+       mo_1e_int_dipole_x[i] += (double) 1;
+    }
+  }
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_read_mo_1e_int_dipole_y_64 (trexio_t* const file, double* const mo_1e_int_dipole_y)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_y == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_y(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+  int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_mo_num_64(file, &(mo_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {mo_num, mo_num};
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_read_mo_1e_int_dipole_y(file, mo_1e_int_dipole_y, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_read_mo_1e_int_dipole_y(file, mo_1e_int_dipole_y, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_read_mo_1e_int_dipole_y(file, mo_1e_int_dipole_y, rank, dims);
+    break;
+*/
+  }
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  /* Handle index type */
+  if ((false)) {
+    uint64_t dim_size = 1;
+    for (uint32_t i=0; i<rank; ++i){
+        dim_size *= dims[i];
+    }
+    for (uint64_t i=0; i<dim_size; ++i){
+       mo_1e_int_dipole_y[i] += (double) 1;
+    }
+  }
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_read_mo_1e_int_dipole_z_64 (trexio_t* const file, double* const mo_1e_int_dipole_z)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_z == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_z(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+  int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_mo_num_64(file, &(mo_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {mo_num, mo_num};
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_read_mo_1e_int_dipole_z(file, mo_1e_int_dipole_z, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_read_mo_1e_int_dipole_z(file, mo_1e_int_dipole_z, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_read_mo_1e_int_dipole_z(file, mo_1e_int_dipole_z, rank, dims);
+    break;
+*/
+  }
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  /* Handle index type */
+  if ((false)) {
+    uint64_t dim_size = 1;
+    for (uint32_t i=0; i<rank; ++i){
+        dim_size *= dims[i];
+    }
+    for (uint64_t i=0; i<dim_size; ++i){
+       mo_1e_int_dipole_z[i] += (double) 1;
+    }
+  }
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
 trexio_read_mo_1e_int_overlap_im_64 (trexio_t* const file, double* const mo_1e_int_overlap_im)
 {
 
@@ -24860,6 +27376,186 @@ trexio_read_mo_1e_int_core_hamiltonian_im_64 (trexio_t* const file, double* cons
     }
     for (uint64_t i=0; i<dim_size; ++i){
        mo_1e_int_core_hamiltonian_im[i] += (double) 1;
+    }
+  }
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_read_mo_1e_int_dipole_x_im_64 (trexio_t* const file, double* const mo_1e_int_dipole_x_im)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_x_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_x_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+  int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_mo_num_64(file, &(mo_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {mo_num, mo_num};
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_read_mo_1e_int_dipole_x_im(file, mo_1e_int_dipole_x_im, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_read_mo_1e_int_dipole_x_im(file, mo_1e_int_dipole_x_im, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_read_mo_1e_int_dipole_x_im(file, mo_1e_int_dipole_x_im, rank, dims);
+    break;
+*/
+  }
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  /* Handle index type */
+  if ((false)) {
+    uint64_t dim_size = 1;
+    for (uint32_t i=0; i<rank; ++i){
+        dim_size *= dims[i];
+    }
+    for (uint64_t i=0; i<dim_size; ++i){
+       mo_1e_int_dipole_x_im[i] += (double) 1;
+    }
+  }
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_read_mo_1e_int_dipole_y_im_64 (trexio_t* const file, double* const mo_1e_int_dipole_y_im)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_y_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_y_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+  int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_mo_num_64(file, &(mo_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {mo_num, mo_num};
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_read_mo_1e_int_dipole_y_im(file, mo_1e_int_dipole_y_im, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_read_mo_1e_int_dipole_y_im(file, mo_1e_int_dipole_y_im, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_read_mo_1e_int_dipole_y_im(file, mo_1e_int_dipole_y_im, rank, dims);
+    break;
+*/
+  }
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  /* Handle index type */
+  if ((false)) {
+    uint64_t dim_size = 1;
+    for (uint32_t i=0; i<rank; ++i){
+        dim_size *= dims[i];
+    }
+    for (uint64_t i=0; i<dim_size; ++i){
+       mo_1e_int_dipole_y_im[i] += (double) 1;
+    }
+  }
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_read_mo_1e_int_dipole_z_im_64 (trexio_t* const file, double* const mo_1e_int_dipole_z_im)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_z_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_z_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+  int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_mo_num_64(file, &(mo_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {mo_num, mo_num};
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_read_mo_1e_int_dipole_z_im(file, mo_1e_int_dipole_z_im, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_read_mo_1e_int_dipole_z_im(file, mo_1e_int_dipole_z_im, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_read_mo_1e_int_dipole_z_im(file, mo_1e_int_dipole_z_im, rank, dims);
+    break;
+*/
+  }
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  /* Handle index type */
+  if ((false)) {
+    uint64_t dim_size = 1;
+    for (uint32_t i=0; i<rank; ++i){
+        dim_size *= dims[i];
+    }
+    for (uint64_t i=0; i<dim_size; ++i){
+       mo_1e_int_dipole_z_im[i] += (double) 1;
     }
   }
 
@@ -25902,15 +28598,19 @@ trexio_read_safe_pbc_k_point_64 (trexio_t* const file, double* const dset_out, c
   if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_pbc_k_point(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
 
+int64_t pbc_k_point_num = 0;
 
 trexio_exit_code rc = TREXIO_FAILURE;
 (void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
+rc = trexio_read_pbc_k_point_num_64(file, &(pbc_k_point_num));
+if (rc != TREXIO_SUCCESS) return rc;
 
+if (pbc_k_point_num == 0L) return TREXIO_INVALID_NUM;
 
-uint32_t rank = 1;
-uint64_t dims[1] = {3};
+uint32_t rank = 2;
+uint64_t dims[2] = {pbc_k_point_num, 3};
 
 /* The block below is specific to safe API as it checks the boundaries */
 uint64_t dim_size = 1;
@@ -27289,6 +29989,105 @@ for (uint32_t i=0; i<rank; ++i){
 }
 
 trexio_exit_code
+trexio_read_safe_ao_1e_int_dipole_x_64 (trexio_t* const file, double* const dset_out, const int64_t dim_out)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_x(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_ao_num_64(file, &(ao_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {ao_num, ao_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_out > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_read_ao_1e_int_dipole_x_64(file, dset_out);
+}
+
+trexio_exit_code
+trexio_read_safe_ao_1e_int_dipole_y_64 (trexio_t* const file, double* const dset_out, const int64_t dim_out)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_y(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_ao_num_64(file, &(ao_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {ao_num, ao_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_out > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_read_ao_1e_int_dipole_y_64(file, dset_out);
+}
+
+trexio_exit_code
+trexio_read_safe_ao_1e_int_dipole_z_64 (trexio_t* const file, double* const dset_out, const int64_t dim_out)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_z(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_ao_num_64(file, &(ao_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {ao_num, ao_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_out > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_read_ao_1e_int_dipole_z_64(file, dset_out);
+}
+
+trexio_exit_code
 trexio_read_safe_ao_1e_int_overlap_im_64 (trexio_t* const file, double* const dset_out, const int64_t dim_out)
 {
 
@@ -27451,6 +30250,105 @@ for (uint32_t i=0; i<rank; ++i){
   if (dim_out > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
 
   return trexio_read_ao_1e_int_core_hamiltonian_im_64(file, dset_out);
+}
+
+trexio_exit_code
+trexio_read_safe_ao_1e_int_dipole_x_im_64 (trexio_t* const file, double* const dset_out, const int64_t dim_out)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_x_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_ao_num_64(file, &(ao_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {ao_num, ao_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_out > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_read_ao_1e_int_dipole_x_im_64(file, dset_out);
+}
+
+trexio_exit_code
+trexio_read_safe_ao_1e_int_dipole_y_im_64 (trexio_t* const file, double* const dset_out, const int64_t dim_out)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_y_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_ao_num_64(file, &(ao_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {ao_num, ao_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_out > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_read_ao_1e_int_dipole_y_im_64(file, dset_out);
+}
+
+trexio_exit_code
+trexio_read_safe_ao_1e_int_dipole_z_im_64 (trexio_t* const file, double* const dset_out, const int64_t dim_out)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_z_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_ao_num_64(file, &(ao_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {ao_num, ao_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_out > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_read_ao_1e_int_dipole_z_im_64(file, dset_out);
 }
 
 trexio_exit_code
@@ -27825,6 +30723,105 @@ for (uint32_t i=0; i<rank; ++i){
 }
 
 trexio_exit_code
+trexio_read_safe_mo_1e_int_dipole_x_64 (trexio_t* const file, double* const dset_out, const int64_t dim_out)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_x(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_mo_num_64(file, &(mo_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {mo_num, mo_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_out > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_read_mo_1e_int_dipole_x_64(file, dset_out);
+}
+
+trexio_exit_code
+trexio_read_safe_mo_1e_int_dipole_y_64 (trexio_t* const file, double* const dset_out, const int64_t dim_out)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_y(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_mo_num_64(file, &(mo_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {mo_num, mo_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_out > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_read_mo_1e_int_dipole_y_64(file, dset_out);
+}
+
+trexio_exit_code
+trexio_read_safe_mo_1e_int_dipole_z_64 (trexio_t* const file, double* const dset_out, const int64_t dim_out)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_z(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_mo_num_64(file, &(mo_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {mo_num, mo_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_out > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_read_mo_1e_int_dipole_z_64(file, dset_out);
+}
+
+trexio_exit_code
 trexio_read_safe_mo_1e_int_overlap_im_64 (trexio_t* const file, double* const dset_out, const int64_t dim_out)
 {
 
@@ -27987,6 +30984,105 @@ for (uint32_t i=0; i<rank; ++i){
   if (dim_out > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
 
   return trexio_read_mo_1e_int_core_hamiltonian_im_64(file, dset_out);
+}
+
+trexio_exit_code
+trexio_read_safe_mo_1e_int_dipole_x_im_64 (trexio_t* const file, double* const dset_out, const int64_t dim_out)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_x_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_mo_num_64(file, &(mo_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {mo_num, mo_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_out > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_read_mo_1e_int_dipole_x_im_64(file, dset_out);
+}
+
+trexio_exit_code
+trexio_read_safe_mo_1e_int_dipole_y_im_64 (trexio_t* const file, double* const dset_out, const int64_t dim_out)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_y_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_mo_num_64(file, &(mo_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {mo_num, mo_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_out > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_read_mo_1e_int_dipole_y_im_64(file, dset_out);
+}
+
+trexio_exit_code
+trexio_read_safe_mo_1e_int_dipole_z_im_64 (trexio_t* const file, double* const dset_out, const int64_t dim_out)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_out == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_z_im(file) != TREXIO_SUCCESS) return TREXIO_DSET_MISSING;
+
+int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_mo_num_64(file, &(mo_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {mo_num, mo_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_out > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_read_mo_1e_int_dipole_z_im_64(file, dset_out);
 }
 
 trexio_exit_code
@@ -28727,6 +31823,24 @@ trexio_read_ao_1e_int_core_hamiltonian (trexio_t* const file, double* const ao_1
 }
 
 trexio_exit_code
+trexio_read_ao_1e_int_dipole_x (trexio_t* const file, double* const ao_1e_int_dipole_x)
+{
+  return trexio_read_ao_1e_int_dipole_x_64(file, ao_1e_int_dipole_x);
+}
+
+trexio_exit_code
+trexio_read_ao_1e_int_dipole_y (trexio_t* const file, double* const ao_1e_int_dipole_y)
+{
+  return trexio_read_ao_1e_int_dipole_y_64(file, ao_1e_int_dipole_y);
+}
+
+trexio_exit_code
+trexio_read_ao_1e_int_dipole_z (trexio_t* const file, double* const ao_1e_int_dipole_z)
+{
+  return trexio_read_ao_1e_int_dipole_z_64(file, ao_1e_int_dipole_z);
+}
+
+trexio_exit_code
 trexio_read_ao_1e_int_overlap_im (trexio_t* const file, double* const ao_1e_int_overlap_im)
 {
   return trexio_read_ao_1e_int_overlap_im_64(file, ao_1e_int_overlap_im);
@@ -28754,6 +31868,24 @@ trexio_exit_code
 trexio_read_ao_1e_int_core_hamiltonian_im (trexio_t* const file, double* const ao_1e_int_core_hamiltonian_im)
 {
   return trexio_read_ao_1e_int_core_hamiltonian_im_64(file, ao_1e_int_core_hamiltonian_im);
+}
+
+trexio_exit_code
+trexio_read_ao_1e_int_dipole_x_im (trexio_t* const file, double* const ao_1e_int_dipole_x_im)
+{
+  return trexio_read_ao_1e_int_dipole_x_im_64(file, ao_1e_int_dipole_x_im);
+}
+
+trexio_exit_code
+trexio_read_ao_1e_int_dipole_y_im (trexio_t* const file, double* const ao_1e_int_dipole_y_im)
+{
+  return trexio_read_ao_1e_int_dipole_y_im_64(file, ao_1e_int_dipole_y_im);
+}
+
+trexio_exit_code
+trexio_read_ao_1e_int_dipole_z_im (trexio_t* const file, double* const ao_1e_int_dipole_z_im)
+{
+  return trexio_read_ao_1e_int_dipole_z_im_64(file, ao_1e_int_dipole_z_im);
 }
 
 trexio_exit_code
@@ -28823,6 +31955,24 @@ trexio_read_mo_1e_int_core_hamiltonian (trexio_t* const file, double* const mo_1
 }
 
 trexio_exit_code
+trexio_read_mo_1e_int_dipole_x (trexio_t* const file, double* const mo_1e_int_dipole_x)
+{
+  return trexio_read_mo_1e_int_dipole_x_64(file, mo_1e_int_dipole_x);
+}
+
+trexio_exit_code
+trexio_read_mo_1e_int_dipole_y (trexio_t* const file, double* const mo_1e_int_dipole_y)
+{
+  return trexio_read_mo_1e_int_dipole_y_64(file, mo_1e_int_dipole_y);
+}
+
+trexio_exit_code
+trexio_read_mo_1e_int_dipole_z (trexio_t* const file, double* const mo_1e_int_dipole_z)
+{
+  return trexio_read_mo_1e_int_dipole_z_64(file, mo_1e_int_dipole_z);
+}
+
+trexio_exit_code
 trexio_read_mo_1e_int_overlap_im (trexio_t* const file, double* const mo_1e_int_overlap_im)
 {
   return trexio_read_mo_1e_int_overlap_im_64(file, mo_1e_int_overlap_im);
@@ -28850,6 +32000,24 @@ trexio_exit_code
 trexio_read_mo_1e_int_core_hamiltonian_im (trexio_t* const file, double* const mo_1e_int_core_hamiltonian_im)
 {
   return trexio_read_mo_1e_int_core_hamiltonian_im_64(file, mo_1e_int_core_hamiltonian_im);
+}
+
+trexio_exit_code
+trexio_read_mo_1e_int_dipole_x_im (trexio_t* const file, double* const mo_1e_int_dipole_x_im)
+{
+  return trexio_read_mo_1e_int_dipole_x_im_64(file, mo_1e_int_dipole_x_im);
+}
+
+trexio_exit_code
+trexio_read_mo_1e_int_dipole_y_im (trexio_t* const file, double* const mo_1e_int_dipole_y_im)
+{
+  return trexio_read_mo_1e_int_dipole_y_im_64(file, mo_1e_int_dipole_y_im);
+}
+
+trexio_exit_code
+trexio_read_mo_1e_int_dipole_z_im (trexio_t* const file, double* const mo_1e_int_dipole_z_im)
+{
+  return trexio_read_mo_1e_int_dipole_z_im_64(file, mo_1e_int_dipole_z_im);
 }
 
 trexio_exit_code
@@ -29231,6 +32399,24 @@ trexio_read_safe_ao_1e_int_core_hamiltonian (trexio_t* const file, double* const
 }
 
 trexio_exit_code
+trexio_read_safe_ao_1e_int_dipole_x (trexio_t* const file, double* const ao_1e_int_dipole_x, const int64_t dim_out)
+{
+  return trexio_read_safe_ao_1e_int_dipole_x_64(file, ao_1e_int_dipole_x, dim_out);
+}
+
+trexio_exit_code
+trexio_read_safe_ao_1e_int_dipole_y (trexio_t* const file, double* const ao_1e_int_dipole_y, const int64_t dim_out)
+{
+  return trexio_read_safe_ao_1e_int_dipole_y_64(file, ao_1e_int_dipole_y, dim_out);
+}
+
+trexio_exit_code
+trexio_read_safe_ao_1e_int_dipole_z (trexio_t* const file, double* const ao_1e_int_dipole_z, const int64_t dim_out)
+{
+  return trexio_read_safe_ao_1e_int_dipole_z_64(file, ao_1e_int_dipole_z, dim_out);
+}
+
+trexio_exit_code
 trexio_read_safe_ao_1e_int_overlap_im (trexio_t* const file, double* const ao_1e_int_overlap_im, const int64_t dim_out)
 {
   return trexio_read_safe_ao_1e_int_overlap_im_64(file, ao_1e_int_overlap_im, dim_out);
@@ -29258,6 +32444,24 @@ trexio_exit_code
 trexio_read_safe_ao_1e_int_core_hamiltonian_im (trexio_t* const file, double* const ao_1e_int_core_hamiltonian_im, const int64_t dim_out)
 {
   return trexio_read_safe_ao_1e_int_core_hamiltonian_im_64(file, ao_1e_int_core_hamiltonian_im, dim_out);
+}
+
+trexio_exit_code
+trexio_read_safe_ao_1e_int_dipole_x_im (trexio_t* const file, double* const ao_1e_int_dipole_x_im, const int64_t dim_out)
+{
+  return trexio_read_safe_ao_1e_int_dipole_x_im_64(file, ao_1e_int_dipole_x_im, dim_out);
+}
+
+trexio_exit_code
+trexio_read_safe_ao_1e_int_dipole_y_im (trexio_t* const file, double* const ao_1e_int_dipole_y_im, const int64_t dim_out)
+{
+  return trexio_read_safe_ao_1e_int_dipole_y_im_64(file, ao_1e_int_dipole_y_im, dim_out);
+}
+
+trexio_exit_code
+trexio_read_safe_ao_1e_int_dipole_z_im (trexio_t* const file, double* const ao_1e_int_dipole_z_im, const int64_t dim_out)
+{
+  return trexio_read_safe_ao_1e_int_dipole_z_im_64(file, ao_1e_int_dipole_z_im, dim_out);
 }
 
 trexio_exit_code
@@ -29327,6 +32531,24 @@ trexio_read_safe_mo_1e_int_core_hamiltonian (trexio_t* const file, double* const
 }
 
 trexio_exit_code
+trexio_read_safe_mo_1e_int_dipole_x (trexio_t* const file, double* const mo_1e_int_dipole_x, const int64_t dim_out)
+{
+  return trexio_read_safe_mo_1e_int_dipole_x_64(file, mo_1e_int_dipole_x, dim_out);
+}
+
+trexio_exit_code
+trexio_read_safe_mo_1e_int_dipole_y (trexio_t* const file, double* const mo_1e_int_dipole_y, const int64_t dim_out)
+{
+  return trexio_read_safe_mo_1e_int_dipole_y_64(file, mo_1e_int_dipole_y, dim_out);
+}
+
+trexio_exit_code
+trexio_read_safe_mo_1e_int_dipole_z (trexio_t* const file, double* const mo_1e_int_dipole_z, const int64_t dim_out)
+{
+  return trexio_read_safe_mo_1e_int_dipole_z_64(file, mo_1e_int_dipole_z, dim_out);
+}
+
+trexio_exit_code
 trexio_read_safe_mo_1e_int_overlap_im (trexio_t* const file, double* const mo_1e_int_overlap_im, const int64_t dim_out)
 {
   return trexio_read_safe_mo_1e_int_overlap_im_64(file, mo_1e_int_overlap_im, dim_out);
@@ -29354,6 +32576,24 @@ trexio_exit_code
 trexio_read_safe_mo_1e_int_core_hamiltonian_im (trexio_t* const file, double* const mo_1e_int_core_hamiltonian_im, const int64_t dim_out)
 {
   return trexio_read_safe_mo_1e_int_core_hamiltonian_im_64(file, mo_1e_int_core_hamiltonian_im, dim_out);
+}
+
+trexio_exit_code
+trexio_read_safe_mo_1e_int_dipole_x_im (trexio_t* const file, double* const mo_1e_int_dipole_x_im, const int64_t dim_out)
+{
+  return trexio_read_safe_mo_1e_int_dipole_x_im_64(file, mo_1e_int_dipole_x_im, dim_out);
+}
+
+trexio_exit_code
+trexio_read_safe_mo_1e_int_dipole_y_im (trexio_t* const file, double* const mo_1e_int_dipole_y_im, const int64_t dim_out)
+{
+  return trexio_read_safe_mo_1e_int_dipole_y_im_64(file, mo_1e_int_dipole_y_im, dim_out);
+}
+
+trexio_exit_code
+trexio_read_safe_mo_1e_int_dipole_z_im (trexio_t* const file, double* const mo_1e_int_dipole_z_im, const int64_t dim_out)
+{
+  return trexio_read_safe_mo_1e_int_dipole_z_im_64(file, mo_1e_int_dipole_z_im, dim_out);
 }
 
 trexio_exit_code
@@ -29683,8 +32923,8 @@ trexio_read_ao_2e_int_eri_cholesky(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_ao_2e_int_eri_cholesky_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_ao_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_ao_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_ao_2e_int_eri_cholesky_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -30089,8 +33329,8 @@ trexio_read_mo_2e_int_eri_cholesky(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_mo_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_mo_2e_int_eri_cholesky_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_2e_int_eri_cholesky_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -30191,8 +33431,8 @@ trexio_read_mo_2e_int_eri_lr_cholesky(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_mo_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_mo_2e_int_eri_lr_cholesky_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_2e_int_eri_lr_cholesky_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -31607,8 +34847,8 @@ trexio_read_rdm_2e_transition(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_mo_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_state_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_state_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -31709,8 +34949,8 @@ trexio_read_rdm_2e_cholesky(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_mo_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_rdm_2e_cholesky_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_rdm_2e_cholesky_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -31811,8 +35051,8 @@ trexio_read_rdm_2e_upup_cholesky(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_mo_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_rdm_2e_upup_cholesky_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_rdm_2e_upup_cholesky_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -32015,8 +35255,8 @@ trexio_read_rdm_2e_updn_cholesky(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_mo_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_rdm_2e_updn_cholesky_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_rdm_2e_updn_cholesky_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -37728,14 +40968,18 @@ trexio_write_pbc_k_point_32 (trexio_t* const file, const float* pbc_k_point)
   if (pbc_k_point == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_pbc_k_point(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
+  int64_t pbc_k_point_num = 0;
 
   trexio_exit_code rc = TREXIO_FAILURE;
 
   /* Error handling for this call is added by the generator */
+  rc = trexio_read_pbc_k_point_num_64(file, &(pbc_k_point_num));
+  if (rc != TREXIO_SUCCESS) return rc;
 
+  if (pbc_k_point_num == 0L) return TREXIO_INVALID_NUM;
 
-  uint32_t rank = 1;
-  uint64_t dims[1] = {3};
+  uint32_t rank = 2;
+  uint64_t dims[2] = {pbc_k_point_num, 3};
 
   uint64_t dim_size = 1;
   for (uint32_t i=0; i<rank; ++i){
@@ -40711,6 +43955,219 @@ trexio_write_ao_1e_int_core_hamiltonian_32 (trexio_t* const file, const float* a
 }
 
 trexio_exit_code
+trexio_write_ao_1e_int_dipole_x_32 (trexio_t* const file, const float* ao_1e_int_dipole_x)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_x == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_x(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+  int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_ao_num_64(file, &(ao_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {ao_num, ao_num};
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+  }
+
+  double* ao_1e_int_dipole_x_64 = CALLOC(dim_size, double);
+  if (ao_1e_int_dipole_x_64 == NULL) return TREXIO_ALLOCATION_FAILED;
+
+  /* A type conversion from single precision to double required since back end only accepts 64-bit data */
+  if ((false)) {
+    for (uint64_t i=0; i<dim_size; ++i){
+      ao_1e_int_dipole_x_64[i] = (double) ao_1e_int_dipole_x[i] - (double) 1;
+    }
+  } else {
+    for (uint64_t i=0; i<dim_size; ++i){
+      ao_1e_int_dipole_x_64[i] = (double) ao_1e_int_dipole_x[i];
+    }
+  }
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_write_ao_1e_int_dipole_x(file, ao_1e_int_dipole_x_64, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_write_ao_1e_int_dipole_x(file, ao_1e_int_dipole_x_64, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_write_ao_1e_int_dipole_x(file, ao_1e_int_dipole_x_64, rank, dims);
+    break;
+*/
+  }
+
+  FREE(ao_1e_int_dipole_x_64);
+
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_write_ao_1e_int_dipole_y_32 (trexio_t* const file, const float* ao_1e_int_dipole_y)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_y == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_y(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+  int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_ao_num_64(file, &(ao_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {ao_num, ao_num};
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+  }
+
+  double* ao_1e_int_dipole_y_64 = CALLOC(dim_size, double);
+  if (ao_1e_int_dipole_y_64 == NULL) return TREXIO_ALLOCATION_FAILED;
+
+  /* A type conversion from single precision to double required since back end only accepts 64-bit data */
+  if ((false)) {
+    for (uint64_t i=0; i<dim_size; ++i){
+      ao_1e_int_dipole_y_64[i] = (double) ao_1e_int_dipole_y[i] - (double) 1;
+    }
+  } else {
+    for (uint64_t i=0; i<dim_size; ++i){
+      ao_1e_int_dipole_y_64[i] = (double) ao_1e_int_dipole_y[i];
+    }
+  }
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_write_ao_1e_int_dipole_y(file, ao_1e_int_dipole_y_64, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_write_ao_1e_int_dipole_y(file, ao_1e_int_dipole_y_64, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_write_ao_1e_int_dipole_y(file, ao_1e_int_dipole_y_64, rank, dims);
+    break;
+*/
+  }
+
+  FREE(ao_1e_int_dipole_y_64);
+
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_write_ao_1e_int_dipole_z_32 (trexio_t* const file, const float* ao_1e_int_dipole_z)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_z == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_z(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+  int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_ao_num_64(file, &(ao_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {ao_num, ao_num};
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+  }
+
+  double* ao_1e_int_dipole_z_64 = CALLOC(dim_size, double);
+  if (ao_1e_int_dipole_z_64 == NULL) return TREXIO_ALLOCATION_FAILED;
+
+  /* A type conversion from single precision to double required since back end only accepts 64-bit data */
+  if ((false)) {
+    for (uint64_t i=0; i<dim_size; ++i){
+      ao_1e_int_dipole_z_64[i] = (double) ao_1e_int_dipole_z[i] - (double) 1;
+    }
+  } else {
+    for (uint64_t i=0; i<dim_size; ++i){
+      ao_1e_int_dipole_z_64[i] = (double) ao_1e_int_dipole_z[i];
+    }
+  }
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_write_ao_1e_int_dipole_z(file, ao_1e_int_dipole_z_64, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_write_ao_1e_int_dipole_z(file, ao_1e_int_dipole_z_64, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_write_ao_1e_int_dipole_z(file, ao_1e_int_dipole_z_64, rank, dims);
+    break;
+*/
+  }
+
+  FREE(ao_1e_int_dipole_z_64);
+
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
 trexio_write_ao_1e_int_overlap_im_32 (trexio_t* const file, const float* ao_1e_int_overlap_im)
 {
 
@@ -41059,6 +44516,219 @@ trexio_write_ao_1e_int_core_hamiltonian_im_32 (trexio_t* const file, const float
   }
 
   FREE(ao_1e_int_core_hamiltonian_im_64);
+
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_write_ao_1e_int_dipole_x_im_32 (trexio_t* const file, const float* ao_1e_int_dipole_x_im)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_x_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_x_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+  int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_ao_num_64(file, &(ao_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {ao_num, ao_num};
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+  }
+
+  double* ao_1e_int_dipole_x_im_64 = CALLOC(dim_size, double);
+  if (ao_1e_int_dipole_x_im_64 == NULL) return TREXIO_ALLOCATION_FAILED;
+
+  /* A type conversion from single precision to double required since back end only accepts 64-bit data */
+  if ((false)) {
+    for (uint64_t i=0; i<dim_size; ++i){
+      ao_1e_int_dipole_x_im_64[i] = (double) ao_1e_int_dipole_x_im[i] - (double) 1;
+    }
+  } else {
+    for (uint64_t i=0; i<dim_size; ++i){
+      ao_1e_int_dipole_x_im_64[i] = (double) ao_1e_int_dipole_x_im[i];
+    }
+  }
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_write_ao_1e_int_dipole_x_im(file, ao_1e_int_dipole_x_im_64, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_write_ao_1e_int_dipole_x_im(file, ao_1e_int_dipole_x_im_64, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_write_ao_1e_int_dipole_x_im(file, ao_1e_int_dipole_x_im_64, rank, dims);
+    break;
+*/
+  }
+
+  FREE(ao_1e_int_dipole_x_im_64);
+
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_write_ao_1e_int_dipole_y_im_32 (trexio_t* const file, const float* ao_1e_int_dipole_y_im)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_y_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_y_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+  int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_ao_num_64(file, &(ao_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {ao_num, ao_num};
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+  }
+
+  double* ao_1e_int_dipole_y_im_64 = CALLOC(dim_size, double);
+  if (ao_1e_int_dipole_y_im_64 == NULL) return TREXIO_ALLOCATION_FAILED;
+
+  /* A type conversion from single precision to double required since back end only accepts 64-bit data */
+  if ((false)) {
+    for (uint64_t i=0; i<dim_size; ++i){
+      ao_1e_int_dipole_y_im_64[i] = (double) ao_1e_int_dipole_y_im[i] - (double) 1;
+    }
+  } else {
+    for (uint64_t i=0; i<dim_size; ++i){
+      ao_1e_int_dipole_y_im_64[i] = (double) ao_1e_int_dipole_y_im[i];
+    }
+  }
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_write_ao_1e_int_dipole_y_im(file, ao_1e_int_dipole_y_im_64, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_write_ao_1e_int_dipole_y_im(file, ao_1e_int_dipole_y_im_64, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_write_ao_1e_int_dipole_y_im(file, ao_1e_int_dipole_y_im_64, rank, dims);
+    break;
+*/
+  }
+
+  FREE(ao_1e_int_dipole_y_im_64);
+
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_write_ao_1e_int_dipole_z_im_32 (trexio_t* const file, const float* ao_1e_int_dipole_z_im)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_z_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_z_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+  int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_ao_num_64(file, &(ao_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {ao_num, ao_num};
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+  }
+
+  double* ao_1e_int_dipole_z_im_64 = CALLOC(dim_size, double);
+  if (ao_1e_int_dipole_z_im_64 == NULL) return TREXIO_ALLOCATION_FAILED;
+
+  /* A type conversion from single precision to double required since back end only accepts 64-bit data */
+  if ((false)) {
+    for (uint64_t i=0; i<dim_size; ++i){
+      ao_1e_int_dipole_z_im_64[i] = (double) ao_1e_int_dipole_z_im[i] - (double) 1;
+    }
+  } else {
+    for (uint64_t i=0; i<dim_size; ++i){
+      ao_1e_int_dipole_z_im_64[i] = (double) ao_1e_int_dipole_z_im[i];
+    }
+  }
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_write_ao_1e_int_dipole_z_im(file, ao_1e_int_dipole_z_im_64, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_write_ao_1e_int_dipole_z_im(file, ao_1e_int_dipole_z_im_64, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_write_ao_1e_int_dipole_z_im(file, ao_1e_int_dipole_z_im_64, rank, dims);
+    break;
+*/
+  }
+
+  FREE(ao_1e_int_dipole_z_im_64);
 
   if (rc != TREXIO_SUCCESS) return rc;
 
@@ -41855,6 +45525,219 @@ trexio_write_mo_1e_int_core_hamiltonian_32 (trexio_t* const file, const float* m
 }
 
 trexio_exit_code
+trexio_write_mo_1e_int_dipole_x_32 (trexio_t* const file, const float* mo_1e_int_dipole_x)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_x == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_x(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+  int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_mo_num_64(file, &(mo_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {mo_num, mo_num};
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+  }
+
+  double* mo_1e_int_dipole_x_64 = CALLOC(dim_size, double);
+  if (mo_1e_int_dipole_x_64 == NULL) return TREXIO_ALLOCATION_FAILED;
+
+  /* A type conversion from single precision to double required since back end only accepts 64-bit data */
+  if ((false)) {
+    for (uint64_t i=0; i<dim_size; ++i){
+      mo_1e_int_dipole_x_64[i] = (double) mo_1e_int_dipole_x[i] - (double) 1;
+    }
+  } else {
+    for (uint64_t i=0; i<dim_size; ++i){
+      mo_1e_int_dipole_x_64[i] = (double) mo_1e_int_dipole_x[i];
+    }
+  }
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_write_mo_1e_int_dipole_x(file, mo_1e_int_dipole_x_64, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_write_mo_1e_int_dipole_x(file, mo_1e_int_dipole_x_64, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_write_mo_1e_int_dipole_x(file, mo_1e_int_dipole_x_64, rank, dims);
+    break;
+*/
+  }
+
+  FREE(mo_1e_int_dipole_x_64);
+
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_write_mo_1e_int_dipole_y_32 (trexio_t* const file, const float* mo_1e_int_dipole_y)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_y == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_y(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+  int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_mo_num_64(file, &(mo_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {mo_num, mo_num};
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+  }
+
+  double* mo_1e_int_dipole_y_64 = CALLOC(dim_size, double);
+  if (mo_1e_int_dipole_y_64 == NULL) return TREXIO_ALLOCATION_FAILED;
+
+  /* A type conversion from single precision to double required since back end only accepts 64-bit data */
+  if ((false)) {
+    for (uint64_t i=0; i<dim_size; ++i){
+      mo_1e_int_dipole_y_64[i] = (double) mo_1e_int_dipole_y[i] - (double) 1;
+    }
+  } else {
+    for (uint64_t i=0; i<dim_size; ++i){
+      mo_1e_int_dipole_y_64[i] = (double) mo_1e_int_dipole_y[i];
+    }
+  }
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_write_mo_1e_int_dipole_y(file, mo_1e_int_dipole_y_64, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_write_mo_1e_int_dipole_y(file, mo_1e_int_dipole_y_64, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_write_mo_1e_int_dipole_y(file, mo_1e_int_dipole_y_64, rank, dims);
+    break;
+*/
+  }
+
+  FREE(mo_1e_int_dipole_y_64);
+
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_write_mo_1e_int_dipole_z_32 (trexio_t* const file, const float* mo_1e_int_dipole_z)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_z == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_z(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+  int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_mo_num_64(file, &(mo_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {mo_num, mo_num};
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+  }
+
+  double* mo_1e_int_dipole_z_64 = CALLOC(dim_size, double);
+  if (mo_1e_int_dipole_z_64 == NULL) return TREXIO_ALLOCATION_FAILED;
+
+  /* A type conversion from single precision to double required since back end only accepts 64-bit data */
+  if ((false)) {
+    for (uint64_t i=0; i<dim_size; ++i){
+      mo_1e_int_dipole_z_64[i] = (double) mo_1e_int_dipole_z[i] - (double) 1;
+    }
+  } else {
+    for (uint64_t i=0; i<dim_size; ++i){
+      mo_1e_int_dipole_z_64[i] = (double) mo_1e_int_dipole_z[i];
+    }
+  }
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_write_mo_1e_int_dipole_z(file, mo_1e_int_dipole_z_64, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_write_mo_1e_int_dipole_z(file, mo_1e_int_dipole_z_64, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_write_mo_1e_int_dipole_z(file, mo_1e_int_dipole_z_64, rank, dims);
+    break;
+*/
+  }
+
+  FREE(mo_1e_int_dipole_z_64);
+
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
 trexio_write_mo_1e_int_overlap_im_32 (trexio_t* const file, const float* mo_1e_int_overlap_im)
 {
 
@@ -42203,6 +46086,219 @@ trexio_write_mo_1e_int_core_hamiltonian_im_32 (trexio_t* const file, const float
   }
 
   FREE(mo_1e_int_core_hamiltonian_im_64);
+
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_write_mo_1e_int_dipole_x_im_32 (trexio_t* const file, const float* mo_1e_int_dipole_x_im)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_x_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_x_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+  int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_mo_num_64(file, &(mo_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {mo_num, mo_num};
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+  }
+
+  double* mo_1e_int_dipole_x_im_64 = CALLOC(dim_size, double);
+  if (mo_1e_int_dipole_x_im_64 == NULL) return TREXIO_ALLOCATION_FAILED;
+
+  /* A type conversion from single precision to double required since back end only accepts 64-bit data */
+  if ((false)) {
+    for (uint64_t i=0; i<dim_size; ++i){
+      mo_1e_int_dipole_x_im_64[i] = (double) mo_1e_int_dipole_x_im[i] - (double) 1;
+    }
+  } else {
+    for (uint64_t i=0; i<dim_size; ++i){
+      mo_1e_int_dipole_x_im_64[i] = (double) mo_1e_int_dipole_x_im[i];
+    }
+  }
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_write_mo_1e_int_dipole_x_im(file, mo_1e_int_dipole_x_im_64, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_write_mo_1e_int_dipole_x_im(file, mo_1e_int_dipole_x_im_64, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_write_mo_1e_int_dipole_x_im(file, mo_1e_int_dipole_x_im_64, rank, dims);
+    break;
+*/
+  }
+
+  FREE(mo_1e_int_dipole_x_im_64);
+
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_write_mo_1e_int_dipole_y_im_32 (trexio_t* const file, const float* mo_1e_int_dipole_y_im)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_y_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_y_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+  int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_mo_num_64(file, &(mo_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {mo_num, mo_num};
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+  }
+
+  double* mo_1e_int_dipole_y_im_64 = CALLOC(dim_size, double);
+  if (mo_1e_int_dipole_y_im_64 == NULL) return TREXIO_ALLOCATION_FAILED;
+
+  /* A type conversion from single precision to double required since back end only accepts 64-bit data */
+  if ((false)) {
+    for (uint64_t i=0; i<dim_size; ++i){
+      mo_1e_int_dipole_y_im_64[i] = (double) mo_1e_int_dipole_y_im[i] - (double) 1;
+    }
+  } else {
+    for (uint64_t i=0; i<dim_size; ++i){
+      mo_1e_int_dipole_y_im_64[i] = (double) mo_1e_int_dipole_y_im[i];
+    }
+  }
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_write_mo_1e_int_dipole_y_im(file, mo_1e_int_dipole_y_im_64, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_write_mo_1e_int_dipole_y_im(file, mo_1e_int_dipole_y_im_64, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_write_mo_1e_int_dipole_y_im(file, mo_1e_int_dipole_y_im_64, rank, dims);
+    break;
+*/
+  }
+
+  FREE(mo_1e_int_dipole_y_im_64);
+
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_write_mo_1e_int_dipole_z_im_32 (trexio_t* const file, const float* mo_1e_int_dipole_z_im)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_z_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_z_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+  int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_mo_num_64(file, &(mo_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {mo_num, mo_num};
+
+  uint64_t dim_size = 1;
+  for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+  }
+
+  double* mo_1e_int_dipole_z_im_64 = CALLOC(dim_size, double);
+  if (mo_1e_int_dipole_z_im_64 == NULL) return TREXIO_ALLOCATION_FAILED;
+
+  /* A type conversion from single precision to double required since back end only accepts 64-bit data */
+  if ((false)) {
+    for (uint64_t i=0; i<dim_size; ++i){
+      mo_1e_int_dipole_z_im_64[i] = (double) mo_1e_int_dipole_z_im[i] - (double) 1;
+    }
+  } else {
+    for (uint64_t i=0; i<dim_size; ++i){
+      mo_1e_int_dipole_z_im_64[i] = (double) mo_1e_int_dipole_z_im[i];
+    }
+  }
+
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  rc = TREXIO_FAILURE;
+  switch (file->back_end) {
+
+  case TREXIO_TEXT:
+    rc = trexio_text_write_mo_1e_int_dipole_z_im(file, mo_1e_int_dipole_z_im_64, rank, dims);
+    break;
+
+  case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+    rc = trexio_hdf5_write_mo_1e_int_dipole_z_im(file, mo_1e_int_dipole_z_im_64, rank, dims);
+    break;
+#else
+    rc = TREXIO_BACK_END_MISSING;
+    break;
+#endif
+/*
+  case TREXIO_JSON:
+    rc = trexio_json_write_mo_1e_int_dipole_z_im(file, mo_1e_int_dipole_z_im_64, rank, dims);
+    break;
+*/
+  }
+
+  FREE(mo_1e_int_dipole_z_im_64);
 
   if (rc != TREXIO_SUCCESS) return rc;
 
@@ -43388,15 +47484,19 @@ trexio_write_safe_pbc_k_point_32 (trexio_t* const file, const float* dset_in, co
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_pbc_k_point(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
+int64_t pbc_k_point_num = 0;
 
 trexio_exit_code rc = TREXIO_FAILURE;
 (void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
+rc = trexio_read_pbc_k_point_num_64(file, &(pbc_k_point_num));
+if (rc != TREXIO_SUCCESS) return rc;
 
+if (pbc_k_point_num == 0L) return TREXIO_INVALID_NUM;
 
-uint32_t rank = 1;
-uint64_t dims[1] = {3};
+uint32_t rank = 2;
+uint64_t dims[2] = {pbc_k_point_num, 3};
 
 /* The block below is specific to safe API as it checks the boundaries */
 uint64_t dim_size = 1;
@@ -44775,6 +48875,105 @@ for (uint32_t i=0; i<rank; ++i){
 }
 
 trexio_exit_code
+trexio_write_safe_ao_1e_int_dipole_x_32 (trexio_t* const file, const float* dset_in, const int64_t dim_in)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_x(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_ao_num_64(file, &(ao_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {ao_num, ao_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_in > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_write_ao_1e_int_dipole_x_32(file, dset_in);
+}
+
+trexio_exit_code
+trexio_write_safe_ao_1e_int_dipole_y_32 (trexio_t* const file, const float* dset_in, const int64_t dim_in)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_y(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_ao_num_64(file, &(ao_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {ao_num, ao_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_in > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_write_ao_1e_int_dipole_y_32(file, dset_in);
+}
+
+trexio_exit_code
+trexio_write_safe_ao_1e_int_dipole_z_32 (trexio_t* const file, const float* dset_in, const int64_t dim_in)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_z(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_ao_num_64(file, &(ao_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {ao_num, ao_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_in > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_write_ao_1e_int_dipole_z_32(file, dset_in);
+}
+
+trexio_exit_code
 trexio_write_safe_ao_1e_int_overlap_im_32 (trexio_t* const file, const float* dset_in, const int64_t dim_in)
 {
 
@@ -44937,6 +49136,105 @@ for (uint32_t i=0; i<rank; ++i){
   if (dim_in > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
 
   return trexio_write_ao_1e_int_core_hamiltonian_im_32(file, dset_in);
+}
+
+trexio_exit_code
+trexio_write_safe_ao_1e_int_dipole_x_im_32 (trexio_t* const file, const float* dset_in, const int64_t dim_in)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_x_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_ao_num_64(file, &(ao_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {ao_num, ao_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_in > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_write_ao_1e_int_dipole_x_im_32(file, dset_in);
+}
+
+trexio_exit_code
+trexio_write_safe_ao_1e_int_dipole_y_im_32 (trexio_t* const file, const float* dset_in, const int64_t dim_in)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_y_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_ao_num_64(file, &(ao_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {ao_num, ao_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_in > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_write_ao_1e_int_dipole_y_im_32(file, dset_in);
+}
+
+trexio_exit_code
+trexio_write_safe_ao_1e_int_dipole_z_im_32 (trexio_t* const file, const float* dset_in, const int64_t dim_in)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_z_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_ao_num_64(file, &(ao_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {ao_num, ao_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_in > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_write_ao_1e_int_dipole_z_im_32(file, dset_in);
 }
 
 trexio_exit_code
@@ -45311,6 +49609,105 @@ for (uint32_t i=0; i<rank; ++i){
 }
 
 trexio_exit_code
+trexio_write_safe_mo_1e_int_dipole_x_32 (trexio_t* const file, const float* dset_in, const int64_t dim_in)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_x(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_mo_num_64(file, &(mo_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {mo_num, mo_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_in > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_write_mo_1e_int_dipole_x_32(file, dset_in);
+}
+
+trexio_exit_code
+trexio_write_safe_mo_1e_int_dipole_y_32 (trexio_t* const file, const float* dset_in, const int64_t dim_in)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_y(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_mo_num_64(file, &(mo_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {mo_num, mo_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_in > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_write_mo_1e_int_dipole_y_32(file, dset_in);
+}
+
+trexio_exit_code
+trexio_write_safe_mo_1e_int_dipole_z_32 (trexio_t* const file, const float* dset_in, const int64_t dim_in)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_z(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_mo_num_64(file, &(mo_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {mo_num, mo_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_in > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_write_mo_1e_int_dipole_z_32(file, dset_in);
+}
+
+trexio_exit_code
 trexio_write_safe_mo_1e_int_overlap_im_32 (trexio_t* const file, const float* dset_in, const int64_t dim_in)
 {
 
@@ -45473,6 +49870,105 @@ for (uint32_t i=0; i<rank; ++i){
   if (dim_in > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
 
   return trexio_write_mo_1e_int_core_hamiltonian_im_32(file, dset_in);
+}
+
+trexio_exit_code
+trexio_write_safe_mo_1e_int_dipole_x_im_32 (trexio_t* const file, const float* dset_in, const int64_t dim_in)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_x_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_mo_num_64(file, &(mo_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {mo_num, mo_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_in > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_write_mo_1e_int_dipole_x_im_32(file, dset_in);
+}
+
+trexio_exit_code
+trexio_write_safe_mo_1e_int_dipole_y_im_32 (trexio_t* const file, const float* dset_in, const int64_t dim_in)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_y_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_mo_num_64(file, &(mo_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {mo_num, mo_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_in > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_write_mo_1e_int_dipole_y_im_32(file, dset_in);
+}
+
+trexio_exit_code
+trexio_write_safe_mo_1e_int_dipole_z_im_32 (trexio_t* const file, const float* dset_in, const int64_t dim_in)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_z_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_mo_num_64(file, &(mo_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {mo_num, mo_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_in > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_write_mo_1e_int_dipole_z_im_32(file, dset_in);
 }
 
 trexio_exit_code
@@ -46650,13 +51146,17 @@ trexio_write_pbc_k_point_64 (trexio_t* const file, const double* pbc_k_point)
   if (pbc_k_point == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_pbc_k_point(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
+  int64_t pbc_k_point_num = 0;
 
   trexio_exit_code rc = TREXIO_FAILURE;
   /* Error handling for this call is added by the generator */
+  rc = trexio_read_pbc_k_point_num_64(file, &(pbc_k_point_num));
+  if (rc != TREXIO_SUCCESS) return rc;
 
+  if (pbc_k_point_num == 0L) return TREXIO_INVALID_NUM;
 
-  uint32_t rank = 1;
-  uint64_t dims[1] = {3};
+  uint32_t rank = 2;
+  uint64_t dims[2] = {pbc_k_point_num, 3};
 
   if ((false)) {
     /* Handle index type : is_index = (false) */
@@ -50597,6 +55097,288 @@ trexio_write_ao_1e_int_core_hamiltonian_64 (trexio_t* const file, const double* 
 }
 
 trexio_exit_code
+trexio_write_ao_1e_int_dipole_x_64 (trexio_t* const file, const double* ao_1e_int_dipole_x)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  if (ao_1e_int_dipole_x == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_x(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+  int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_ao_num_64(file, &(ao_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {ao_num, ao_num};
+
+  if ((false)) {
+    /* Handle index type : is_index = (false) */
+    uint64_t dim_size = 1;
+    for (uint32_t i=0; i<rank; ++i){
+      dim_size *= dims[i];
+    }
+
+    double* ao_1e_int_dipole_x_p =
+       CALLOC(dim_size, double);
+
+    if (ao_1e_int_dipole_x_p == NULL) return TREXIO_ALLOCATION_FAILED;
+
+    for (uint64_t i=0; i<dim_size; ++i){
+       ao_1e_int_dipole_x_p[i] = ao_1e_int_dipole_x[i] - (double) 1;
+    }
+
+    rc = TREXIO_FAILURE;
+    switch (file->back_end) {
+
+    case TREXIO_TEXT:
+      rc = trexio_text_write_ao_1e_int_dipole_x(file,
+                                          (const double*) ao_1e_int_dipole_x_p,
+                                          rank, dims);
+      break;
+
+    case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+      rc = trexio_hdf5_write_ao_1e_int_dipole_x(file,
+                                          (const double*) ao_1e_int_dipole_x_p,
+                                          rank, dims);
+      break;
+#else
+      rc = TREXIO_BACK_END_MISSING;
+      break;
+#endif
+      /*
+        case TREXIO_JSON:
+        rc = trexio_json_write_ao_1e_int_dipole_x(file, ao_1e_int_dipole_x_p, rank, dims);
+        break;
+      */
+      FREE(ao_1e_int_dipole_x_p);
+
+    }
+
+  } else {
+
+    rc = TREXIO_FAILURE;
+    switch (file->back_end) {
+
+    case TREXIO_TEXT:
+      rc = trexio_text_write_ao_1e_int_dipole_x(file, ao_1e_int_dipole_x, rank, dims);
+      break;
+
+    case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+      rc = trexio_hdf5_write_ao_1e_int_dipole_x(file, ao_1e_int_dipole_x, rank, dims);
+      break;
+#else
+      rc = TREXIO_BACK_END_MISSING;
+      break;
+#endif
+      /*
+        case TREXIO_JSON:
+        rc = trexio_json_write_ao_1e_int_dipole_x(file, ao_1e_int_dipole_x, rank, dims);
+        break;
+      */
+    }
+  }
+
+  return rc;
+}
+
+trexio_exit_code
+trexio_write_ao_1e_int_dipole_y_64 (trexio_t* const file, const double* ao_1e_int_dipole_y)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  if (ao_1e_int_dipole_y == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_y(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+  int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_ao_num_64(file, &(ao_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {ao_num, ao_num};
+
+  if ((false)) {
+    /* Handle index type : is_index = (false) */
+    uint64_t dim_size = 1;
+    for (uint32_t i=0; i<rank; ++i){
+      dim_size *= dims[i];
+    }
+
+    double* ao_1e_int_dipole_y_p =
+       CALLOC(dim_size, double);
+
+    if (ao_1e_int_dipole_y_p == NULL) return TREXIO_ALLOCATION_FAILED;
+
+    for (uint64_t i=0; i<dim_size; ++i){
+       ao_1e_int_dipole_y_p[i] = ao_1e_int_dipole_y[i] - (double) 1;
+    }
+
+    rc = TREXIO_FAILURE;
+    switch (file->back_end) {
+
+    case TREXIO_TEXT:
+      rc = trexio_text_write_ao_1e_int_dipole_y(file,
+                                          (const double*) ao_1e_int_dipole_y_p,
+                                          rank, dims);
+      break;
+
+    case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+      rc = trexio_hdf5_write_ao_1e_int_dipole_y(file,
+                                          (const double*) ao_1e_int_dipole_y_p,
+                                          rank, dims);
+      break;
+#else
+      rc = TREXIO_BACK_END_MISSING;
+      break;
+#endif
+      /*
+        case TREXIO_JSON:
+        rc = trexio_json_write_ao_1e_int_dipole_y(file, ao_1e_int_dipole_y_p, rank, dims);
+        break;
+      */
+      FREE(ao_1e_int_dipole_y_p);
+
+    }
+
+  } else {
+
+    rc = TREXIO_FAILURE;
+    switch (file->back_end) {
+
+    case TREXIO_TEXT:
+      rc = trexio_text_write_ao_1e_int_dipole_y(file, ao_1e_int_dipole_y, rank, dims);
+      break;
+
+    case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+      rc = trexio_hdf5_write_ao_1e_int_dipole_y(file, ao_1e_int_dipole_y, rank, dims);
+      break;
+#else
+      rc = TREXIO_BACK_END_MISSING;
+      break;
+#endif
+      /*
+        case TREXIO_JSON:
+        rc = trexio_json_write_ao_1e_int_dipole_y(file, ao_1e_int_dipole_y, rank, dims);
+        break;
+      */
+    }
+  }
+
+  return rc;
+}
+
+trexio_exit_code
+trexio_write_ao_1e_int_dipole_z_64 (trexio_t* const file, const double* ao_1e_int_dipole_z)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  if (ao_1e_int_dipole_z == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_z(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+  int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_ao_num_64(file, &(ao_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {ao_num, ao_num};
+
+  if ((false)) {
+    /* Handle index type : is_index = (false) */
+    uint64_t dim_size = 1;
+    for (uint32_t i=0; i<rank; ++i){
+      dim_size *= dims[i];
+    }
+
+    double* ao_1e_int_dipole_z_p =
+       CALLOC(dim_size, double);
+
+    if (ao_1e_int_dipole_z_p == NULL) return TREXIO_ALLOCATION_FAILED;
+
+    for (uint64_t i=0; i<dim_size; ++i){
+       ao_1e_int_dipole_z_p[i] = ao_1e_int_dipole_z[i] - (double) 1;
+    }
+
+    rc = TREXIO_FAILURE;
+    switch (file->back_end) {
+
+    case TREXIO_TEXT:
+      rc = trexio_text_write_ao_1e_int_dipole_z(file,
+                                          (const double*) ao_1e_int_dipole_z_p,
+                                          rank, dims);
+      break;
+
+    case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+      rc = trexio_hdf5_write_ao_1e_int_dipole_z(file,
+                                          (const double*) ao_1e_int_dipole_z_p,
+                                          rank, dims);
+      break;
+#else
+      rc = TREXIO_BACK_END_MISSING;
+      break;
+#endif
+      /*
+        case TREXIO_JSON:
+        rc = trexio_json_write_ao_1e_int_dipole_z(file, ao_1e_int_dipole_z_p, rank, dims);
+        break;
+      */
+      FREE(ao_1e_int_dipole_z_p);
+
+    }
+
+  } else {
+
+    rc = TREXIO_FAILURE;
+    switch (file->back_end) {
+
+    case TREXIO_TEXT:
+      rc = trexio_text_write_ao_1e_int_dipole_z(file, ao_1e_int_dipole_z, rank, dims);
+      break;
+
+    case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+      rc = trexio_hdf5_write_ao_1e_int_dipole_z(file, ao_1e_int_dipole_z, rank, dims);
+      break;
+#else
+      rc = TREXIO_BACK_END_MISSING;
+      break;
+#endif
+      /*
+        case TREXIO_JSON:
+        rc = trexio_json_write_ao_1e_int_dipole_z(file, ao_1e_int_dipole_z, rank, dims);
+        break;
+      */
+    }
+  }
+
+  return rc;
+}
+
+trexio_exit_code
 trexio_write_ao_1e_int_overlap_im_64 (trexio_t* const file, const double* ao_1e_int_overlap_im)
 {
 
@@ -51058,6 +55840,288 @@ trexio_write_ao_1e_int_core_hamiltonian_im_64 (trexio_t* const file, const doubl
       /*
         case TREXIO_JSON:
         rc = trexio_json_write_ao_1e_int_core_hamiltonian_im(file, ao_1e_int_core_hamiltonian_im, rank, dims);
+        break;
+      */
+    }
+  }
+
+  return rc;
+}
+
+trexio_exit_code
+trexio_write_ao_1e_int_dipole_x_im_64 (trexio_t* const file, const double* ao_1e_int_dipole_x_im)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  if (ao_1e_int_dipole_x_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_x_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+  int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_ao_num_64(file, &(ao_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {ao_num, ao_num};
+
+  if ((false)) {
+    /* Handle index type : is_index = (false) */
+    uint64_t dim_size = 1;
+    for (uint32_t i=0; i<rank; ++i){
+      dim_size *= dims[i];
+    }
+
+    double* ao_1e_int_dipole_x_im_p =
+       CALLOC(dim_size, double);
+
+    if (ao_1e_int_dipole_x_im_p == NULL) return TREXIO_ALLOCATION_FAILED;
+
+    for (uint64_t i=0; i<dim_size; ++i){
+       ao_1e_int_dipole_x_im_p[i] = ao_1e_int_dipole_x_im[i] - (double) 1;
+    }
+
+    rc = TREXIO_FAILURE;
+    switch (file->back_end) {
+
+    case TREXIO_TEXT:
+      rc = trexio_text_write_ao_1e_int_dipole_x_im(file,
+                                          (const double*) ao_1e_int_dipole_x_im_p,
+                                          rank, dims);
+      break;
+
+    case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+      rc = trexio_hdf5_write_ao_1e_int_dipole_x_im(file,
+                                          (const double*) ao_1e_int_dipole_x_im_p,
+                                          rank, dims);
+      break;
+#else
+      rc = TREXIO_BACK_END_MISSING;
+      break;
+#endif
+      /*
+        case TREXIO_JSON:
+        rc = trexio_json_write_ao_1e_int_dipole_x_im(file, ao_1e_int_dipole_x_im_p, rank, dims);
+        break;
+      */
+      FREE(ao_1e_int_dipole_x_im_p);
+
+    }
+
+  } else {
+
+    rc = TREXIO_FAILURE;
+    switch (file->back_end) {
+
+    case TREXIO_TEXT:
+      rc = trexio_text_write_ao_1e_int_dipole_x_im(file, ao_1e_int_dipole_x_im, rank, dims);
+      break;
+
+    case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+      rc = trexio_hdf5_write_ao_1e_int_dipole_x_im(file, ao_1e_int_dipole_x_im, rank, dims);
+      break;
+#else
+      rc = TREXIO_BACK_END_MISSING;
+      break;
+#endif
+      /*
+        case TREXIO_JSON:
+        rc = trexio_json_write_ao_1e_int_dipole_x_im(file, ao_1e_int_dipole_x_im, rank, dims);
+        break;
+      */
+    }
+  }
+
+  return rc;
+}
+
+trexio_exit_code
+trexio_write_ao_1e_int_dipole_y_im_64 (trexio_t* const file, const double* ao_1e_int_dipole_y_im)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  if (ao_1e_int_dipole_y_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_y_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+  int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_ao_num_64(file, &(ao_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {ao_num, ao_num};
+
+  if ((false)) {
+    /* Handle index type : is_index = (false) */
+    uint64_t dim_size = 1;
+    for (uint32_t i=0; i<rank; ++i){
+      dim_size *= dims[i];
+    }
+
+    double* ao_1e_int_dipole_y_im_p =
+       CALLOC(dim_size, double);
+
+    if (ao_1e_int_dipole_y_im_p == NULL) return TREXIO_ALLOCATION_FAILED;
+
+    for (uint64_t i=0; i<dim_size; ++i){
+       ao_1e_int_dipole_y_im_p[i] = ao_1e_int_dipole_y_im[i] - (double) 1;
+    }
+
+    rc = TREXIO_FAILURE;
+    switch (file->back_end) {
+
+    case TREXIO_TEXT:
+      rc = trexio_text_write_ao_1e_int_dipole_y_im(file,
+                                          (const double*) ao_1e_int_dipole_y_im_p,
+                                          rank, dims);
+      break;
+
+    case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+      rc = trexio_hdf5_write_ao_1e_int_dipole_y_im(file,
+                                          (const double*) ao_1e_int_dipole_y_im_p,
+                                          rank, dims);
+      break;
+#else
+      rc = TREXIO_BACK_END_MISSING;
+      break;
+#endif
+      /*
+        case TREXIO_JSON:
+        rc = trexio_json_write_ao_1e_int_dipole_y_im(file, ao_1e_int_dipole_y_im_p, rank, dims);
+        break;
+      */
+      FREE(ao_1e_int_dipole_y_im_p);
+
+    }
+
+  } else {
+
+    rc = TREXIO_FAILURE;
+    switch (file->back_end) {
+
+    case TREXIO_TEXT:
+      rc = trexio_text_write_ao_1e_int_dipole_y_im(file, ao_1e_int_dipole_y_im, rank, dims);
+      break;
+
+    case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+      rc = trexio_hdf5_write_ao_1e_int_dipole_y_im(file, ao_1e_int_dipole_y_im, rank, dims);
+      break;
+#else
+      rc = TREXIO_BACK_END_MISSING;
+      break;
+#endif
+      /*
+        case TREXIO_JSON:
+        rc = trexio_json_write_ao_1e_int_dipole_y_im(file, ao_1e_int_dipole_y_im, rank, dims);
+        break;
+      */
+    }
+  }
+
+  return rc;
+}
+
+trexio_exit_code
+trexio_write_ao_1e_int_dipole_z_im_64 (trexio_t* const file, const double* ao_1e_int_dipole_z_im)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  if (ao_1e_int_dipole_z_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_z_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+  int64_t ao_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_ao_num_64(file, &(ao_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {ao_num, ao_num};
+
+  if ((false)) {
+    /* Handle index type : is_index = (false) */
+    uint64_t dim_size = 1;
+    for (uint32_t i=0; i<rank; ++i){
+      dim_size *= dims[i];
+    }
+
+    double* ao_1e_int_dipole_z_im_p =
+       CALLOC(dim_size, double);
+
+    if (ao_1e_int_dipole_z_im_p == NULL) return TREXIO_ALLOCATION_FAILED;
+
+    for (uint64_t i=0; i<dim_size; ++i){
+       ao_1e_int_dipole_z_im_p[i] = ao_1e_int_dipole_z_im[i] - (double) 1;
+    }
+
+    rc = TREXIO_FAILURE;
+    switch (file->back_end) {
+
+    case TREXIO_TEXT:
+      rc = trexio_text_write_ao_1e_int_dipole_z_im(file,
+                                          (const double*) ao_1e_int_dipole_z_im_p,
+                                          rank, dims);
+      break;
+
+    case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+      rc = trexio_hdf5_write_ao_1e_int_dipole_z_im(file,
+                                          (const double*) ao_1e_int_dipole_z_im_p,
+                                          rank, dims);
+      break;
+#else
+      rc = TREXIO_BACK_END_MISSING;
+      break;
+#endif
+      /*
+        case TREXIO_JSON:
+        rc = trexio_json_write_ao_1e_int_dipole_z_im(file, ao_1e_int_dipole_z_im_p, rank, dims);
+        break;
+      */
+      FREE(ao_1e_int_dipole_z_im_p);
+
+    }
+
+  } else {
+
+    rc = TREXIO_FAILURE;
+    switch (file->back_end) {
+
+    case TREXIO_TEXT:
+      rc = trexio_text_write_ao_1e_int_dipole_z_im(file, ao_1e_int_dipole_z_im, rank, dims);
+      break;
+
+    case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+      rc = trexio_hdf5_write_ao_1e_int_dipole_z_im(file, ao_1e_int_dipole_z_im, rank, dims);
+      break;
+#else
+      rc = TREXIO_BACK_END_MISSING;
+      break;
+#endif
+      /*
+        case TREXIO_JSON:
+        rc = trexio_json_write_ao_1e_int_dipole_z_im(file, ao_1e_int_dipole_z_im, rank, dims);
         break;
       */
     }
@@ -52109,6 +57173,288 @@ trexio_write_mo_1e_int_core_hamiltonian_64 (trexio_t* const file, const double* 
 }
 
 trexio_exit_code
+trexio_write_mo_1e_int_dipole_x_64 (trexio_t* const file, const double* mo_1e_int_dipole_x)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  if (mo_1e_int_dipole_x == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_x(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+  int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_mo_num_64(file, &(mo_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {mo_num, mo_num};
+
+  if ((false)) {
+    /* Handle index type : is_index = (false) */
+    uint64_t dim_size = 1;
+    for (uint32_t i=0; i<rank; ++i){
+      dim_size *= dims[i];
+    }
+
+    double* mo_1e_int_dipole_x_p =
+       CALLOC(dim_size, double);
+
+    if (mo_1e_int_dipole_x_p == NULL) return TREXIO_ALLOCATION_FAILED;
+
+    for (uint64_t i=0; i<dim_size; ++i){
+       mo_1e_int_dipole_x_p[i] = mo_1e_int_dipole_x[i] - (double) 1;
+    }
+
+    rc = TREXIO_FAILURE;
+    switch (file->back_end) {
+
+    case TREXIO_TEXT:
+      rc = trexio_text_write_mo_1e_int_dipole_x(file,
+                                          (const double*) mo_1e_int_dipole_x_p,
+                                          rank, dims);
+      break;
+
+    case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+      rc = trexio_hdf5_write_mo_1e_int_dipole_x(file,
+                                          (const double*) mo_1e_int_dipole_x_p,
+                                          rank, dims);
+      break;
+#else
+      rc = TREXIO_BACK_END_MISSING;
+      break;
+#endif
+      /*
+        case TREXIO_JSON:
+        rc = trexio_json_write_mo_1e_int_dipole_x(file, mo_1e_int_dipole_x_p, rank, dims);
+        break;
+      */
+      FREE(mo_1e_int_dipole_x_p);
+
+    }
+
+  } else {
+
+    rc = TREXIO_FAILURE;
+    switch (file->back_end) {
+
+    case TREXIO_TEXT:
+      rc = trexio_text_write_mo_1e_int_dipole_x(file, mo_1e_int_dipole_x, rank, dims);
+      break;
+
+    case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+      rc = trexio_hdf5_write_mo_1e_int_dipole_x(file, mo_1e_int_dipole_x, rank, dims);
+      break;
+#else
+      rc = TREXIO_BACK_END_MISSING;
+      break;
+#endif
+      /*
+        case TREXIO_JSON:
+        rc = trexio_json_write_mo_1e_int_dipole_x(file, mo_1e_int_dipole_x, rank, dims);
+        break;
+      */
+    }
+  }
+
+  return rc;
+}
+
+trexio_exit_code
+trexio_write_mo_1e_int_dipole_y_64 (trexio_t* const file, const double* mo_1e_int_dipole_y)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  if (mo_1e_int_dipole_y == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_y(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+  int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_mo_num_64(file, &(mo_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {mo_num, mo_num};
+
+  if ((false)) {
+    /* Handle index type : is_index = (false) */
+    uint64_t dim_size = 1;
+    for (uint32_t i=0; i<rank; ++i){
+      dim_size *= dims[i];
+    }
+
+    double* mo_1e_int_dipole_y_p =
+       CALLOC(dim_size, double);
+
+    if (mo_1e_int_dipole_y_p == NULL) return TREXIO_ALLOCATION_FAILED;
+
+    for (uint64_t i=0; i<dim_size; ++i){
+       mo_1e_int_dipole_y_p[i] = mo_1e_int_dipole_y[i] - (double) 1;
+    }
+
+    rc = TREXIO_FAILURE;
+    switch (file->back_end) {
+
+    case TREXIO_TEXT:
+      rc = trexio_text_write_mo_1e_int_dipole_y(file,
+                                          (const double*) mo_1e_int_dipole_y_p,
+                                          rank, dims);
+      break;
+
+    case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+      rc = trexio_hdf5_write_mo_1e_int_dipole_y(file,
+                                          (const double*) mo_1e_int_dipole_y_p,
+                                          rank, dims);
+      break;
+#else
+      rc = TREXIO_BACK_END_MISSING;
+      break;
+#endif
+      /*
+        case TREXIO_JSON:
+        rc = trexio_json_write_mo_1e_int_dipole_y(file, mo_1e_int_dipole_y_p, rank, dims);
+        break;
+      */
+      FREE(mo_1e_int_dipole_y_p);
+
+    }
+
+  } else {
+
+    rc = TREXIO_FAILURE;
+    switch (file->back_end) {
+
+    case TREXIO_TEXT:
+      rc = trexio_text_write_mo_1e_int_dipole_y(file, mo_1e_int_dipole_y, rank, dims);
+      break;
+
+    case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+      rc = trexio_hdf5_write_mo_1e_int_dipole_y(file, mo_1e_int_dipole_y, rank, dims);
+      break;
+#else
+      rc = TREXIO_BACK_END_MISSING;
+      break;
+#endif
+      /*
+        case TREXIO_JSON:
+        rc = trexio_json_write_mo_1e_int_dipole_y(file, mo_1e_int_dipole_y, rank, dims);
+        break;
+      */
+    }
+  }
+
+  return rc;
+}
+
+trexio_exit_code
+trexio_write_mo_1e_int_dipole_z_64 (trexio_t* const file, const double* mo_1e_int_dipole_z)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  if (mo_1e_int_dipole_z == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_z(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+  int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_mo_num_64(file, &(mo_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {mo_num, mo_num};
+
+  if ((false)) {
+    /* Handle index type : is_index = (false) */
+    uint64_t dim_size = 1;
+    for (uint32_t i=0; i<rank; ++i){
+      dim_size *= dims[i];
+    }
+
+    double* mo_1e_int_dipole_z_p =
+       CALLOC(dim_size, double);
+
+    if (mo_1e_int_dipole_z_p == NULL) return TREXIO_ALLOCATION_FAILED;
+
+    for (uint64_t i=0; i<dim_size; ++i){
+       mo_1e_int_dipole_z_p[i] = mo_1e_int_dipole_z[i] - (double) 1;
+    }
+
+    rc = TREXIO_FAILURE;
+    switch (file->back_end) {
+
+    case TREXIO_TEXT:
+      rc = trexio_text_write_mo_1e_int_dipole_z(file,
+                                          (const double*) mo_1e_int_dipole_z_p,
+                                          rank, dims);
+      break;
+
+    case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+      rc = trexio_hdf5_write_mo_1e_int_dipole_z(file,
+                                          (const double*) mo_1e_int_dipole_z_p,
+                                          rank, dims);
+      break;
+#else
+      rc = TREXIO_BACK_END_MISSING;
+      break;
+#endif
+      /*
+        case TREXIO_JSON:
+        rc = trexio_json_write_mo_1e_int_dipole_z(file, mo_1e_int_dipole_z_p, rank, dims);
+        break;
+      */
+      FREE(mo_1e_int_dipole_z_p);
+
+    }
+
+  } else {
+
+    rc = TREXIO_FAILURE;
+    switch (file->back_end) {
+
+    case TREXIO_TEXT:
+      rc = trexio_text_write_mo_1e_int_dipole_z(file, mo_1e_int_dipole_z, rank, dims);
+      break;
+
+    case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+      rc = trexio_hdf5_write_mo_1e_int_dipole_z(file, mo_1e_int_dipole_z, rank, dims);
+      break;
+#else
+      rc = TREXIO_BACK_END_MISSING;
+      break;
+#endif
+      /*
+        case TREXIO_JSON:
+        rc = trexio_json_write_mo_1e_int_dipole_z(file, mo_1e_int_dipole_z, rank, dims);
+        break;
+      */
+    }
+  }
+
+  return rc;
+}
+
+trexio_exit_code
 trexio_write_mo_1e_int_overlap_im_64 (trexio_t* const file, const double* mo_1e_int_overlap_im)
 {
 
@@ -52570,6 +57916,288 @@ trexio_write_mo_1e_int_core_hamiltonian_im_64 (trexio_t* const file, const doubl
       /*
         case TREXIO_JSON:
         rc = trexio_json_write_mo_1e_int_core_hamiltonian_im(file, mo_1e_int_core_hamiltonian_im, rank, dims);
+        break;
+      */
+    }
+  }
+
+  return rc;
+}
+
+trexio_exit_code
+trexio_write_mo_1e_int_dipole_x_im_64 (trexio_t* const file, const double* mo_1e_int_dipole_x_im)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  if (mo_1e_int_dipole_x_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_x_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+  int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_mo_num_64(file, &(mo_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {mo_num, mo_num};
+
+  if ((false)) {
+    /* Handle index type : is_index = (false) */
+    uint64_t dim_size = 1;
+    for (uint32_t i=0; i<rank; ++i){
+      dim_size *= dims[i];
+    }
+
+    double* mo_1e_int_dipole_x_im_p =
+       CALLOC(dim_size, double);
+
+    if (mo_1e_int_dipole_x_im_p == NULL) return TREXIO_ALLOCATION_FAILED;
+
+    for (uint64_t i=0; i<dim_size; ++i){
+       mo_1e_int_dipole_x_im_p[i] = mo_1e_int_dipole_x_im[i] - (double) 1;
+    }
+
+    rc = TREXIO_FAILURE;
+    switch (file->back_end) {
+
+    case TREXIO_TEXT:
+      rc = trexio_text_write_mo_1e_int_dipole_x_im(file,
+                                          (const double*) mo_1e_int_dipole_x_im_p,
+                                          rank, dims);
+      break;
+
+    case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+      rc = trexio_hdf5_write_mo_1e_int_dipole_x_im(file,
+                                          (const double*) mo_1e_int_dipole_x_im_p,
+                                          rank, dims);
+      break;
+#else
+      rc = TREXIO_BACK_END_MISSING;
+      break;
+#endif
+      /*
+        case TREXIO_JSON:
+        rc = trexio_json_write_mo_1e_int_dipole_x_im(file, mo_1e_int_dipole_x_im_p, rank, dims);
+        break;
+      */
+      FREE(mo_1e_int_dipole_x_im_p);
+
+    }
+
+  } else {
+
+    rc = TREXIO_FAILURE;
+    switch (file->back_end) {
+
+    case TREXIO_TEXT:
+      rc = trexio_text_write_mo_1e_int_dipole_x_im(file, mo_1e_int_dipole_x_im, rank, dims);
+      break;
+
+    case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+      rc = trexio_hdf5_write_mo_1e_int_dipole_x_im(file, mo_1e_int_dipole_x_im, rank, dims);
+      break;
+#else
+      rc = TREXIO_BACK_END_MISSING;
+      break;
+#endif
+      /*
+        case TREXIO_JSON:
+        rc = trexio_json_write_mo_1e_int_dipole_x_im(file, mo_1e_int_dipole_x_im, rank, dims);
+        break;
+      */
+    }
+  }
+
+  return rc;
+}
+
+trexio_exit_code
+trexio_write_mo_1e_int_dipole_y_im_64 (trexio_t* const file, const double* mo_1e_int_dipole_y_im)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  if (mo_1e_int_dipole_y_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_y_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+  int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_mo_num_64(file, &(mo_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {mo_num, mo_num};
+
+  if ((false)) {
+    /* Handle index type : is_index = (false) */
+    uint64_t dim_size = 1;
+    for (uint32_t i=0; i<rank; ++i){
+      dim_size *= dims[i];
+    }
+
+    double* mo_1e_int_dipole_y_im_p =
+       CALLOC(dim_size, double);
+
+    if (mo_1e_int_dipole_y_im_p == NULL) return TREXIO_ALLOCATION_FAILED;
+
+    for (uint64_t i=0; i<dim_size; ++i){
+       mo_1e_int_dipole_y_im_p[i] = mo_1e_int_dipole_y_im[i] - (double) 1;
+    }
+
+    rc = TREXIO_FAILURE;
+    switch (file->back_end) {
+
+    case TREXIO_TEXT:
+      rc = trexio_text_write_mo_1e_int_dipole_y_im(file,
+                                          (const double*) mo_1e_int_dipole_y_im_p,
+                                          rank, dims);
+      break;
+
+    case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+      rc = trexio_hdf5_write_mo_1e_int_dipole_y_im(file,
+                                          (const double*) mo_1e_int_dipole_y_im_p,
+                                          rank, dims);
+      break;
+#else
+      rc = TREXIO_BACK_END_MISSING;
+      break;
+#endif
+      /*
+        case TREXIO_JSON:
+        rc = trexio_json_write_mo_1e_int_dipole_y_im(file, mo_1e_int_dipole_y_im_p, rank, dims);
+        break;
+      */
+      FREE(mo_1e_int_dipole_y_im_p);
+
+    }
+
+  } else {
+
+    rc = TREXIO_FAILURE;
+    switch (file->back_end) {
+
+    case TREXIO_TEXT:
+      rc = trexio_text_write_mo_1e_int_dipole_y_im(file, mo_1e_int_dipole_y_im, rank, dims);
+      break;
+
+    case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+      rc = trexio_hdf5_write_mo_1e_int_dipole_y_im(file, mo_1e_int_dipole_y_im, rank, dims);
+      break;
+#else
+      rc = TREXIO_BACK_END_MISSING;
+      break;
+#endif
+      /*
+        case TREXIO_JSON:
+        rc = trexio_json_write_mo_1e_int_dipole_y_im(file, mo_1e_int_dipole_y_im, rank, dims);
+        break;
+      */
+    }
+  }
+
+  return rc;
+}
+
+trexio_exit_code
+trexio_write_mo_1e_int_dipole_z_im_64 (trexio_t* const file, const double* mo_1e_int_dipole_z_im)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  assert(file->back_end < TREXIO_INVALID_BACK_END);
+
+  if (mo_1e_int_dipole_z_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_z_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+  int64_t mo_num = 0;
+
+  trexio_exit_code rc = TREXIO_FAILURE;
+  /* Error handling for this call is added by the generator */
+  rc = trexio_read_mo_num_64(file, &(mo_num));
+  if (rc != TREXIO_SUCCESS) return rc;
+
+  if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+  uint32_t rank = 2;
+  uint64_t dims[2] = {mo_num, mo_num};
+
+  if ((false)) {
+    /* Handle index type : is_index = (false) */
+    uint64_t dim_size = 1;
+    for (uint32_t i=0; i<rank; ++i){
+      dim_size *= dims[i];
+    }
+
+    double* mo_1e_int_dipole_z_im_p =
+       CALLOC(dim_size, double);
+
+    if (mo_1e_int_dipole_z_im_p == NULL) return TREXIO_ALLOCATION_FAILED;
+
+    for (uint64_t i=0; i<dim_size; ++i){
+       mo_1e_int_dipole_z_im_p[i] = mo_1e_int_dipole_z_im[i] - (double) 1;
+    }
+
+    rc = TREXIO_FAILURE;
+    switch (file->back_end) {
+
+    case TREXIO_TEXT:
+      rc = trexio_text_write_mo_1e_int_dipole_z_im(file,
+                                          (const double*) mo_1e_int_dipole_z_im_p,
+                                          rank, dims);
+      break;
+
+    case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+      rc = trexio_hdf5_write_mo_1e_int_dipole_z_im(file,
+                                          (const double*) mo_1e_int_dipole_z_im_p,
+                                          rank, dims);
+      break;
+#else
+      rc = TREXIO_BACK_END_MISSING;
+      break;
+#endif
+      /*
+        case TREXIO_JSON:
+        rc = trexio_json_write_mo_1e_int_dipole_z_im(file, mo_1e_int_dipole_z_im_p, rank, dims);
+        break;
+      */
+      FREE(mo_1e_int_dipole_z_im_p);
+
+    }
+
+  } else {
+
+    rc = TREXIO_FAILURE;
+    switch (file->back_end) {
+
+    case TREXIO_TEXT:
+      rc = trexio_text_write_mo_1e_int_dipole_z_im(file, mo_1e_int_dipole_z_im, rank, dims);
+      break;
+
+    case TREXIO_HDF5:
+#ifdef HAVE_HDF5
+      rc = trexio_hdf5_write_mo_1e_int_dipole_z_im(file, mo_1e_int_dipole_z_im, rank, dims);
+      break;
+#else
+      rc = TREXIO_BACK_END_MISSING;
+      break;
+#endif
+      /*
+        case TREXIO_JSON:
+        rc = trexio_json_write_mo_1e_int_dipole_z_im(file, mo_1e_int_dipole_z_im, rank, dims);
         break;
       */
     }
@@ -54056,15 +59684,19 @@ trexio_write_safe_pbc_k_point_64 (trexio_t* const file, const double* dset_in, c
   if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
   if (trexio_has_pbc_k_point(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
 
+int64_t pbc_k_point_num = 0;
 
 trexio_exit_code rc = TREXIO_FAILURE;
 (void) rc; // Avoids unused parameter error for scalar variables
 
 /* Error handling for this call is added by the generator */
+rc = trexio_read_pbc_k_point_num_64(file, &(pbc_k_point_num));
+if (rc != TREXIO_SUCCESS) return rc;
 
+if (pbc_k_point_num == 0L) return TREXIO_INVALID_NUM;
 
-uint32_t rank = 1;
-uint64_t dims[1] = {3};
+uint32_t rank = 2;
+uint64_t dims[2] = {pbc_k_point_num, 3};
 
 /* The block below is specific to safe API as it checks the boundaries */
 uint64_t dim_size = 1;
@@ -55443,6 +61075,105 @@ for (uint32_t i=0; i<rank; ++i){
 }
 
 trexio_exit_code
+trexio_write_safe_ao_1e_int_dipole_x_64 (trexio_t* const file, const double* dset_in, const int64_t dim_in)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_x(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_ao_num_64(file, &(ao_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {ao_num, ao_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_in > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_write_ao_1e_int_dipole_x_64(file, dset_in);
+}
+
+trexio_exit_code
+trexio_write_safe_ao_1e_int_dipole_y_64 (trexio_t* const file, const double* dset_in, const int64_t dim_in)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_y(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_ao_num_64(file, &(ao_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {ao_num, ao_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_in > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_write_ao_1e_int_dipole_y_64(file, dset_in);
+}
+
+trexio_exit_code
+trexio_write_safe_ao_1e_int_dipole_z_64 (trexio_t* const file, const double* dset_in, const int64_t dim_in)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_z(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_ao_num_64(file, &(ao_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {ao_num, ao_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_in > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_write_ao_1e_int_dipole_z_64(file, dset_in);
+}
+
+trexio_exit_code
 trexio_write_safe_ao_1e_int_overlap_im_64 (trexio_t* const file, const double* dset_in, const int64_t dim_in)
 {
 
@@ -55605,6 +61336,105 @@ for (uint32_t i=0; i<rank; ++i){
   if (dim_in > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
 
   return trexio_write_ao_1e_int_core_hamiltonian_im_64(file, dset_in);
+}
+
+trexio_exit_code
+trexio_write_safe_ao_1e_int_dipole_x_im_64 (trexio_t* const file, const double* dset_in, const int64_t dim_in)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_x_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_ao_num_64(file, &(ao_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {ao_num, ao_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_in > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_write_ao_1e_int_dipole_x_im_64(file, dset_in);
+}
+
+trexio_exit_code
+trexio_write_safe_ao_1e_int_dipole_y_im_64 (trexio_t* const file, const double* dset_in, const int64_t dim_in)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_y_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_ao_num_64(file, &(ao_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {ao_num, ao_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_in > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_write_ao_1e_int_dipole_y_im_64(file, dset_in);
+}
+
+trexio_exit_code
+trexio_write_safe_ao_1e_int_dipole_z_im_64 (trexio_t* const file, const double* dset_in, const int64_t dim_in)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_ao_1e_int_dipole_z_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+int64_t ao_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_ao_num_64(file, &(ao_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (ao_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {ao_num, ao_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_in > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_write_ao_1e_int_dipole_z_im_64(file, dset_in);
 }
 
 trexio_exit_code
@@ -55979,6 +61809,105 @@ for (uint32_t i=0; i<rank; ++i){
 }
 
 trexio_exit_code
+trexio_write_safe_mo_1e_int_dipole_x_64 (trexio_t* const file, const double* dset_in, const int64_t dim_in)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_x(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_mo_num_64(file, &(mo_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {mo_num, mo_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_in > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_write_mo_1e_int_dipole_x_64(file, dset_in);
+}
+
+trexio_exit_code
+trexio_write_safe_mo_1e_int_dipole_y_64 (trexio_t* const file, const double* dset_in, const int64_t dim_in)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_y(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_mo_num_64(file, &(mo_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {mo_num, mo_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_in > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_write_mo_1e_int_dipole_y_64(file, dset_in);
+}
+
+trexio_exit_code
+trexio_write_safe_mo_1e_int_dipole_z_64 (trexio_t* const file, const double* dset_in, const int64_t dim_in)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_z(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_mo_num_64(file, &(mo_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {mo_num, mo_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_in > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_write_mo_1e_int_dipole_z_64(file, dset_in);
+}
+
+trexio_exit_code
 trexio_write_safe_mo_1e_int_overlap_im_64 (trexio_t* const file, const double* dset_in, const int64_t dim_in)
 {
 
@@ -56141,6 +62070,105 @@ for (uint32_t i=0; i<rank; ++i){
   if (dim_in > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
 
   return trexio_write_mo_1e_int_core_hamiltonian_im_64(file, dset_in);
+}
+
+trexio_exit_code
+trexio_write_safe_mo_1e_int_dipole_x_im_64 (trexio_t* const file, const double* dset_in, const int64_t dim_in)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_x_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_mo_num_64(file, &(mo_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {mo_num, mo_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_in > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_write_mo_1e_int_dipole_x_im_64(file, dset_in);
+}
+
+trexio_exit_code
+trexio_write_safe_mo_1e_int_dipole_y_im_64 (trexio_t* const file, const double* dset_in, const int64_t dim_in)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_y_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_mo_num_64(file, &(mo_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {mo_num, mo_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_in > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_write_mo_1e_int_dipole_y_im_64(file, dset_in);
+}
+
+trexio_exit_code
+trexio_write_safe_mo_1e_int_dipole_z_im_64 (trexio_t* const file, const double* dset_in, const int64_t dim_in)
+{
+
+  if (file  == NULL) return TREXIO_INVALID_ARG_1;
+  if (dset_in == NULL) return TREXIO_INVALID_ARG_2;
+  if (trexio_has_mo_1e_int_dipole_z_im(file) == TREXIO_SUCCESS && file->mode != 'u') return TREXIO_DSET_ALREADY_EXISTS;
+
+int64_t mo_num = 0;
+
+trexio_exit_code rc = TREXIO_FAILURE;
+(void) rc; // Avoids unused parameter error for scalar variables
+
+/* Error handling for this call is added by the generator */
+rc = trexio_read_mo_num_64(file, &(mo_num));
+if (rc != TREXIO_SUCCESS) return rc;
+
+if (mo_num == 0L) return TREXIO_INVALID_NUM;
+
+uint32_t rank = 2;
+uint64_t dims[2] = {mo_num, mo_num};
+
+/* The block below is specific to safe API as it checks the boundaries */
+uint64_t dim_size = 1;
+for (uint32_t i=0; i<rank; ++i){
+    dim_size *= dims[i];
+}
+
+  if (dim_in > (int64_t) dim_size) return TREXIO_UNSAFE_ARRAY_DIM;
+
+  return trexio_write_mo_1e_int_dipole_z_im_64(file, dset_in);
 }
 
 trexio_exit_code
@@ -56881,6 +62909,24 @@ trexio_write_ao_1e_int_core_hamiltonian (trexio_t* const file, const double* ao_
 }
 
 trexio_exit_code
+trexio_write_ao_1e_int_dipole_x (trexio_t* const file, const double* ao_1e_int_dipole_x)
+{
+  return trexio_write_ao_1e_int_dipole_x_64(file, ao_1e_int_dipole_x);
+}
+
+trexio_exit_code
+trexio_write_ao_1e_int_dipole_y (trexio_t* const file, const double* ao_1e_int_dipole_y)
+{
+  return trexio_write_ao_1e_int_dipole_y_64(file, ao_1e_int_dipole_y);
+}
+
+trexio_exit_code
+trexio_write_ao_1e_int_dipole_z (trexio_t* const file, const double* ao_1e_int_dipole_z)
+{
+  return trexio_write_ao_1e_int_dipole_z_64(file, ao_1e_int_dipole_z);
+}
+
+trexio_exit_code
 trexio_write_ao_1e_int_overlap_im (trexio_t* const file, const double* ao_1e_int_overlap_im)
 {
   return trexio_write_ao_1e_int_overlap_im_64(file, ao_1e_int_overlap_im);
@@ -56908,6 +62954,24 @@ trexio_exit_code
 trexio_write_ao_1e_int_core_hamiltonian_im (trexio_t* const file, const double* ao_1e_int_core_hamiltonian_im)
 {
   return trexio_write_ao_1e_int_core_hamiltonian_im_64(file, ao_1e_int_core_hamiltonian_im);
+}
+
+trexio_exit_code
+trexio_write_ao_1e_int_dipole_x_im (trexio_t* const file, const double* ao_1e_int_dipole_x_im)
+{
+  return trexio_write_ao_1e_int_dipole_x_im_64(file, ao_1e_int_dipole_x_im);
+}
+
+trexio_exit_code
+trexio_write_ao_1e_int_dipole_y_im (trexio_t* const file, const double* ao_1e_int_dipole_y_im)
+{
+  return trexio_write_ao_1e_int_dipole_y_im_64(file, ao_1e_int_dipole_y_im);
+}
+
+trexio_exit_code
+trexio_write_ao_1e_int_dipole_z_im (trexio_t* const file, const double* ao_1e_int_dipole_z_im)
+{
+  return trexio_write_ao_1e_int_dipole_z_im_64(file, ao_1e_int_dipole_z_im);
 }
 
 trexio_exit_code
@@ -56977,6 +63041,24 @@ trexio_write_mo_1e_int_core_hamiltonian (trexio_t* const file, const double* mo_
 }
 
 trexio_exit_code
+trexio_write_mo_1e_int_dipole_x (trexio_t* const file, const double* mo_1e_int_dipole_x)
+{
+  return trexio_write_mo_1e_int_dipole_x_64(file, mo_1e_int_dipole_x);
+}
+
+trexio_exit_code
+trexio_write_mo_1e_int_dipole_y (trexio_t* const file, const double* mo_1e_int_dipole_y)
+{
+  return trexio_write_mo_1e_int_dipole_y_64(file, mo_1e_int_dipole_y);
+}
+
+trexio_exit_code
+trexio_write_mo_1e_int_dipole_z (trexio_t* const file, const double* mo_1e_int_dipole_z)
+{
+  return trexio_write_mo_1e_int_dipole_z_64(file, mo_1e_int_dipole_z);
+}
+
+trexio_exit_code
 trexio_write_mo_1e_int_overlap_im (trexio_t* const file, const double* mo_1e_int_overlap_im)
 {
   return trexio_write_mo_1e_int_overlap_im_64(file, mo_1e_int_overlap_im);
@@ -57004,6 +63086,24 @@ trexio_exit_code
 trexio_write_mo_1e_int_core_hamiltonian_im (trexio_t* const file, const double* mo_1e_int_core_hamiltonian_im)
 {
   return trexio_write_mo_1e_int_core_hamiltonian_im_64(file, mo_1e_int_core_hamiltonian_im);
+}
+
+trexio_exit_code
+trexio_write_mo_1e_int_dipole_x_im (trexio_t* const file, const double* mo_1e_int_dipole_x_im)
+{
+  return trexio_write_mo_1e_int_dipole_x_im_64(file, mo_1e_int_dipole_x_im);
+}
+
+trexio_exit_code
+trexio_write_mo_1e_int_dipole_y_im (trexio_t* const file, const double* mo_1e_int_dipole_y_im)
+{
+  return trexio_write_mo_1e_int_dipole_y_im_64(file, mo_1e_int_dipole_y_im);
+}
+
+trexio_exit_code
+trexio_write_mo_1e_int_dipole_z_im (trexio_t* const file, const double* mo_1e_int_dipole_z_im)
+{
+  return trexio_write_mo_1e_int_dipole_z_im_64(file, mo_1e_int_dipole_z_im);
 }
 
 trexio_exit_code
@@ -57385,6 +63485,24 @@ trexio_write_safe_ao_1e_int_core_hamiltonian (trexio_t* const file, const double
 }
 
 trexio_exit_code
+trexio_write_safe_ao_1e_int_dipole_x (trexio_t* const file, const double* ao_1e_int_dipole_x, const int64_t dim_in)
+{
+  return trexio_write_safe_ao_1e_int_dipole_x_64(file, ao_1e_int_dipole_x, dim_in);
+}
+
+trexio_exit_code
+trexio_write_safe_ao_1e_int_dipole_y (trexio_t* const file, const double* ao_1e_int_dipole_y, const int64_t dim_in)
+{
+  return trexio_write_safe_ao_1e_int_dipole_y_64(file, ao_1e_int_dipole_y, dim_in);
+}
+
+trexio_exit_code
+trexio_write_safe_ao_1e_int_dipole_z (trexio_t* const file, const double* ao_1e_int_dipole_z, const int64_t dim_in)
+{
+  return trexio_write_safe_ao_1e_int_dipole_z_64(file, ao_1e_int_dipole_z, dim_in);
+}
+
+trexio_exit_code
 trexio_write_safe_ao_1e_int_overlap_im (trexio_t* const file, const double* ao_1e_int_overlap_im, const int64_t dim_in)
 {
   return trexio_write_safe_ao_1e_int_overlap_im_64(file, ao_1e_int_overlap_im, dim_in);
@@ -57412,6 +63530,24 @@ trexio_exit_code
 trexio_write_safe_ao_1e_int_core_hamiltonian_im (trexio_t* const file, const double* ao_1e_int_core_hamiltonian_im, const int64_t dim_in)
 {
   return trexio_write_safe_ao_1e_int_core_hamiltonian_im_64(file, ao_1e_int_core_hamiltonian_im, dim_in);
+}
+
+trexio_exit_code
+trexio_write_safe_ao_1e_int_dipole_x_im (trexio_t* const file, const double* ao_1e_int_dipole_x_im, const int64_t dim_in)
+{
+  return trexio_write_safe_ao_1e_int_dipole_x_im_64(file, ao_1e_int_dipole_x_im, dim_in);
+}
+
+trexio_exit_code
+trexio_write_safe_ao_1e_int_dipole_y_im (trexio_t* const file, const double* ao_1e_int_dipole_y_im, const int64_t dim_in)
+{
+  return trexio_write_safe_ao_1e_int_dipole_y_im_64(file, ao_1e_int_dipole_y_im, dim_in);
+}
+
+trexio_exit_code
+trexio_write_safe_ao_1e_int_dipole_z_im (trexio_t* const file, const double* ao_1e_int_dipole_z_im, const int64_t dim_in)
+{
+  return trexio_write_safe_ao_1e_int_dipole_z_im_64(file, ao_1e_int_dipole_z_im, dim_in);
 }
 
 trexio_exit_code
@@ -57481,6 +63617,24 @@ trexio_write_safe_mo_1e_int_core_hamiltonian (trexio_t* const file, const double
 }
 
 trexio_exit_code
+trexio_write_safe_mo_1e_int_dipole_x (trexio_t* const file, const double* mo_1e_int_dipole_x, const int64_t dim_in)
+{
+  return trexio_write_safe_mo_1e_int_dipole_x_64(file, mo_1e_int_dipole_x, dim_in);
+}
+
+trexio_exit_code
+trexio_write_safe_mo_1e_int_dipole_y (trexio_t* const file, const double* mo_1e_int_dipole_y, const int64_t dim_in)
+{
+  return trexio_write_safe_mo_1e_int_dipole_y_64(file, mo_1e_int_dipole_y, dim_in);
+}
+
+trexio_exit_code
+trexio_write_safe_mo_1e_int_dipole_z (trexio_t* const file, const double* mo_1e_int_dipole_z, const int64_t dim_in)
+{
+  return trexio_write_safe_mo_1e_int_dipole_z_64(file, mo_1e_int_dipole_z, dim_in);
+}
+
+trexio_exit_code
 trexio_write_safe_mo_1e_int_overlap_im (trexio_t* const file, const double* mo_1e_int_overlap_im, const int64_t dim_in)
 {
   return trexio_write_safe_mo_1e_int_overlap_im_64(file, mo_1e_int_overlap_im, dim_in);
@@ -57508,6 +63662,24 @@ trexio_exit_code
 trexio_write_safe_mo_1e_int_core_hamiltonian_im (trexio_t* const file, const double* mo_1e_int_core_hamiltonian_im, const int64_t dim_in)
 {
   return trexio_write_safe_mo_1e_int_core_hamiltonian_im_64(file, mo_1e_int_core_hamiltonian_im, dim_in);
+}
+
+trexio_exit_code
+trexio_write_safe_mo_1e_int_dipole_x_im (trexio_t* const file, const double* mo_1e_int_dipole_x_im, const int64_t dim_in)
+{
+  return trexio_write_safe_mo_1e_int_dipole_x_im_64(file, mo_1e_int_dipole_x_im, dim_in);
+}
+
+trexio_exit_code
+trexio_write_safe_mo_1e_int_dipole_y_im (trexio_t* const file, const double* mo_1e_int_dipole_y_im, const int64_t dim_in)
+{
+  return trexio_write_safe_mo_1e_int_dipole_y_im_64(file, mo_1e_int_dipole_y_im, dim_in);
+}
+
+trexio_exit_code
+trexio_write_safe_mo_1e_int_dipole_z_im (trexio_t* const file, const double* mo_1e_int_dipole_z_im, const int64_t dim_in)
+{
+  return trexio_write_safe_mo_1e_int_dipole_z_im_64(file, mo_1e_int_dipole_z_im, dim_in);
 }
 
 trexio_exit_code
@@ -57911,8 +64083,8 @@ trexio_write_ao_2e_int_eri_cholesky(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_ao_2e_int_eri_cholesky_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_ao_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_ao_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_ao_2e_int_eri_cholesky_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -58457,8 +64629,8 @@ trexio_write_mo_2e_int_eri_cholesky(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_mo_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_mo_2e_int_eri_cholesky_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_2e_int_eri_cholesky_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -58594,8 +64766,8 @@ trexio_write_mo_2e_int_eri_lr_cholesky(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_mo_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_mo_2e_int_eri_lr_cholesky_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_2e_int_eri_lr_cholesky_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -60500,8 +66672,8 @@ trexio_write_rdm_2e_transition(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_mo_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_state_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_state_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -60637,8 +66809,8 @@ trexio_write_rdm_2e_cholesky(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_mo_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_rdm_2e_cholesky_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_rdm_2e_cholesky_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -60774,8 +66946,8 @@ trexio_write_rdm_2e_upup_cholesky(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_mo_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_rdm_2e_upup_cholesky_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_rdm_2e_upup_cholesky_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -61048,8 +67220,8 @@ trexio_write_rdm_2e_updn_cholesky(trexio_t* const file,
   int64_t unique_dims[2];
 
   // Below part is populated by the generator when unique_rank > 1
-  rc = trexio_read_mo_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
-  rc = trexio_read_rdm_2e_updn_cholesky_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_rdm_2e_updn_cholesky_num_64(file, &unique_dims[0]); if (rc != TREXIO_SUCCESS) return rc;
+  rc = trexio_read_mo_num_64(file, &unique_dims[1]); if (rc != TREXIO_SUCCESS) return rc;
 
   /* Find the maximal value along all dimensions to define the compression technique in the back end */
   int64_t max_dim = unique_dims[0];
@@ -62003,14 +68175,14 @@ trexio_get_int64_num(trexio_t* const file, int32_t* const num)
   if (num   == NULL) return TREXIO_INVALID_ARG_2;
 
   /* Read the number of mos */
-  int64_t mo_num = 0L;
-  trexio_exit_code rc = trexio_read_mo_num_64(file, &mo_num);
+  int32_t mo_num = 0L;
+  trexio_exit_code rc = trexio_read_mo_num_32(file, &mo_num);
   if (rc != TREXIO_SUCCESS) return rc;
   if (mo_num == 0L) return TREXIO_INVALID_NUM;
 
-  /* Compute how many integer numbers is needed to represent a determinant */
+  /* Compute how many integer numbers are needed to represent a determinant */
   int32_t int_num = 0;
-  int_num = (int32_t) (mo_num - 1L)/64 + 1;
+  int_num = (mo_num - 1)/TREXIO_NORB_PER_INT + 1;
 
   *num = int_num;
 

@@ -125,11 +125,17 @@
 #define AO_1E_INT_POTENTIAL_N_E_NAME           "ao_1e_int_potential_n_e"
 #define AO_1E_INT_ECP_NAME           "ao_1e_int_ecp"
 #define AO_1E_INT_CORE_HAMILTONIAN_NAME           "ao_1e_int_core_hamiltonian"
+#define AO_1E_INT_DIPOLE_X_NAME           "ao_1e_int_dipole_x"
+#define AO_1E_INT_DIPOLE_Y_NAME           "ao_1e_int_dipole_y"
+#define AO_1E_INT_DIPOLE_Z_NAME           "ao_1e_int_dipole_z"
 #define AO_1E_INT_OVERLAP_IM_NAME           "ao_1e_int_overlap_im"
 #define AO_1E_INT_KINETIC_IM_NAME           "ao_1e_int_kinetic_im"
 #define AO_1E_INT_POTENTIAL_N_E_IM_NAME           "ao_1e_int_potential_n_e_im"
 #define AO_1E_INT_ECP_IM_NAME           "ao_1e_int_ecp_im"
 #define AO_1E_INT_CORE_HAMILTONIAN_IM_NAME           "ao_1e_int_core_hamiltonian_im"
+#define AO_1E_INT_DIPOLE_X_IM_NAME           "ao_1e_int_dipole_x_im"
+#define AO_1E_INT_DIPOLE_Y_IM_NAME           "ao_1e_int_dipole_y_im"
+#define AO_1E_INT_DIPOLE_Z_IM_NAME           "ao_1e_int_dipole_z_im"
 #define MO_COEFFICIENT_NAME           "mo_coefficient"
 #define MO_COEFFICIENT_IM_NAME           "mo_coefficient_im"
 #define MO_OCCUPATION_NAME           "mo_occupation"
@@ -141,11 +147,17 @@
 #define MO_1E_INT_POTENTIAL_N_E_NAME           "mo_1e_int_potential_n_e"
 #define MO_1E_INT_ECP_NAME           "mo_1e_int_ecp"
 #define MO_1E_INT_CORE_HAMILTONIAN_NAME           "mo_1e_int_core_hamiltonian"
+#define MO_1E_INT_DIPOLE_X_NAME           "mo_1e_int_dipole_x"
+#define MO_1E_INT_DIPOLE_Y_NAME           "mo_1e_int_dipole_y"
+#define MO_1E_INT_DIPOLE_Z_NAME           "mo_1e_int_dipole_z"
 #define MO_1E_INT_OVERLAP_IM_NAME           "mo_1e_int_overlap_im"
 #define MO_1E_INT_KINETIC_IM_NAME           "mo_1e_int_kinetic_im"
 #define MO_1E_INT_POTENTIAL_N_E_IM_NAME           "mo_1e_int_potential_n_e_im"
 #define MO_1E_INT_ECP_IM_NAME           "mo_1e_int_ecp_im"
 #define MO_1E_INT_CORE_HAMILTONIAN_IM_NAME           "mo_1e_int_core_hamiltonian_im"
+#define MO_1E_INT_DIPOLE_X_IM_NAME           "mo_1e_int_dipole_x_im"
+#define MO_1E_INT_DIPOLE_Y_IM_NAME           "mo_1e_int_dipole_y_im"
+#define MO_1E_INT_DIPOLE_Z_IM_NAME           "mo_1e_int_dipole_z_im"
 #define RDM_1E_NAME           "rdm_1e"
 #define RDM_1E_UP_NAME           "rdm_1e_up"
 #define RDM_1E_DN_NAME           "rdm_1e_dn"
@@ -221,7 +233,17 @@ trexio_exit_code
 trexio_hdf5_inquire(const char* file_name)
 {
   /* H5Fis_hdf5 determines whether file is in HDF5 format */
+  /* Disable HDF5 error messages during auto-detection */
+  H5E_auto2_t old_func;
+  void *old_client_data;
+  H5Eget_auto2(H5E_DEFAULT, &old_func, &old_client_data);
+  H5Eset_auto2(H5E_DEFAULT, NULL, NULL);
+
   htri_t rc = H5Fis_hdf5(file_name);
+
+  /* Restore previous error handler */
+  H5Eset_auto2(H5E_DEFAULT, old_func, old_client_data);
+
   if (rc > 0 ) {
     return TREXIO_SUCCESS;    //exists and HDF5
   } else if (rc == 0) {
@@ -243,6 +265,12 @@ trexio_hdf5_init (trexio_t* const file)
 
   if (stat(file->file_name, &st) == 0) f_exists = 1;
 
+  /* Disable HDF5 error messages during file operations to avoid noise when opening invalid HDF5 files */
+  H5E_auto2_t old_func;
+  void *old_client_data;
+  H5Eget_auto2(H5E_DEFAULT, &old_func, &old_client_data);
+  H5Eset_auto2(H5E_DEFAULT, NULL, NULL);
+
   if (f_exists == 1) {
 
     switch (file->mode) {
@@ -262,6 +290,7 @@ trexio_hdf5_init (trexio_t* const file)
     switch (file->mode) {
     case 'r':
       // reading non-existing file -> error
+      H5Eset_auto2(H5E_DEFAULT, old_func, old_client_data);
       return TREXIO_FAILURE;
     case 'u':
     case 'w':
@@ -271,6 +300,9 @@ trexio_hdf5_init (trexio_t* const file)
     }
 
   }
+
+  /* Restore previous error handler */
+  H5Eset_auto2(H5E_DEFAULT, old_func, old_client_data);
 
   /* Create or open groups in the hdf5 file assuming that they exist if file exists */
   switch (file->mode) {
@@ -1631,7 +1663,7 @@ trexio_exit_code trexio_hdf5_has_determinant_coefficient(trexio_t* const file)
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
   if (f->determinant_group == (hsize_t) 0) return TREXIO_HAS_NOT;
 
-  const char* dset_name = "determinant_coefficient";
+  const char dset_name[] = "determinant_coefficient";
 
   htri_t exists = H5Lexists(f->determinant_group, dset_name, H5P_DEFAULT);
   if (exists > 0) {
@@ -1650,7 +1682,7 @@ trexio_exit_code trexio_hdf5_has_csf_coefficient(trexio_t* const file)
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
   if (f->csf_group == (hsize_t) 0) return TREXIO_HAS_NOT;
 
-  const char* dset_name = "csf_coefficient";
+  const char dset_name[] = "csf_coefficient";
 
   htri_t exists = H5Lexists(f->csf_group, dset_name, H5P_DEFAULT);
   if (exists > 0) {
@@ -2663,6 +2695,66 @@ trexio_hdf5_has_ao_1e_int_core_hamiltonian (trexio_t* const file)
 }
 
 trexio_exit_code
+trexio_hdf5_has_ao_1e_int_dipole_x (trexio_t* const file)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+
+  trexio_hdf5_t* f = (trexio_hdf5_t*) file;
+  if (f->ao_1e_int_group == (hsize_t) 0) return TREXIO_HAS_NOT;
+
+  htri_t exists = H5Lexists(f->ao_1e_int_group, AO_1E_INT_DIPOLE_X_NAME, H5P_DEFAULT);
+  if (exists > 0) {
+    return TREXIO_SUCCESS;
+  } else if (exists < 0) {
+    return TREXIO_FAILURE;
+  } else {
+    return TREXIO_HAS_NOT;
+  }
+
+}
+
+trexio_exit_code
+trexio_hdf5_has_ao_1e_int_dipole_y (trexio_t* const file)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+
+  trexio_hdf5_t* f = (trexio_hdf5_t*) file;
+  if (f->ao_1e_int_group == (hsize_t) 0) return TREXIO_HAS_NOT;
+
+  htri_t exists = H5Lexists(f->ao_1e_int_group, AO_1E_INT_DIPOLE_Y_NAME, H5P_DEFAULT);
+  if (exists > 0) {
+    return TREXIO_SUCCESS;
+  } else if (exists < 0) {
+    return TREXIO_FAILURE;
+  } else {
+    return TREXIO_HAS_NOT;
+  }
+
+}
+
+trexio_exit_code
+trexio_hdf5_has_ao_1e_int_dipole_z (trexio_t* const file)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+
+  trexio_hdf5_t* f = (trexio_hdf5_t*) file;
+  if (f->ao_1e_int_group == (hsize_t) 0) return TREXIO_HAS_NOT;
+
+  htri_t exists = H5Lexists(f->ao_1e_int_group, AO_1E_INT_DIPOLE_Z_NAME, H5P_DEFAULT);
+  if (exists > 0) {
+    return TREXIO_SUCCESS;
+  } else if (exists < 0) {
+    return TREXIO_FAILURE;
+  } else {
+    return TREXIO_HAS_NOT;
+  }
+
+}
+
+trexio_exit_code
 trexio_hdf5_has_ao_1e_int_overlap_im (trexio_t* const file)
 {
 
@@ -2752,6 +2844,66 @@ trexio_hdf5_has_ao_1e_int_core_hamiltonian_im (trexio_t* const file)
   if (f->ao_1e_int_group == (hsize_t) 0) return TREXIO_HAS_NOT;
 
   htri_t exists = H5Lexists(f->ao_1e_int_group, AO_1E_INT_CORE_HAMILTONIAN_IM_NAME, H5P_DEFAULT);
+  if (exists > 0) {
+    return TREXIO_SUCCESS;
+  } else if (exists < 0) {
+    return TREXIO_FAILURE;
+  } else {
+    return TREXIO_HAS_NOT;
+  }
+
+}
+
+trexio_exit_code
+trexio_hdf5_has_ao_1e_int_dipole_x_im (trexio_t* const file)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+
+  trexio_hdf5_t* f = (trexio_hdf5_t*) file;
+  if (f->ao_1e_int_group == (hsize_t) 0) return TREXIO_HAS_NOT;
+
+  htri_t exists = H5Lexists(f->ao_1e_int_group, AO_1E_INT_DIPOLE_X_IM_NAME, H5P_DEFAULT);
+  if (exists > 0) {
+    return TREXIO_SUCCESS;
+  } else if (exists < 0) {
+    return TREXIO_FAILURE;
+  } else {
+    return TREXIO_HAS_NOT;
+  }
+
+}
+
+trexio_exit_code
+trexio_hdf5_has_ao_1e_int_dipole_y_im (trexio_t* const file)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+
+  trexio_hdf5_t* f = (trexio_hdf5_t*) file;
+  if (f->ao_1e_int_group == (hsize_t) 0) return TREXIO_HAS_NOT;
+
+  htri_t exists = H5Lexists(f->ao_1e_int_group, AO_1E_INT_DIPOLE_Y_IM_NAME, H5P_DEFAULT);
+  if (exists > 0) {
+    return TREXIO_SUCCESS;
+  } else if (exists < 0) {
+    return TREXIO_FAILURE;
+  } else {
+    return TREXIO_HAS_NOT;
+  }
+
+}
+
+trexio_exit_code
+trexio_hdf5_has_ao_1e_int_dipole_z_im (trexio_t* const file)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+
+  trexio_hdf5_t* f = (trexio_hdf5_t*) file;
+  if (f->ao_1e_int_group == (hsize_t) 0) return TREXIO_HAS_NOT;
+
+  htri_t exists = H5Lexists(f->ao_1e_int_group, AO_1E_INT_DIPOLE_Z_IM_NAME, H5P_DEFAULT);
   if (exists > 0) {
     return TREXIO_SUCCESS;
   } else if (exists < 0) {
@@ -2983,6 +3135,66 @@ trexio_hdf5_has_mo_1e_int_core_hamiltonian (trexio_t* const file)
 }
 
 trexio_exit_code
+trexio_hdf5_has_mo_1e_int_dipole_x (trexio_t* const file)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+
+  trexio_hdf5_t* f = (trexio_hdf5_t*) file;
+  if (f->mo_1e_int_group == (hsize_t) 0) return TREXIO_HAS_NOT;
+
+  htri_t exists = H5Lexists(f->mo_1e_int_group, MO_1E_INT_DIPOLE_X_NAME, H5P_DEFAULT);
+  if (exists > 0) {
+    return TREXIO_SUCCESS;
+  } else if (exists < 0) {
+    return TREXIO_FAILURE;
+  } else {
+    return TREXIO_HAS_NOT;
+  }
+
+}
+
+trexio_exit_code
+trexio_hdf5_has_mo_1e_int_dipole_y (trexio_t* const file)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+
+  trexio_hdf5_t* f = (trexio_hdf5_t*) file;
+  if (f->mo_1e_int_group == (hsize_t) 0) return TREXIO_HAS_NOT;
+
+  htri_t exists = H5Lexists(f->mo_1e_int_group, MO_1E_INT_DIPOLE_Y_NAME, H5P_DEFAULT);
+  if (exists > 0) {
+    return TREXIO_SUCCESS;
+  } else if (exists < 0) {
+    return TREXIO_FAILURE;
+  } else {
+    return TREXIO_HAS_NOT;
+  }
+
+}
+
+trexio_exit_code
+trexio_hdf5_has_mo_1e_int_dipole_z (trexio_t* const file)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+
+  trexio_hdf5_t* f = (trexio_hdf5_t*) file;
+  if (f->mo_1e_int_group == (hsize_t) 0) return TREXIO_HAS_NOT;
+
+  htri_t exists = H5Lexists(f->mo_1e_int_group, MO_1E_INT_DIPOLE_Z_NAME, H5P_DEFAULT);
+  if (exists > 0) {
+    return TREXIO_SUCCESS;
+  } else if (exists < 0) {
+    return TREXIO_FAILURE;
+  } else {
+    return TREXIO_HAS_NOT;
+  }
+
+}
+
+trexio_exit_code
 trexio_hdf5_has_mo_1e_int_overlap_im (trexio_t* const file)
 {
 
@@ -3072,6 +3284,66 @@ trexio_hdf5_has_mo_1e_int_core_hamiltonian_im (trexio_t* const file)
   if (f->mo_1e_int_group == (hsize_t) 0) return TREXIO_HAS_NOT;
 
   htri_t exists = H5Lexists(f->mo_1e_int_group, MO_1E_INT_CORE_HAMILTONIAN_IM_NAME, H5P_DEFAULT);
+  if (exists > 0) {
+    return TREXIO_SUCCESS;
+  } else if (exists < 0) {
+    return TREXIO_FAILURE;
+  } else {
+    return TREXIO_HAS_NOT;
+  }
+
+}
+
+trexio_exit_code
+trexio_hdf5_has_mo_1e_int_dipole_x_im (trexio_t* const file)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+
+  trexio_hdf5_t* f = (trexio_hdf5_t*) file;
+  if (f->mo_1e_int_group == (hsize_t) 0) return TREXIO_HAS_NOT;
+
+  htri_t exists = H5Lexists(f->mo_1e_int_group, MO_1E_INT_DIPOLE_X_IM_NAME, H5P_DEFAULT);
+  if (exists > 0) {
+    return TREXIO_SUCCESS;
+  } else if (exists < 0) {
+    return TREXIO_FAILURE;
+  } else {
+    return TREXIO_HAS_NOT;
+  }
+
+}
+
+trexio_exit_code
+trexio_hdf5_has_mo_1e_int_dipole_y_im (trexio_t* const file)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+
+  trexio_hdf5_t* f = (trexio_hdf5_t*) file;
+  if (f->mo_1e_int_group == (hsize_t) 0) return TREXIO_HAS_NOT;
+
+  htri_t exists = H5Lexists(f->mo_1e_int_group, MO_1E_INT_DIPOLE_Y_IM_NAME, H5P_DEFAULT);
+  if (exists > 0) {
+    return TREXIO_SUCCESS;
+  } else if (exists < 0) {
+    return TREXIO_FAILURE;
+  } else {
+    return TREXIO_HAS_NOT;
+  }
+
+}
+
+trexio_exit_code
+trexio_hdf5_has_mo_1e_int_dipole_z_im (trexio_t* const file)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+
+  trexio_hdf5_t* f = (trexio_hdf5_t*) file;
+  if (f->mo_1e_int_group == (hsize_t) 0) return TREXIO_HAS_NOT;
+
+  htri_t exists = H5Lexists(f->mo_1e_int_group, MO_1E_INT_DIPOLE_Z_IM_NAME, H5P_DEFAULT);
   if (exists > 0) {
     return TREXIO_SUCCESS;
   } else if (exists < 0) {
@@ -6014,7 +6286,7 @@ trexio_exit_code trexio_hdf5_read_determinant_coefficient(trexio_t* const file,
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
   if (dset == NULL) return TREXIO_INVALID_ARG_6;
 
-  const char* dset_name = "determinant_coefficient";
+  const char dset_name[] = "determinant_coefficient";
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -6040,7 +6312,7 @@ trexio_exit_code trexio_hdf5_read_csf_coefficient(trexio_t* const file,
   if (eof_read_size == NULL) return TREXIO_INVALID_ARG_5;
   if (dset == NULL) return TREXIO_INVALID_ARG_6;
 
-  const char* dset_name = "csf_coefficient";
+  const char dset_name[] = "csf_coefficient";
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -8853,6 +9125,174 @@ trexio_hdf5_read_ao_1e_int_core_hamiltonian (trexio_t* const file, double* const
 }
 
 trexio_exit_code
+trexio_hdf5_read_ao_1e_int_dipole_x (trexio_t* const file, double* const ao_1e_int_dipole_x, const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_x == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
+
+  // open the dataset to get its dimensions
+  hid_t dset_id = H5Dopen(f->ao_1e_int_group, AO_1E_INT_DIPOLE_X_NAME, H5P_DEFAULT);
+  if (dset_id <= 0) return TREXIO_INVALID_ID;
+
+  // allocate space for the dimensions to be read
+  hsize_t* ddims = CALLOC( (int) rank, hsize_t);
+  if (ddims == NULL) return TREXIO_FAILURE;
+
+  // get the dataspace of the dataset
+  hid_t dspace_id = H5Dget_space(dset_id);
+  // get the rank and dimensions of the dataset
+  int rrank = H5Sget_simple_extent_dims(dspace_id, ddims, NULL);
+  // check that dimensions are consistent
+  if (rrank != (int) rank) {
+    FREE(ddims);
+    H5Sclose(dspace_id);
+    H5Dclose(dset_id);
+    return TREXIO_INVALID_ARG_3;
+  }
+
+  for (uint32_t i=0; i<rank; ++i){
+    if (ddims[i] != dims[i]) {
+      FREE(ddims);
+      H5Sclose(dspace_id);
+      H5Dclose(dset_id);
+      return TREXIO_INVALID_ARG_4;
+    }
+  }
+
+  FREE(ddims);
+
+  /* Read dataset */
+  herr_t status = H5Dread(dset_id,
+                          H5T_NATIVE_DOUBLE,
+                          H5S_ALL, H5S_ALL, H5P_DEFAULT, 
+                          ao_1e_int_dipole_x);
+
+  H5Sclose(dspace_id);
+  H5Dclose(dset_id);
+
+  if (status < 0) return TREXIO_FAILURE;
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_hdf5_read_ao_1e_int_dipole_y (trexio_t* const file, double* const ao_1e_int_dipole_y, const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_y == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
+
+  // open the dataset to get its dimensions
+  hid_t dset_id = H5Dopen(f->ao_1e_int_group, AO_1E_INT_DIPOLE_Y_NAME, H5P_DEFAULT);
+  if (dset_id <= 0) return TREXIO_INVALID_ID;
+
+  // allocate space for the dimensions to be read
+  hsize_t* ddims = CALLOC( (int) rank, hsize_t);
+  if (ddims == NULL) return TREXIO_FAILURE;
+
+  // get the dataspace of the dataset
+  hid_t dspace_id = H5Dget_space(dset_id);
+  // get the rank and dimensions of the dataset
+  int rrank = H5Sget_simple_extent_dims(dspace_id, ddims, NULL);
+  // check that dimensions are consistent
+  if (rrank != (int) rank) {
+    FREE(ddims);
+    H5Sclose(dspace_id);
+    H5Dclose(dset_id);
+    return TREXIO_INVALID_ARG_3;
+  }
+
+  for (uint32_t i=0; i<rank; ++i){
+    if (ddims[i] != dims[i]) {
+      FREE(ddims);
+      H5Sclose(dspace_id);
+      H5Dclose(dset_id);
+      return TREXIO_INVALID_ARG_4;
+    }
+  }
+
+  FREE(ddims);
+
+  /* Read dataset */
+  herr_t status = H5Dread(dset_id,
+                          H5T_NATIVE_DOUBLE,
+                          H5S_ALL, H5S_ALL, H5P_DEFAULT, 
+                          ao_1e_int_dipole_y);
+
+  H5Sclose(dspace_id);
+  H5Dclose(dset_id);
+
+  if (status < 0) return TREXIO_FAILURE;
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_hdf5_read_ao_1e_int_dipole_z (trexio_t* const file, double* const ao_1e_int_dipole_z, const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_z == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
+
+  // open the dataset to get its dimensions
+  hid_t dset_id = H5Dopen(f->ao_1e_int_group, AO_1E_INT_DIPOLE_Z_NAME, H5P_DEFAULT);
+  if (dset_id <= 0) return TREXIO_INVALID_ID;
+
+  // allocate space for the dimensions to be read
+  hsize_t* ddims = CALLOC( (int) rank, hsize_t);
+  if (ddims == NULL) return TREXIO_FAILURE;
+
+  // get the dataspace of the dataset
+  hid_t dspace_id = H5Dget_space(dset_id);
+  // get the rank and dimensions of the dataset
+  int rrank = H5Sget_simple_extent_dims(dspace_id, ddims, NULL);
+  // check that dimensions are consistent
+  if (rrank != (int) rank) {
+    FREE(ddims);
+    H5Sclose(dspace_id);
+    H5Dclose(dset_id);
+    return TREXIO_INVALID_ARG_3;
+  }
+
+  for (uint32_t i=0; i<rank; ++i){
+    if (ddims[i] != dims[i]) {
+      FREE(ddims);
+      H5Sclose(dspace_id);
+      H5Dclose(dset_id);
+      return TREXIO_INVALID_ARG_4;
+    }
+  }
+
+  FREE(ddims);
+
+  /* Read dataset */
+  herr_t status = H5Dread(dset_id,
+                          H5T_NATIVE_DOUBLE,
+                          H5S_ALL, H5S_ALL, H5P_DEFAULT, 
+                          ao_1e_int_dipole_z);
+
+  H5Sclose(dspace_id);
+  H5Dclose(dset_id);
+
+  if (status < 0) return TREXIO_FAILURE;
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
 trexio_hdf5_read_ao_1e_int_overlap_im (trexio_t* const file, double* const ao_1e_int_overlap_im, const uint32_t rank, const uint64_t* dims)
 {
 
@@ -9123,6 +9563,174 @@ trexio_hdf5_read_ao_1e_int_core_hamiltonian_im (trexio_t* const file, double* co
                           H5T_NATIVE_DOUBLE,
                           H5S_ALL, H5S_ALL, H5P_DEFAULT, 
                           ao_1e_int_core_hamiltonian_im);
+
+  H5Sclose(dspace_id);
+  H5Dclose(dset_id);
+
+  if (status < 0) return TREXIO_FAILURE;
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_hdf5_read_ao_1e_int_dipole_x_im (trexio_t* const file, double* const ao_1e_int_dipole_x_im, const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_x_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
+
+  // open the dataset to get its dimensions
+  hid_t dset_id = H5Dopen(f->ao_1e_int_group, AO_1E_INT_DIPOLE_X_IM_NAME, H5P_DEFAULT);
+  if (dset_id <= 0) return TREXIO_INVALID_ID;
+
+  // allocate space for the dimensions to be read
+  hsize_t* ddims = CALLOC( (int) rank, hsize_t);
+  if (ddims == NULL) return TREXIO_FAILURE;
+
+  // get the dataspace of the dataset
+  hid_t dspace_id = H5Dget_space(dset_id);
+  // get the rank and dimensions of the dataset
+  int rrank = H5Sget_simple_extent_dims(dspace_id, ddims, NULL);
+  // check that dimensions are consistent
+  if (rrank != (int) rank) {
+    FREE(ddims);
+    H5Sclose(dspace_id);
+    H5Dclose(dset_id);
+    return TREXIO_INVALID_ARG_3;
+  }
+
+  for (uint32_t i=0; i<rank; ++i){
+    if (ddims[i] != dims[i]) {
+      FREE(ddims);
+      H5Sclose(dspace_id);
+      H5Dclose(dset_id);
+      return TREXIO_INVALID_ARG_4;
+    }
+  }
+
+  FREE(ddims);
+
+  /* Read dataset */
+  herr_t status = H5Dread(dset_id,
+                          H5T_NATIVE_DOUBLE,
+                          H5S_ALL, H5S_ALL, H5P_DEFAULT, 
+                          ao_1e_int_dipole_x_im);
+
+  H5Sclose(dspace_id);
+  H5Dclose(dset_id);
+
+  if (status < 0) return TREXIO_FAILURE;
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_hdf5_read_ao_1e_int_dipole_y_im (trexio_t* const file, double* const ao_1e_int_dipole_y_im, const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_y_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
+
+  // open the dataset to get its dimensions
+  hid_t dset_id = H5Dopen(f->ao_1e_int_group, AO_1E_INT_DIPOLE_Y_IM_NAME, H5P_DEFAULT);
+  if (dset_id <= 0) return TREXIO_INVALID_ID;
+
+  // allocate space for the dimensions to be read
+  hsize_t* ddims = CALLOC( (int) rank, hsize_t);
+  if (ddims == NULL) return TREXIO_FAILURE;
+
+  // get the dataspace of the dataset
+  hid_t dspace_id = H5Dget_space(dset_id);
+  // get the rank and dimensions of the dataset
+  int rrank = H5Sget_simple_extent_dims(dspace_id, ddims, NULL);
+  // check that dimensions are consistent
+  if (rrank != (int) rank) {
+    FREE(ddims);
+    H5Sclose(dspace_id);
+    H5Dclose(dset_id);
+    return TREXIO_INVALID_ARG_3;
+  }
+
+  for (uint32_t i=0; i<rank; ++i){
+    if (ddims[i] != dims[i]) {
+      FREE(ddims);
+      H5Sclose(dspace_id);
+      H5Dclose(dset_id);
+      return TREXIO_INVALID_ARG_4;
+    }
+  }
+
+  FREE(ddims);
+
+  /* Read dataset */
+  herr_t status = H5Dread(dset_id,
+                          H5T_NATIVE_DOUBLE,
+                          H5S_ALL, H5S_ALL, H5P_DEFAULT, 
+                          ao_1e_int_dipole_y_im);
+
+  H5Sclose(dspace_id);
+  H5Dclose(dset_id);
+
+  if (status < 0) return TREXIO_FAILURE;
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_hdf5_read_ao_1e_int_dipole_z_im (trexio_t* const file, double* const ao_1e_int_dipole_z_im, const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_z_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
+
+  // open the dataset to get its dimensions
+  hid_t dset_id = H5Dopen(f->ao_1e_int_group, AO_1E_INT_DIPOLE_Z_IM_NAME, H5P_DEFAULT);
+  if (dset_id <= 0) return TREXIO_INVALID_ID;
+
+  // allocate space for the dimensions to be read
+  hsize_t* ddims = CALLOC( (int) rank, hsize_t);
+  if (ddims == NULL) return TREXIO_FAILURE;
+
+  // get the dataspace of the dataset
+  hid_t dspace_id = H5Dget_space(dset_id);
+  // get the rank and dimensions of the dataset
+  int rrank = H5Sget_simple_extent_dims(dspace_id, ddims, NULL);
+  // check that dimensions are consistent
+  if (rrank != (int) rank) {
+    FREE(ddims);
+    H5Sclose(dspace_id);
+    H5Dclose(dset_id);
+    return TREXIO_INVALID_ARG_3;
+  }
+
+  for (uint32_t i=0; i<rank; ++i){
+    if (ddims[i] != dims[i]) {
+      FREE(ddims);
+      H5Sclose(dspace_id);
+      H5Dclose(dset_id);
+      return TREXIO_INVALID_ARG_4;
+    }
+  }
+
+  FREE(ddims);
+
+  /* Read dataset */
+  herr_t status = H5Dread(dset_id,
+                          H5T_NATIVE_DOUBLE,
+                          H5S_ALL, H5S_ALL, H5P_DEFAULT, 
+                          ao_1e_int_dipole_z_im);
 
   H5Sclose(dspace_id);
   H5Dclose(dset_id);
@@ -9749,6 +10357,174 @@ trexio_hdf5_read_mo_1e_int_core_hamiltonian (trexio_t* const file, double* const
 }
 
 trexio_exit_code
+trexio_hdf5_read_mo_1e_int_dipole_x (trexio_t* const file, double* const mo_1e_int_dipole_x, const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_x == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
+
+  // open the dataset to get its dimensions
+  hid_t dset_id = H5Dopen(f->mo_1e_int_group, MO_1E_INT_DIPOLE_X_NAME, H5P_DEFAULT);
+  if (dset_id <= 0) return TREXIO_INVALID_ID;
+
+  // allocate space for the dimensions to be read
+  hsize_t* ddims = CALLOC( (int) rank, hsize_t);
+  if (ddims == NULL) return TREXIO_FAILURE;
+
+  // get the dataspace of the dataset
+  hid_t dspace_id = H5Dget_space(dset_id);
+  // get the rank and dimensions of the dataset
+  int rrank = H5Sget_simple_extent_dims(dspace_id, ddims, NULL);
+  // check that dimensions are consistent
+  if (rrank != (int) rank) {
+    FREE(ddims);
+    H5Sclose(dspace_id);
+    H5Dclose(dset_id);
+    return TREXIO_INVALID_ARG_3;
+  }
+
+  for (uint32_t i=0; i<rank; ++i){
+    if (ddims[i] != dims[i]) {
+      FREE(ddims);
+      H5Sclose(dspace_id);
+      H5Dclose(dset_id);
+      return TREXIO_INVALID_ARG_4;
+    }
+  }
+
+  FREE(ddims);
+
+  /* Read dataset */
+  herr_t status = H5Dread(dset_id,
+                          H5T_NATIVE_DOUBLE,
+                          H5S_ALL, H5S_ALL, H5P_DEFAULT, 
+                          mo_1e_int_dipole_x);
+
+  H5Sclose(dspace_id);
+  H5Dclose(dset_id);
+
+  if (status < 0) return TREXIO_FAILURE;
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_hdf5_read_mo_1e_int_dipole_y (trexio_t* const file, double* const mo_1e_int_dipole_y, const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_y == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
+
+  // open the dataset to get its dimensions
+  hid_t dset_id = H5Dopen(f->mo_1e_int_group, MO_1E_INT_DIPOLE_Y_NAME, H5P_DEFAULT);
+  if (dset_id <= 0) return TREXIO_INVALID_ID;
+
+  // allocate space for the dimensions to be read
+  hsize_t* ddims = CALLOC( (int) rank, hsize_t);
+  if (ddims == NULL) return TREXIO_FAILURE;
+
+  // get the dataspace of the dataset
+  hid_t dspace_id = H5Dget_space(dset_id);
+  // get the rank and dimensions of the dataset
+  int rrank = H5Sget_simple_extent_dims(dspace_id, ddims, NULL);
+  // check that dimensions are consistent
+  if (rrank != (int) rank) {
+    FREE(ddims);
+    H5Sclose(dspace_id);
+    H5Dclose(dset_id);
+    return TREXIO_INVALID_ARG_3;
+  }
+
+  for (uint32_t i=0; i<rank; ++i){
+    if (ddims[i] != dims[i]) {
+      FREE(ddims);
+      H5Sclose(dspace_id);
+      H5Dclose(dset_id);
+      return TREXIO_INVALID_ARG_4;
+    }
+  }
+
+  FREE(ddims);
+
+  /* Read dataset */
+  herr_t status = H5Dread(dset_id,
+                          H5T_NATIVE_DOUBLE,
+                          H5S_ALL, H5S_ALL, H5P_DEFAULT, 
+                          mo_1e_int_dipole_y);
+
+  H5Sclose(dspace_id);
+  H5Dclose(dset_id);
+
+  if (status < 0) return TREXIO_FAILURE;
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_hdf5_read_mo_1e_int_dipole_z (trexio_t* const file, double* const mo_1e_int_dipole_z, const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_z == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
+
+  // open the dataset to get its dimensions
+  hid_t dset_id = H5Dopen(f->mo_1e_int_group, MO_1E_INT_DIPOLE_Z_NAME, H5P_DEFAULT);
+  if (dset_id <= 0) return TREXIO_INVALID_ID;
+
+  // allocate space for the dimensions to be read
+  hsize_t* ddims = CALLOC( (int) rank, hsize_t);
+  if (ddims == NULL) return TREXIO_FAILURE;
+
+  // get the dataspace of the dataset
+  hid_t dspace_id = H5Dget_space(dset_id);
+  // get the rank and dimensions of the dataset
+  int rrank = H5Sget_simple_extent_dims(dspace_id, ddims, NULL);
+  // check that dimensions are consistent
+  if (rrank != (int) rank) {
+    FREE(ddims);
+    H5Sclose(dspace_id);
+    H5Dclose(dset_id);
+    return TREXIO_INVALID_ARG_3;
+  }
+
+  for (uint32_t i=0; i<rank; ++i){
+    if (ddims[i] != dims[i]) {
+      FREE(ddims);
+      H5Sclose(dspace_id);
+      H5Dclose(dset_id);
+      return TREXIO_INVALID_ARG_4;
+    }
+  }
+
+  FREE(ddims);
+
+  /* Read dataset */
+  herr_t status = H5Dread(dset_id,
+                          H5T_NATIVE_DOUBLE,
+                          H5S_ALL, H5S_ALL, H5P_DEFAULT, 
+                          mo_1e_int_dipole_z);
+
+  H5Sclose(dspace_id);
+  H5Dclose(dset_id);
+
+  if (status < 0) return TREXIO_FAILURE;
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
 trexio_hdf5_read_mo_1e_int_overlap_im (trexio_t* const file, double* const mo_1e_int_overlap_im, const uint32_t rank, const uint64_t* dims)
 {
 
@@ -10019,6 +10795,174 @@ trexio_hdf5_read_mo_1e_int_core_hamiltonian_im (trexio_t* const file, double* co
                           H5T_NATIVE_DOUBLE,
                           H5S_ALL, H5S_ALL, H5P_DEFAULT, 
                           mo_1e_int_core_hamiltonian_im);
+
+  H5Sclose(dspace_id);
+  H5Dclose(dset_id);
+
+  if (status < 0) return TREXIO_FAILURE;
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_hdf5_read_mo_1e_int_dipole_x_im (trexio_t* const file, double* const mo_1e_int_dipole_x_im, const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_x_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
+
+  // open the dataset to get its dimensions
+  hid_t dset_id = H5Dopen(f->mo_1e_int_group, MO_1E_INT_DIPOLE_X_IM_NAME, H5P_DEFAULT);
+  if (dset_id <= 0) return TREXIO_INVALID_ID;
+
+  // allocate space for the dimensions to be read
+  hsize_t* ddims = CALLOC( (int) rank, hsize_t);
+  if (ddims == NULL) return TREXIO_FAILURE;
+
+  // get the dataspace of the dataset
+  hid_t dspace_id = H5Dget_space(dset_id);
+  // get the rank and dimensions of the dataset
+  int rrank = H5Sget_simple_extent_dims(dspace_id, ddims, NULL);
+  // check that dimensions are consistent
+  if (rrank != (int) rank) {
+    FREE(ddims);
+    H5Sclose(dspace_id);
+    H5Dclose(dset_id);
+    return TREXIO_INVALID_ARG_3;
+  }
+
+  for (uint32_t i=0; i<rank; ++i){
+    if (ddims[i] != dims[i]) {
+      FREE(ddims);
+      H5Sclose(dspace_id);
+      H5Dclose(dset_id);
+      return TREXIO_INVALID_ARG_4;
+    }
+  }
+
+  FREE(ddims);
+
+  /* Read dataset */
+  herr_t status = H5Dread(dset_id,
+                          H5T_NATIVE_DOUBLE,
+                          H5S_ALL, H5S_ALL, H5P_DEFAULT, 
+                          mo_1e_int_dipole_x_im);
+
+  H5Sclose(dspace_id);
+  H5Dclose(dset_id);
+
+  if (status < 0) return TREXIO_FAILURE;
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_hdf5_read_mo_1e_int_dipole_y_im (trexio_t* const file, double* const mo_1e_int_dipole_y_im, const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_y_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
+
+  // open the dataset to get its dimensions
+  hid_t dset_id = H5Dopen(f->mo_1e_int_group, MO_1E_INT_DIPOLE_Y_IM_NAME, H5P_DEFAULT);
+  if (dset_id <= 0) return TREXIO_INVALID_ID;
+
+  // allocate space for the dimensions to be read
+  hsize_t* ddims = CALLOC( (int) rank, hsize_t);
+  if (ddims == NULL) return TREXIO_FAILURE;
+
+  // get the dataspace of the dataset
+  hid_t dspace_id = H5Dget_space(dset_id);
+  // get the rank and dimensions of the dataset
+  int rrank = H5Sget_simple_extent_dims(dspace_id, ddims, NULL);
+  // check that dimensions are consistent
+  if (rrank != (int) rank) {
+    FREE(ddims);
+    H5Sclose(dspace_id);
+    H5Dclose(dset_id);
+    return TREXIO_INVALID_ARG_3;
+  }
+
+  for (uint32_t i=0; i<rank; ++i){
+    if (ddims[i] != dims[i]) {
+      FREE(ddims);
+      H5Sclose(dspace_id);
+      H5Dclose(dset_id);
+      return TREXIO_INVALID_ARG_4;
+    }
+  }
+
+  FREE(ddims);
+
+  /* Read dataset */
+  herr_t status = H5Dread(dset_id,
+                          H5T_NATIVE_DOUBLE,
+                          H5S_ALL, H5S_ALL, H5P_DEFAULT, 
+                          mo_1e_int_dipole_y_im);
+
+  H5Sclose(dspace_id);
+  H5Dclose(dset_id);
+
+  if (status < 0) return TREXIO_FAILURE;
+
+  return TREXIO_SUCCESS;
+}
+
+trexio_exit_code
+trexio_hdf5_read_mo_1e_int_dipole_z_im (trexio_t* const file, double* const mo_1e_int_dipole_z_im, const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_z_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
+
+  // open the dataset to get its dimensions
+  hid_t dset_id = H5Dopen(f->mo_1e_int_group, MO_1E_INT_DIPOLE_Z_IM_NAME, H5P_DEFAULT);
+  if (dset_id <= 0) return TREXIO_INVALID_ID;
+
+  // allocate space for the dimensions to be read
+  hsize_t* ddims = CALLOC( (int) rank, hsize_t);
+  if (ddims == NULL) return TREXIO_FAILURE;
+
+  // get the dataspace of the dataset
+  hid_t dspace_id = H5Dget_space(dset_id);
+  // get the rank and dimensions of the dataset
+  int rrank = H5Sget_simple_extent_dims(dspace_id, ddims, NULL);
+  // check that dimensions are consistent
+  if (rrank != (int) rank) {
+    FREE(ddims);
+    H5Sclose(dspace_id);
+    H5Dclose(dset_id);
+    return TREXIO_INVALID_ARG_3;
+  }
+
+  for (uint32_t i=0; i<rank; ++i){
+    if (ddims[i] != dims[i]) {
+      FREE(ddims);
+      H5Sclose(dspace_id);
+      H5Dclose(dset_id);
+      return TREXIO_INVALID_ARG_4;
+    }
+  }
+
+  FREE(ddims);
+
+  /* Read dataset */
+  herr_t status = H5Dread(dset_id,
+                          H5T_NATIVE_DOUBLE,
+                          H5S_ALL, H5S_ALL, H5P_DEFAULT, 
+                          mo_1e_int_dipole_z_im);
 
   H5Sclose(dspace_id);
   H5Dclose(dset_id);
@@ -16147,7 +17091,7 @@ trexio_exit_code trexio_hdf5_write_determinant_coefficient(trexio_t* const file,
   if (dims == NULL) return TREXIO_INVALID_ARG_4;
   if (dset == NULL) return TREXIO_INVALID_ARG_5;
 
-  const char* dset_name = "determinant_coefficient";
+  const char dset_name[] = "determinant_coefficient";
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -16185,7 +17129,7 @@ trexio_hdf5_read_determinant_coefficient_size (trexio_t* const file, int64_t* co
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (size_max == NULL) return TREXIO_INVALID_ARG_2;
 
-  const char* dset_name = "determinant_coefficient";
+  const char dset_name[] = "determinant_coefficient";
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -16225,7 +17169,7 @@ trexio_exit_code trexio_hdf5_write_csf_coefficient(trexio_t* const file,
   if (dims == NULL) return TREXIO_INVALID_ARG_4;
   if (dset == NULL) return TREXIO_INVALID_ARG_5;
 
-  const char* dset_name = "csf_coefficient";
+  const char dset_name[] = "csf_coefficient";
 
   trexio_hdf5_t* f = (trexio_hdf5_t*) file;
 
@@ -16263,7 +17207,7 @@ trexio_hdf5_read_csf_coefficient_size (trexio_t* const file, int64_t* const size
   if (file == NULL) return TREXIO_INVALID_ARG_1;
   if (size_max == NULL) return TREXIO_INVALID_ARG_2;
 
-  const char* dset_name = "csf_coefficient";
+  const char dset_name[] = "csf_coefficient";
 
   const trexio_hdf5_t* f = (const trexio_hdf5_t*) file;
 
@@ -18841,6 +19785,159 @@ trexio_hdf5_write_ao_1e_int_core_hamiltonian (trexio_t* const file, const double
 }
 
 trexio_exit_code
+trexio_hdf5_write_ao_1e_int_dipole_x (trexio_t* const file, const double* ao_1e_int_dipole_x, const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_x == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  trexio_hdf5_t* f = (trexio_hdf5_t*) file;
+
+  /*
+     Try to delete an existing dataset by unlinking it from the group (UNSAFE mode).
+     NOTE: In principle, HDF5 should see the deallocated (unused) file space and free it,
+     thus reducing the size of the HDF5 file. In practic, this is not always the case.
+
+     Consider using HDF5-native h5repack utility after deleting/overwriting big datasets.
+  */
+  
+  if ((trexio_hdf5_has_ao_1e_int_dipole_x(file) == TREXIO_SUCCESS) && (file->mode == 'u')) {
+    herr_t status_del = H5Ldelete(f->ao_1e_int_group, AO_1E_INT_DIPOLE_X_NAME, H5P_DEFAULT);
+    if (status_del < 0) return TREXIO_FAILURE;
+  }
+
+  hid_t dspace_id = H5Screate_simple( (int) rank, (const hsize_t*) dims, NULL);
+  if (dspace_id <= 0) return TREXIO_INVALID_ID;
+
+  hid_t dset_id = H5Dcreate (f->ao_1e_int_group,
+                             AO_1E_INT_DIPOLE_X_NAME,
+                             H5T_NATIVE_DOUBLE,
+                             dspace_id,
+                             H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  if (dset_id <= 0) {
+    H5Sclose(dspace_id);
+    return TREXIO_INVALID_ID;
+  }
+
+  herr_t status = H5Dwrite(dset_id,
+                           H5T_NATIVE_DOUBLE,
+                           H5S_ALL,
+                           dspace_id,
+                           H5P_DEFAULT,
+                           ao_1e_int_dipole_x);
+  H5Dclose(dset_id);
+  H5Sclose(dspace_id);
+  if (status < 0) return TREXIO_FAILURE;
+
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
+trexio_hdf5_write_ao_1e_int_dipole_y (trexio_t* const file, const double* ao_1e_int_dipole_y, const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_y == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  trexio_hdf5_t* f = (trexio_hdf5_t*) file;
+
+  /*
+     Try to delete an existing dataset by unlinking it from the group (UNSAFE mode).
+     NOTE: In principle, HDF5 should see the deallocated (unused) file space and free it,
+     thus reducing the size of the HDF5 file. In practic, this is not always the case.
+
+     Consider using HDF5-native h5repack utility after deleting/overwriting big datasets.
+  */
+  
+  if ((trexio_hdf5_has_ao_1e_int_dipole_y(file) == TREXIO_SUCCESS) && (file->mode == 'u')) {
+    herr_t status_del = H5Ldelete(f->ao_1e_int_group, AO_1E_INT_DIPOLE_Y_NAME, H5P_DEFAULT);
+    if (status_del < 0) return TREXIO_FAILURE;
+  }
+
+  hid_t dspace_id = H5Screate_simple( (int) rank, (const hsize_t*) dims, NULL);
+  if (dspace_id <= 0) return TREXIO_INVALID_ID;
+
+  hid_t dset_id = H5Dcreate (f->ao_1e_int_group,
+                             AO_1E_INT_DIPOLE_Y_NAME,
+                             H5T_NATIVE_DOUBLE,
+                             dspace_id,
+                             H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  if (dset_id <= 0) {
+    H5Sclose(dspace_id);
+    return TREXIO_INVALID_ID;
+  }
+
+  herr_t status = H5Dwrite(dset_id,
+                           H5T_NATIVE_DOUBLE,
+                           H5S_ALL,
+                           dspace_id,
+                           H5P_DEFAULT,
+                           ao_1e_int_dipole_y);
+  H5Dclose(dset_id);
+  H5Sclose(dspace_id);
+  if (status < 0) return TREXIO_FAILURE;
+
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
+trexio_hdf5_write_ao_1e_int_dipole_z (trexio_t* const file, const double* ao_1e_int_dipole_z, const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_z == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  trexio_hdf5_t* f = (trexio_hdf5_t*) file;
+
+  /*
+     Try to delete an existing dataset by unlinking it from the group (UNSAFE mode).
+     NOTE: In principle, HDF5 should see the deallocated (unused) file space and free it,
+     thus reducing the size of the HDF5 file. In practic, this is not always the case.
+
+     Consider using HDF5-native h5repack utility after deleting/overwriting big datasets.
+  */
+  
+  if ((trexio_hdf5_has_ao_1e_int_dipole_z(file) == TREXIO_SUCCESS) && (file->mode == 'u')) {
+    herr_t status_del = H5Ldelete(f->ao_1e_int_group, AO_1E_INT_DIPOLE_Z_NAME, H5P_DEFAULT);
+    if (status_del < 0) return TREXIO_FAILURE;
+  }
+
+  hid_t dspace_id = H5Screate_simple( (int) rank, (const hsize_t*) dims, NULL);
+  if (dspace_id <= 0) return TREXIO_INVALID_ID;
+
+  hid_t dset_id = H5Dcreate (f->ao_1e_int_group,
+                             AO_1E_INT_DIPOLE_Z_NAME,
+                             H5T_NATIVE_DOUBLE,
+                             dspace_id,
+                             H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  if (dset_id <= 0) {
+    H5Sclose(dspace_id);
+    return TREXIO_INVALID_ID;
+  }
+
+  herr_t status = H5Dwrite(dset_id,
+                           H5T_NATIVE_DOUBLE,
+                           H5S_ALL,
+                           dspace_id,
+                           H5P_DEFAULT,
+                           ao_1e_int_dipole_z);
+  H5Dclose(dset_id);
+  H5Sclose(dspace_id);
+  if (status < 0) return TREXIO_FAILURE;
+
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
 trexio_hdf5_write_ao_1e_int_overlap_im (trexio_t* const file, const double* ao_1e_int_overlap_im, const uint32_t rank, const uint64_t* dims)
 {
 
@@ -19087,6 +20184,159 @@ trexio_hdf5_write_ao_1e_int_core_hamiltonian_im (trexio_t* const file, const dou
                            dspace_id,
                            H5P_DEFAULT,
                            ao_1e_int_core_hamiltonian_im);
+  H5Dclose(dset_id);
+  H5Sclose(dspace_id);
+  if (status < 0) return TREXIO_FAILURE;
+
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
+trexio_hdf5_write_ao_1e_int_dipole_x_im (trexio_t* const file, const double* ao_1e_int_dipole_x_im, const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_x_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  trexio_hdf5_t* f = (trexio_hdf5_t*) file;
+
+  /*
+     Try to delete an existing dataset by unlinking it from the group (UNSAFE mode).
+     NOTE: In principle, HDF5 should see the deallocated (unused) file space and free it,
+     thus reducing the size of the HDF5 file. In practic, this is not always the case.
+
+     Consider using HDF5-native h5repack utility after deleting/overwriting big datasets.
+  */
+  
+  if ((trexio_hdf5_has_ao_1e_int_dipole_x_im(file) == TREXIO_SUCCESS) && (file->mode == 'u')) {
+    herr_t status_del = H5Ldelete(f->ao_1e_int_group, AO_1E_INT_DIPOLE_X_IM_NAME, H5P_DEFAULT);
+    if (status_del < 0) return TREXIO_FAILURE;
+  }
+
+  hid_t dspace_id = H5Screate_simple( (int) rank, (const hsize_t*) dims, NULL);
+  if (dspace_id <= 0) return TREXIO_INVALID_ID;
+
+  hid_t dset_id = H5Dcreate (f->ao_1e_int_group,
+                             AO_1E_INT_DIPOLE_X_IM_NAME,
+                             H5T_NATIVE_DOUBLE,
+                             dspace_id,
+                             H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  if (dset_id <= 0) {
+    H5Sclose(dspace_id);
+    return TREXIO_INVALID_ID;
+  }
+
+  herr_t status = H5Dwrite(dset_id,
+                           H5T_NATIVE_DOUBLE,
+                           H5S_ALL,
+                           dspace_id,
+                           H5P_DEFAULT,
+                           ao_1e_int_dipole_x_im);
+  H5Dclose(dset_id);
+  H5Sclose(dspace_id);
+  if (status < 0) return TREXIO_FAILURE;
+
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
+trexio_hdf5_write_ao_1e_int_dipole_y_im (trexio_t* const file, const double* ao_1e_int_dipole_y_im, const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_y_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  trexio_hdf5_t* f = (trexio_hdf5_t*) file;
+
+  /*
+     Try to delete an existing dataset by unlinking it from the group (UNSAFE mode).
+     NOTE: In principle, HDF5 should see the deallocated (unused) file space and free it,
+     thus reducing the size of the HDF5 file. In practic, this is not always the case.
+
+     Consider using HDF5-native h5repack utility after deleting/overwriting big datasets.
+  */
+  
+  if ((trexio_hdf5_has_ao_1e_int_dipole_y_im(file) == TREXIO_SUCCESS) && (file->mode == 'u')) {
+    herr_t status_del = H5Ldelete(f->ao_1e_int_group, AO_1E_INT_DIPOLE_Y_IM_NAME, H5P_DEFAULT);
+    if (status_del < 0) return TREXIO_FAILURE;
+  }
+
+  hid_t dspace_id = H5Screate_simple( (int) rank, (const hsize_t*) dims, NULL);
+  if (dspace_id <= 0) return TREXIO_INVALID_ID;
+
+  hid_t dset_id = H5Dcreate (f->ao_1e_int_group,
+                             AO_1E_INT_DIPOLE_Y_IM_NAME,
+                             H5T_NATIVE_DOUBLE,
+                             dspace_id,
+                             H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  if (dset_id <= 0) {
+    H5Sclose(dspace_id);
+    return TREXIO_INVALID_ID;
+  }
+
+  herr_t status = H5Dwrite(dset_id,
+                           H5T_NATIVE_DOUBLE,
+                           H5S_ALL,
+                           dspace_id,
+                           H5P_DEFAULT,
+                           ao_1e_int_dipole_y_im);
+  H5Dclose(dset_id);
+  H5Sclose(dspace_id);
+  if (status < 0) return TREXIO_FAILURE;
+
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
+trexio_hdf5_write_ao_1e_int_dipole_z_im (trexio_t* const file, const double* ao_1e_int_dipole_z_im, const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (ao_1e_int_dipole_z_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  trexio_hdf5_t* f = (trexio_hdf5_t*) file;
+
+  /*
+     Try to delete an existing dataset by unlinking it from the group (UNSAFE mode).
+     NOTE: In principle, HDF5 should see the deallocated (unused) file space and free it,
+     thus reducing the size of the HDF5 file. In practic, this is not always the case.
+
+     Consider using HDF5-native h5repack utility after deleting/overwriting big datasets.
+  */
+  
+  if ((trexio_hdf5_has_ao_1e_int_dipole_z_im(file) == TREXIO_SUCCESS) && (file->mode == 'u')) {
+    herr_t status_del = H5Ldelete(f->ao_1e_int_group, AO_1E_INT_DIPOLE_Z_IM_NAME, H5P_DEFAULT);
+    if (status_del < 0) return TREXIO_FAILURE;
+  }
+
+  hid_t dspace_id = H5Screate_simple( (int) rank, (const hsize_t*) dims, NULL);
+  if (dspace_id <= 0) return TREXIO_INVALID_ID;
+
+  hid_t dset_id = H5Dcreate (f->ao_1e_int_group,
+                             AO_1E_INT_DIPOLE_Z_IM_NAME,
+                             H5T_NATIVE_DOUBLE,
+                             dspace_id,
+                             H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  if (dset_id <= 0) {
+    H5Sclose(dspace_id);
+    return TREXIO_INVALID_ID;
+  }
+
+  herr_t status = H5Dwrite(dset_id,
+                           H5T_NATIVE_DOUBLE,
+                           H5S_ALL,
+                           dspace_id,
+                           H5P_DEFAULT,
+                           ao_1e_int_dipole_z_im);
   H5Dclose(dset_id);
   H5Sclose(dspace_id);
   if (status < 0) return TREXIO_FAILURE;
@@ -19657,6 +20907,159 @@ trexio_hdf5_write_mo_1e_int_core_hamiltonian (trexio_t* const file, const double
 }
 
 trexio_exit_code
+trexio_hdf5_write_mo_1e_int_dipole_x (trexio_t* const file, const double* mo_1e_int_dipole_x, const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_x == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  trexio_hdf5_t* f = (trexio_hdf5_t*) file;
+
+  /*
+     Try to delete an existing dataset by unlinking it from the group (UNSAFE mode).
+     NOTE: In principle, HDF5 should see the deallocated (unused) file space and free it,
+     thus reducing the size of the HDF5 file. In practic, this is not always the case.
+
+     Consider using HDF5-native h5repack utility after deleting/overwriting big datasets.
+  */
+  
+  if ((trexio_hdf5_has_mo_1e_int_dipole_x(file) == TREXIO_SUCCESS) && (file->mode == 'u')) {
+    herr_t status_del = H5Ldelete(f->mo_1e_int_group, MO_1E_INT_DIPOLE_X_NAME, H5P_DEFAULT);
+    if (status_del < 0) return TREXIO_FAILURE;
+  }
+
+  hid_t dspace_id = H5Screate_simple( (int) rank, (const hsize_t*) dims, NULL);
+  if (dspace_id <= 0) return TREXIO_INVALID_ID;
+
+  hid_t dset_id = H5Dcreate (f->mo_1e_int_group,
+                             MO_1E_INT_DIPOLE_X_NAME,
+                             H5T_NATIVE_DOUBLE,
+                             dspace_id,
+                             H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  if (dset_id <= 0) {
+    H5Sclose(dspace_id);
+    return TREXIO_INVALID_ID;
+  }
+
+  herr_t status = H5Dwrite(dset_id,
+                           H5T_NATIVE_DOUBLE,
+                           H5S_ALL,
+                           dspace_id,
+                           H5P_DEFAULT,
+                           mo_1e_int_dipole_x);
+  H5Dclose(dset_id);
+  H5Sclose(dspace_id);
+  if (status < 0) return TREXIO_FAILURE;
+
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
+trexio_hdf5_write_mo_1e_int_dipole_y (trexio_t* const file, const double* mo_1e_int_dipole_y, const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_y == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  trexio_hdf5_t* f = (trexio_hdf5_t*) file;
+
+  /*
+     Try to delete an existing dataset by unlinking it from the group (UNSAFE mode).
+     NOTE: In principle, HDF5 should see the deallocated (unused) file space and free it,
+     thus reducing the size of the HDF5 file. In practic, this is not always the case.
+
+     Consider using HDF5-native h5repack utility after deleting/overwriting big datasets.
+  */
+  
+  if ((trexio_hdf5_has_mo_1e_int_dipole_y(file) == TREXIO_SUCCESS) && (file->mode == 'u')) {
+    herr_t status_del = H5Ldelete(f->mo_1e_int_group, MO_1E_INT_DIPOLE_Y_NAME, H5P_DEFAULT);
+    if (status_del < 0) return TREXIO_FAILURE;
+  }
+
+  hid_t dspace_id = H5Screate_simple( (int) rank, (const hsize_t*) dims, NULL);
+  if (dspace_id <= 0) return TREXIO_INVALID_ID;
+
+  hid_t dset_id = H5Dcreate (f->mo_1e_int_group,
+                             MO_1E_INT_DIPOLE_Y_NAME,
+                             H5T_NATIVE_DOUBLE,
+                             dspace_id,
+                             H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  if (dset_id <= 0) {
+    H5Sclose(dspace_id);
+    return TREXIO_INVALID_ID;
+  }
+
+  herr_t status = H5Dwrite(dset_id,
+                           H5T_NATIVE_DOUBLE,
+                           H5S_ALL,
+                           dspace_id,
+                           H5P_DEFAULT,
+                           mo_1e_int_dipole_y);
+  H5Dclose(dset_id);
+  H5Sclose(dspace_id);
+  if (status < 0) return TREXIO_FAILURE;
+
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
+trexio_hdf5_write_mo_1e_int_dipole_z (trexio_t* const file, const double* mo_1e_int_dipole_z, const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_z == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  trexio_hdf5_t* f = (trexio_hdf5_t*) file;
+
+  /*
+     Try to delete an existing dataset by unlinking it from the group (UNSAFE mode).
+     NOTE: In principle, HDF5 should see the deallocated (unused) file space and free it,
+     thus reducing the size of the HDF5 file. In practic, this is not always the case.
+
+     Consider using HDF5-native h5repack utility after deleting/overwriting big datasets.
+  */
+  
+  if ((trexio_hdf5_has_mo_1e_int_dipole_z(file) == TREXIO_SUCCESS) && (file->mode == 'u')) {
+    herr_t status_del = H5Ldelete(f->mo_1e_int_group, MO_1E_INT_DIPOLE_Z_NAME, H5P_DEFAULT);
+    if (status_del < 0) return TREXIO_FAILURE;
+  }
+
+  hid_t dspace_id = H5Screate_simple( (int) rank, (const hsize_t*) dims, NULL);
+  if (dspace_id <= 0) return TREXIO_INVALID_ID;
+
+  hid_t dset_id = H5Dcreate (f->mo_1e_int_group,
+                             MO_1E_INT_DIPOLE_Z_NAME,
+                             H5T_NATIVE_DOUBLE,
+                             dspace_id,
+                             H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  if (dset_id <= 0) {
+    H5Sclose(dspace_id);
+    return TREXIO_INVALID_ID;
+  }
+
+  herr_t status = H5Dwrite(dset_id,
+                           H5T_NATIVE_DOUBLE,
+                           H5S_ALL,
+                           dspace_id,
+                           H5P_DEFAULT,
+                           mo_1e_int_dipole_z);
+  H5Dclose(dset_id);
+  H5Sclose(dspace_id);
+  if (status < 0) return TREXIO_FAILURE;
+
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
 trexio_hdf5_write_mo_1e_int_overlap_im (trexio_t* const file, const double* mo_1e_int_overlap_im, const uint32_t rank, const uint64_t* dims)
 {
 
@@ -19903,6 +21306,159 @@ trexio_hdf5_write_mo_1e_int_core_hamiltonian_im (trexio_t* const file, const dou
                            dspace_id,
                            H5P_DEFAULT,
                            mo_1e_int_core_hamiltonian_im);
+  H5Dclose(dset_id);
+  H5Sclose(dspace_id);
+  if (status < 0) return TREXIO_FAILURE;
+
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
+trexio_hdf5_write_mo_1e_int_dipole_x_im (trexio_t* const file, const double* mo_1e_int_dipole_x_im, const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_x_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  trexio_hdf5_t* f = (trexio_hdf5_t*) file;
+
+  /*
+     Try to delete an existing dataset by unlinking it from the group (UNSAFE mode).
+     NOTE: In principle, HDF5 should see the deallocated (unused) file space and free it,
+     thus reducing the size of the HDF5 file. In practic, this is not always the case.
+
+     Consider using HDF5-native h5repack utility after deleting/overwriting big datasets.
+  */
+  
+  if ((trexio_hdf5_has_mo_1e_int_dipole_x_im(file) == TREXIO_SUCCESS) && (file->mode == 'u')) {
+    herr_t status_del = H5Ldelete(f->mo_1e_int_group, MO_1E_INT_DIPOLE_X_IM_NAME, H5P_DEFAULT);
+    if (status_del < 0) return TREXIO_FAILURE;
+  }
+
+  hid_t dspace_id = H5Screate_simple( (int) rank, (const hsize_t*) dims, NULL);
+  if (dspace_id <= 0) return TREXIO_INVALID_ID;
+
+  hid_t dset_id = H5Dcreate (f->mo_1e_int_group,
+                             MO_1E_INT_DIPOLE_X_IM_NAME,
+                             H5T_NATIVE_DOUBLE,
+                             dspace_id,
+                             H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  if (dset_id <= 0) {
+    H5Sclose(dspace_id);
+    return TREXIO_INVALID_ID;
+  }
+
+  herr_t status = H5Dwrite(dset_id,
+                           H5T_NATIVE_DOUBLE,
+                           H5S_ALL,
+                           dspace_id,
+                           H5P_DEFAULT,
+                           mo_1e_int_dipole_x_im);
+  H5Dclose(dset_id);
+  H5Sclose(dspace_id);
+  if (status < 0) return TREXIO_FAILURE;
+
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
+trexio_hdf5_write_mo_1e_int_dipole_y_im (trexio_t* const file, const double* mo_1e_int_dipole_y_im, const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_y_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  trexio_hdf5_t* f = (trexio_hdf5_t*) file;
+
+  /*
+     Try to delete an existing dataset by unlinking it from the group (UNSAFE mode).
+     NOTE: In principle, HDF5 should see the deallocated (unused) file space and free it,
+     thus reducing the size of the HDF5 file. In practic, this is not always the case.
+
+     Consider using HDF5-native h5repack utility after deleting/overwriting big datasets.
+  */
+  
+  if ((trexio_hdf5_has_mo_1e_int_dipole_y_im(file) == TREXIO_SUCCESS) && (file->mode == 'u')) {
+    herr_t status_del = H5Ldelete(f->mo_1e_int_group, MO_1E_INT_DIPOLE_Y_IM_NAME, H5P_DEFAULT);
+    if (status_del < 0) return TREXIO_FAILURE;
+  }
+
+  hid_t dspace_id = H5Screate_simple( (int) rank, (const hsize_t*) dims, NULL);
+  if (dspace_id <= 0) return TREXIO_INVALID_ID;
+
+  hid_t dset_id = H5Dcreate (f->mo_1e_int_group,
+                             MO_1E_INT_DIPOLE_Y_IM_NAME,
+                             H5T_NATIVE_DOUBLE,
+                             dspace_id,
+                             H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  if (dset_id <= 0) {
+    H5Sclose(dspace_id);
+    return TREXIO_INVALID_ID;
+  }
+
+  herr_t status = H5Dwrite(dset_id,
+                           H5T_NATIVE_DOUBLE,
+                           H5S_ALL,
+                           dspace_id,
+                           H5P_DEFAULT,
+                           mo_1e_int_dipole_y_im);
+  H5Dclose(dset_id);
+  H5Sclose(dspace_id);
+  if (status < 0) return TREXIO_FAILURE;
+
+  return TREXIO_SUCCESS;
+
+}
+
+trexio_exit_code
+trexio_hdf5_write_mo_1e_int_dipole_z_im (trexio_t* const file, const double* mo_1e_int_dipole_z_im, const uint32_t rank, const uint64_t* dims)
+{
+
+  if (file == NULL) return TREXIO_INVALID_ARG_1;
+  if (mo_1e_int_dipole_z_im == NULL) return TREXIO_INVALID_ARG_2;
+  if (rank < 1) return TREXIO_INVALID_ARG_3;
+  if (dims == NULL) return TREXIO_INVALID_ARG_4;
+
+  trexio_hdf5_t* f = (trexio_hdf5_t*) file;
+
+  /*
+     Try to delete an existing dataset by unlinking it from the group (UNSAFE mode).
+     NOTE: In principle, HDF5 should see the deallocated (unused) file space and free it,
+     thus reducing the size of the HDF5 file. In practic, this is not always the case.
+
+     Consider using HDF5-native h5repack utility after deleting/overwriting big datasets.
+  */
+  
+  if ((trexio_hdf5_has_mo_1e_int_dipole_z_im(file) == TREXIO_SUCCESS) && (file->mode == 'u')) {
+    herr_t status_del = H5Ldelete(f->mo_1e_int_group, MO_1E_INT_DIPOLE_Z_IM_NAME, H5P_DEFAULT);
+    if (status_del < 0) return TREXIO_FAILURE;
+  }
+
+  hid_t dspace_id = H5Screate_simple( (int) rank, (const hsize_t*) dims, NULL);
+  if (dspace_id <= 0) return TREXIO_INVALID_ID;
+
+  hid_t dset_id = H5Dcreate (f->mo_1e_int_group,
+                             MO_1E_INT_DIPOLE_Z_IM_NAME,
+                             H5T_NATIVE_DOUBLE,
+                             dspace_id,
+                             H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  if (dset_id <= 0) {
+    H5Sclose(dspace_id);
+    return TREXIO_INVALID_ID;
+  }
+
+  herr_t status = H5Dwrite(dset_id,
+                           H5T_NATIVE_DOUBLE,
+                           H5S_ALL,
+                           dspace_id,
+                           H5P_DEFAULT,
+                           mo_1e_int_dipole_z_im);
   H5Dclose(dset_id);
   H5Sclose(dspace_id);
   if (status < 0) return TREXIO_FAILURE;

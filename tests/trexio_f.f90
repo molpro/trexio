@@ -272,11 +272,11 @@ interface
   end function trexio_evaluate_nao_radial_all
 end interface
 
-character(len = 12) :: TREXIO_PACKAGE_VERSION = "2.5.2"
+character(len = 12) :: TREXIO_PACKAGE_VERSION = "2.6.0"
 integer :: TREXIO_VERSION_MAJOR = 2
-integer :: TREXIO_VERSION_MINOR = 5
-integer :: TREXIO_VERSION_PATCH = 2
-character(len = 64) :: TREXIO_GIT_HASH = "b99e53f32dc58e5abf535ff46b5cdbb5655df44b"
+integer :: TREXIO_VERSION_MINOR = 6
+integer :: TREXIO_VERSION_PATCH = 0
+character(len = 64) :: TREXIO_GIT_HASH = "174e7cbd2499dc78471951c46e144b5d6ec2370e"
 
 interface
    integer(trexio_exit_code) function &
@@ -1432,6 +1432,33 @@ end interface
 
 interface
    integer(trexio_exit_code) function &
+        trexio_has_ao_1e_int_dipole_x &
+        (trex_file) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+   end function trexio_has_ao_1e_int_dipole_x
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_has_ao_1e_int_dipole_y &
+        (trex_file) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+   end function trexio_has_ao_1e_int_dipole_y
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_has_ao_1e_int_dipole_z &
+        (trex_file) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+   end function trexio_has_ao_1e_int_dipole_z
+end interface
+
+interface
+   integer(trexio_exit_code) function &
         trexio_has_ao_1e_int_overlap_im &
         (trex_file) bind(C)
      import
@@ -1473,6 +1500,33 @@ interface
      import
      integer(trexio_t), intent(in), value :: trex_file
    end function trexio_has_ao_1e_int_core_hamiltonian_im
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_has_ao_1e_int_dipole_x_im &
+        (trex_file) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+   end function trexio_has_ao_1e_int_dipole_x_im
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_has_ao_1e_int_dipole_y_im &
+        (trex_file) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+   end function trexio_has_ao_1e_int_dipole_y_im
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_has_ao_1e_int_dipole_z_im &
+        (trex_file) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+   end function trexio_has_ao_1e_int_dipole_z_im
 end interface
 
 interface
@@ -1576,6 +1630,33 @@ end interface
 
 interface
    integer(trexio_exit_code) function &
+        trexio_has_mo_1e_int_dipole_x &
+        (trex_file) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+   end function trexio_has_mo_1e_int_dipole_x
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_has_mo_1e_int_dipole_y &
+        (trex_file) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+   end function trexio_has_mo_1e_int_dipole_y
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_has_mo_1e_int_dipole_z &
+        (trex_file) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+   end function trexio_has_mo_1e_int_dipole_z
+end interface
+
+interface
+   integer(trexio_exit_code) function &
         trexio_has_mo_1e_int_overlap_im &
         (trex_file) bind(C)
      import
@@ -1617,6 +1698,33 @@ interface
      import
      integer(trexio_t), intent(in), value :: trex_file
    end function trexio_has_mo_1e_int_core_hamiltonian_im
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_has_mo_1e_int_dipole_x_im &
+        (trex_file) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+   end function trexio_has_mo_1e_int_dipole_x_im
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_has_mo_1e_int_dipole_y_im &
+        (trex_file) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+   end function trexio_has_mo_1e_int_dipole_y_im
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_has_mo_1e_int_dipole_z_im &
+        (trex_file) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+   end function trexio_has_mo_1e_int_dipole_z_im
 end interface
 
 interface
@@ -4268,6 +4376,36 @@ end interface
 
 interface
    integer(trexio_exit_code) function &
+        trexio_read_ao_1e_int_dipole_x_32 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_float), intent(out) :: dset(*)
+   end function trexio_read_ao_1e_int_dipole_x_32
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_read_ao_1e_int_dipole_y_32 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_float), intent(out) :: dset(*)
+   end function trexio_read_ao_1e_int_dipole_y_32
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_read_ao_1e_int_dipole_z_32 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_float), intent(out) :: dset(*)
+   end function trexio_read_ao_1e_int_dipole_z_32
+end interface
+
+interface
+   integer(trexio_exit_code) function &
         trexio_read_ao_1e_int_overlap_im_32 &
         (trex_file, dset) bind(C)
      import
@@ -4314,6 +4452,36 @@ interface
      integer(trexio_t), intent(in), value :: trex_file
      real(c_float), intent(out) :: dset(*)
    end function trexio_read_ao_1e_int_core_hamiltonian_im_32
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_read_ao_1e_int_dipole_x_im_32 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_float), intent(out) :: dset(*)
+   end function trexio_read_ao_1e_int_dipole_x_im_32
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_read_ao_1e_int_dipole_y_im_32 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_float), intent(out) :: dset(*)
+   end function trexio_read_ao_1e_int_dipole_y_im_32
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_read_ao_1e_int_dipole_z_im_32 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_float), intent(out) :: dset(*)
+   end function trexio_read_ao_1e_int_dipole_z_im_32
 end interface
 
 interface
@@ -4428,6 +4596,36 @@ end interface
 
 interface
    integer(trexio_exit_code) function &
+        trexio_read_mo_1e_int_dipole_x_32 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_float), intent(out) :: dset(*)
+   end function trexio_read_mo_1e_int_dipole_x_32
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_read_mo_1e_int_dipole_y_32 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_float), intent(out) :: dset(*)
+   end function trexio_read_mo_1e_int_dipole_y_32
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_read_mo_1e_int_dipole_z_32 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_float), intent(out) :: dset(*)
+   end function trexio_read_mo_1e_int_dipole_z_32
+end interface
+
+interface
+   integer(trexio_exit_code) function &
         trexio_read_mo_1e_int_overlap_im_32 &
         (trex_file, dset) bind(C)
      import
@@ -4474,6 +4672,36 @@ interface
      integer(trexio_t), intent(in), value :: trex_file
      real(c_float), intent(out) :: dset(*)
    end function trexio_read_mo_1e_int_core_hamiltonian_im_32
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_read_mo_1e_int_dipole_x_im_32 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_float), intent(out) :: dset(*)
+   end function trexio_read_mo_1e_int_dipole_x_im_32
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_read_mo_1e_int_dipole_y_im_32 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_float), intent(out) :: dset(*)
+   end function trexio_read_mo_1e_int_dipole_y_im_32
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_read_mo_1e_int_dipole_z_im_32 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_float), intent(out) :: dset(*)
+   end function trexio_read_mo_1e_int_dipole_z_im_32
 end interface
 
 interface
@@ -5108,6 +5336,36 @@ end interface
 
 interface
    integer(trexio_exit_code) function &
+        trexio_read_ao_1e_int_dipole_x_64 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(out) :: dset(*)
+   end function trexio_read_ao_1e_int_dipole_x_64
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_read_ao_1e_int_dipole_y_64 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(out) :: dset(*)
+   end function trexio_read_ao_1e_int_dipole_y_64
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_read_ao_1e_int_dipole_z_64 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(out) :: dset(*)
+   end function trexio_read_ao_1e_int_dipole_z_64
+end interface
+
+interface
+   integer(trexio_exit_code) function &
         trexio_read_ao_1e_int_overlap_im_64 &
         (trex_file, dset) bind(C)
      import
@@ -5154,6 +5412,36 @@ interface
      integer(trexio_t), intent(in), value :: trex_file
      real(c_double), intent(out) :: dset(*)
    end function trexio_read_ao_1e_int_core_hamiltonian_im_64
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_read_ao_1e_int_dipole_x_im_64 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(out) :: dset(*)
+   end function trexio_read_ao_1e_int_dipole_x_im_64
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_read_ao_1e_int_dipole_y_im_64 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(out) :: dset(*)
+   end function trexio_read_ao_1e_int_dipole_y_im_64
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_read_ao_1e_int_dipole_z_im_64 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(out) :: dset(*)
+   end function trexio_read_ao_1e_int_dipole_z_im_64
 end interface
 
 interface
@@ -5268,6 +5556,36 @@ end interface
 
 interface
    integer(trexio_exit_code) function &
+        trexio_read_mo_1e_int_dipole_x_64 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(out) :: dset(*)
+   end function trexio_read_mo_1e_int_dipole_x_64
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_read_mo_1e_int_dipole_y_64 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(out) :: dset(*)
+   end function trexio_read_mo_1e_int_dipole_y_64
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_read_mo_1e_int_dipole_z_64 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(out) :: dset(*)
+   end function trexio_read_mo_1e_int_dipole_z_64
+end interface
+
+interface
+   integer(trexio_exit_code) function &
         trexio_read_mo_1e_int_overlap_im_64 &
         (trex_file, dset) bind(C)
      import
@@ -5314,6 +5632,36 @@ interface
      integer(trexio_t), intent(in), value :: trex_file
      real(c_double), intent(out) :: dset(*)
    end function trexio_read_mo_1e_int_core_hamiltonian_im_64
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_read_mo_1e_int_dipole_x_im_64 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(out) :: dset(*)
+   end function trexio_read_mo_1e_int_dipole_x_im_64
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_read_mo_1e_int_dipole_y_im_64 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(out) :: dset(*)
+   end function trexio_read_mo_1e_int_dipole_y_im_64
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_read_mo_1e_int_dipole_z_im_64 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(out) :: dset(*)
+   end function trexio_read_mo_1e_int_dipole_z_im_64
 end interface
 
 interface
@@ -5948,6 +6296,36 @@ end interface
 
 interface
    integer(trexio_exit_code) function &
+        trexio_read_ao_1e_int_dipole_x &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(out) :: dset(*)
+   end function trexio_read_ao_1e_int_dipole_x
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_read_ao_1e_int_dipole_y &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(out) :: dset(*)
+   end function trexio_read_ao_1e_int_dipole_y
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_read_ao_1e_int_dipole_z &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(out) :: dset(*)
+   end function trexio_read_ao_1e_int_dipole_z
+end interface
+
+interface
+   integer(trexio_exit_code) function &
         trexio_read_ao_1e_int_overlap_im &
         (trex_file, dset) bind(C)
      import
@@ -5994,6 +6372,36 @@ interface
      integer(trexio_t), intent(in), value :: trex_file
      real(c_double), intent(out) :: dset(*)
    end function trexio_read_ao_1e_int_core_hamiltonian_im
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_read_ao_1e_int_dipole_x_im &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(out) :: dset(*)
+   end function trexio_read_ao_1e_int_dipole_x_im
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_read_ao_1e_int_dipole_y_im &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(out) :: dset(*)
+   end function trexio_read_ao_1e_int_dipole_y_im
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_read_ao_1e_int_dipole_z_im &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(out) :: dset(*)
+   end function trexio_read_ao_1e_int_dipole_z_im
 end interface
 
 interface
@@ -6108,6 +6516,36 @@ end interface
 
 interface
    integer(trexio_exit_code) function &
+        trexio_read_mo_1e_int_dipole_x &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(out) :: dset(*)
+   end function trexio_read_mo_1e_int_dipole_x
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_read_mo_1e_int_dipole_y &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(out) :: dset(*)
+   end function trexio_read_mo_1e_int_dipole_y
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_read_mo_1e_int_dipole_z &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(out) :: dset(*)
+   end function trexio_read_mo_1e_int_dipole_z
+end interface
+
+interface
+   integer(trexio_exit_code) function &
         trexio_read_mo_1e_int_overlap_im &
         (trex_file, dset) bind(C)
      import
@@ -6154,6 +6592,36 @@ interface
      integer(trexio_t), intent(in), value :: trex_file
      real(c_double), intent(out) :: dset(*)
    end function trexio_read_mo_1e_int_core_hamiltonian_im
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_read_mo_1e_int_dipole_x_im &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(out) :: dset(*)
+   end function trexio_read_mo_1e_int_dipole_x_im
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_read_mo_1e_int_dipole_y_im &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(out) :: dset(*)
+   end function trexio_read_mo_1e_int_dipole_y_im
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_read_mo_1e_int_dipole_z_im &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(out) :: dset(*)
+   end function trexio_read_mo_1e_int_dipole_z_im
 end interface
 
 interface
@@ -9477,6 +9945,36 @@ end interface
 
 interface
    integer(trexio_exit_code) function &
+        trexio_write_ao_1e_int_dipole_x_32 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_float), intent(in) :: dset(*)
+   end function trexio_write_ao_1e_int_dipole_x_32
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_write_ao_1e_int_dipole_y_32 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_float), intent(in) :: dset(*)
+   end function trexio_write_ao_1e_int_dipole_y_32
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_write_ao_1e_int_dipole_z_32 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_float), intent(in) :: dset(*)
+   end function trexio_write_ao_1e_int_dipole_z_32
+end interface
+
+interface
+   integer(trexio_exit_code) function &
         trexio_write_ao_1e_int_overlap_im_32 &
         (trex_file, dset) bind(C)
      import
@@ -9523,6 +10021,36 @@ interface
      integer(trexio_t), intent(in), value :: trex_file
      real(c_float), intent(in) :: dset(*)
    end function trexio_write_ao_1e_int_core_hamiltonian_im_32
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_write_ao_1e_int_dipole_x_im_32 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_float), intent(in) :: dset(*)
+   end function trexio_write_ao_1e_int_dipole_x_im_32
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_write_ao_1e_int_dipole_y_im_32 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_float), intent(in) :: dset(*)
+   end function trexio_write_ao_1e_int_dipole_y_im_32
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_write_ao_1e_int_dipole_z_im_32 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_float), intent(in) :: dset(*)
+   end function trexio_write_ao_1e_int_dipole_z_im_32
 end interface
 
 interface
@@ -9637,6 +10165,36 @@ end interface
 
 interface
    integer(trexio_exit_code) function &
+        trexio_write_mo_1e_int_dipole_x_32 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_float), intent(in) :: dset(*)
+   end function trexio_write_mo_1e_int_dipole_x_32
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_write_mo_1e_int_dipole_y_32 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_float), intent(in) :: dset(*)
+   end function trexio_write_mo_1e_int_dipole_y_32
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_write_mo_1e_int_dipole_z_32 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_float), intent(in) :: dset(*)
+   end function trexio_write_mo_1e_int_dipole_z_32
+end interface
+
+interface
+   integer(trexio_exit_code) function &
         trexio_write_mo_1e_int_overlap_im_32 &
         (trex_file, dset) bind(C)
      import
@@ -9683,6 +10241,36 @@ interface
      integer(trexio_t), intent(in), value :: trex_file
      real(c_float), intent(in) :: dset(*)
    end function trexio_write_mo_1e_int_core_hamiltonian_im_32
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_write_mo_1e_int_dipole_x_im_32 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_float), intent(in) :: dset(*)
+   end function trexio_write_mo_1e_int_dipole_x_im_32
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_write_mo_1e_int_dipole_y_im_32 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_float), intent(in) :: dset(*)
+   end function trexio_write_mo_1e_int_dipole_y_im_32
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_write_mo_1e_int_dipole_z_im_32 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_float), intent(in) :: dset(*)
+   end function trexio_write_mo_1e_int_dipole_z_im_32
 end interface
 
 interface
@@ -10317,6 +10905,36 @@ end interface
 
 interface
    integer(trexio_exit_code) function &
+        trexio_write_ao_1e_int_dipole_x_64 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(in) :: dset(*)
+   end function trexio_write_ao_1e_int_dipole_x_64
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_write_ao_1e_int_dipole_y_64 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(in) :: dset(*)
+   end function trexio_write_ao_1e_int_dipole_y_64
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_write_ao_1e_int_dipole_z_64 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(in) :: dset(*)
+   end function trexio_write_ao_1e_int_dipole_z_64
+end interface
+
+interface
+   integer(trexio_exit_code) function &
         trexio_write_ao_1e_int_overlap_im_64 &
         (trex_file, dset) bind(C)
      import
@@ -10363,6 +10981,36 @@ interface
      integer(trexio_t), intent(in), value :: trex_file
      real(c_double), intent(in) :: dset(*)
    end function trexio_write_ao_1e_int_core_hamiltonian_im_64
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_write_ao_1e_int_dipole_x_im_64 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(in) :: dset(*)
+   end function trexio_write_ao_1e_int_dipole_x_im_64
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_write_ao_1e_int_dipole_y_im_64 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(in) :: dset(*)
+   end function trexio_write_ao_1e_int_dipole_y_im_64
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_write_ao_1e_int_dipole_z_im_64 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(in) :: dset(*)
+   end function trexio_write_ao_1e_int_dipole_z_im_64
 end interface
 
 interface
@@ -10477,6 +11125,36 @@ end interface
 
 interface
    integer(trexio_exit_code) function &
+        trexio_write_mo_1e_int_dipole_x_64 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(in) :: dset(*)
+   end function trexio_write_mo_1e_int_dipole_x_64
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_write_mo_1e_int_dipole_y_64 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(in) :: dset(*)
+   end function trexio_write_mo_1e_int_dipole_y_64
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_write_mo_1e_int_dipole_z_64 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(in) :: dset(*)
+   end function trexio_write_mo_1e_int_dipole_z_64
+end interface
+
+interface
+   integer(trexio_exit_code) function &
         trexio_write_mo_1e_int_overlap_im_64 &
         (trex_file, dset) bind(C)
      import
@@ -10523,6 +11201,36 @@ interface
      integer(trexio_t), intent(in), value :: trex_file
      real(c_double), intent(in) :: dset(*)
    end function trexio_write_mo_1e_int_core_hamiltonian_im_64
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_write_mo_1e_int_dipole_x_im_64 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(in) :: dset(*)
+   end function trexio_write_mo_1e_int_dipole_x_im_64
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_write_mo_1e_int_dipole_y_im_64 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(in) :: dset(*)
+   end function trexio_write_mo_1e_int_dipole_y_im_64
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_write_mo_1e_int_dipole_z_im_64 &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(in) :: dset(*)
+   end function trexio_write_mo_1e_int_dipole_z_im_64
 end interface
 
 interface
@@ -11157,6 +11865,36 @@ end interface
 
 interface
    integer(trexio_exit_code) function &
+        trexio_write_ao_1e_int_dipole_x &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(in) :: dset(*)
+   end function trexio_write_ao_1e_int_dipole_x
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_write_ao_1e_int_dipole_y &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(in) :: dset(*)
+   end function trexio_write_ao_1e_int_dipole_y
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_write_ao_1e_int_dipole_z &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(in) :: dset(*)
+   end function trexio_write_ao_1e_int_dipole_z
+end interface
+
+interface
+   integer(trexio_exit_code) function &
         trexio_write_ao_1e_int_overlap_im &
         (trex_file, dset) bind(C)
      import
@@ -11203,6 +11941,36 @@ interface
      integer(trexio_t), intent(in), value :: trex_file
      real(c_double), intent(in) :: dset(*)
    end function trexio_write_ao_1e_int_core_hamiltonian_im
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_write_ao_1e_int_dipole_x_im &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(in) :: dset(*)
+   end function trexio_write_ao_1e_int_dipole_x_im
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_write_ao_1e_int_dipole_y_im &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(in) :: dset(*)
+   end function trexio_write_ao_1e_int_dipole_y_im
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_write_ao_1e_int_dipole_z_im &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(in) :: dset(*)
+   end function trexio_write_ao_1e_int_dipole_z_im
 end interface
 
 interface
@@ -11317,6 +12085,36 @@ end interface
 
 interface
    integer(trexio_exit_code) function &
+        trexio_write_mo_1e_int_dipole_x &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(in) :: dset(*)
+   end function trexio_write_mo_1e_int_dipole_x
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_write_mo_1e_int_dipole_y &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(in) :: dset(*)
+   end function trexio_write_mo_1e_int_dipole_y
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_write_mo_1e_int_dipole_z &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(in) :: dset(*)
+   end function trexio_write_mo_1e_int_dipole_z
+end interface
+
+interface
+   integer(trexio_exit_code) function &
         trexio_write_mo_1e_int_overlap_im &
         (trex_file, dset) bind(C)
      import
@@ -11363,6 +12161,36 @@ interface
      integer(trexio_t), intent(in), value :: trex_file
      real(c_double), intent(in) :: dset(*)
    end function trexio_write_mo_1e_int_core_hamiltonian_im
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_write_mo_1e_int_dipole_x_im &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(in) :: dset(*)
+   end function trexio_write_mo_1e_int_dipole_x_im
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_write_mo_1e_int_dipole_y_im &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(in) :: dset(*)
+   end function trexio_write_mo_1e_int_dipole_y_im
+end interface
+
+interface
+   integer(trexio_exit_code) function &
+        trexio_write_mo_1e_int_dipole_z_im &
+        (trex_file, dset) bind(C)
+     import
+     integer(trexio_t), intent(in), value :: trex_file
+     real(c_double), intent(in) :: dset(*)
+   end function trexio_write_mo_1e_int_dipole_z_im
 end interface
 
 interface

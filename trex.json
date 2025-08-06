@@ -30,11 +30,11 @@
 } ,
 
 "pbc": {
-	  "periodic" : [ "int"  , []                    ]
-  ,    "k_point_num" : [ "dim"  , []                    ]
-  ,        "k_point" : [ "float", [ "3" ]               ]
-  , "k_point_weight" : [ "float", [ "pbc.k_point_num" ] ]
-  ,       "madelung" : [ "float", []                    ]
+	  "periodic" : [ "int"  , []                         ]
+  ,    "k_point_num" : [ "dim"  , []                         ]
+  ,        "k_point" : [ "float", [ "pbc.k_point_num", "3" ] ]
+  , "k_point_weight" : [ "float", [ "pbc.k_point_num" ]      ]
+  ,       "madelung" : [ "float", []                         ]
 } ,
 
 "electron": {
@@ -123,11 +123,17 @@
   ,       "potential_n_e" : [ "float", [ "ao.num", "ao.num" ] ]
   ,                 "ecp" : [ "float", [ "ao.num", "ao.num" ] ]
   ,    "core_hamiltonian" : [ "float", [ "ao.num", "ao.num" ] ]
+  ,            "dipole_x" : [ "float", [ "ao.num", "ao.num" ] ]
+  ,            "dipole_y" : [ "float", [ "ao.num", "ao.num" ] ]
+  ,            "dipole_z" : [ "float", [ "ao.num", "ao.num" ] ]
   ,          "overlap_im" : [ "float", [ "ao.num", "ao.num" ] ]
   ,          "kinetic_im" : [ "float", [ "ao.num", "ao.num" ] ]
   ,    "potential_n_e_im" : [ "float", [ "ao.num", "ao.num" ] ]
   ,              "ecp_im" : [ "float", [ "ao.num", "ao.num" ] ]
   , "core_hamiltonian_im" : [ "float", [ "ao.num", "ao.num" ] ]
+  ,         "dipole_x_im" : [ "float", [ "ao.num", "ao.num" ] ]
+  ,         "dipole_y_im" : [ "float", [ "ao.num", "ao.num" ] ]
+  ,         "dipole_z_im" : [ "float", [ "ao.num", "ao.num" ] ]
 } ,
 
 "ao_2e_int": {
@@ -158,11 +164,17 @@
   ,       "potential_n_e" : [ "float", [ "mo.num", "mo.num" ] ]
   ,                 "ecp" : [ "float", [ "mo.num", "mo.num" ] ]
   ,    "core_hamiltonian" : [ "float", [ "mo.num", "mo.num" ] ]
+  ,            "dipole_x" : [ "float", [ "mo.num", "mo.num" ] ]
+  ,            "dipole_y" : [ "float", [ "mo.num", "mo.num" ] ]
+  ,            "dipole_z" : [ "float", [ "mo.num", "mo.num" ] ]
   ,          "overlap_im" : [ "float", [ "mo.num", "mo.num" ] ]
   ,          "kinetic_im" : [ "float", [ "mo.num", "mo.num" ] ]
   ,    "potential_n_e_im" : [ "float", [ "mo.num", "mo.num" ] ]
   ,              "ecp_im" : [ "float", [ "mo.num", "mo.num" ] ]
   , "core_hamiltonian_im" : [ "float", [ "mo.num", "mo.num" ] ]
+  ,         "dipole_x_im" : [ "float", [ "mo.num", "mo.num" ] ]
+  ,         "dipole_y_im" : [ "float", [ "mo.num", "mo.num" ] ]
+  ,         "dipole_z_im" : [ "float", [ "mo.num", "mo.num" ] ]
 } ,
 
 "mo_2e_int": {

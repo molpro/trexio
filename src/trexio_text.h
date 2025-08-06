@@ -301,31 +301,49 @@ typedef struct ao_1e_int_s {
   double*  ao_1e_int_potential_n_e;
   double*  ao_1e_int_ecp;
   double*  ao_1e_int_core_hamiltonian;
+  double*  ao_1e_int_dipole_x;
+  double*  ao_1e_int_dipole_y;
+  double*  ao_1e_int_dipole_z;
   double*  ao_1e_int_overlap_im;
   double*  ao_1e_int_kinetic_im;
   double*  ao_1e_int_potential_n_e_im;
   double*  ao_1e_int_ecp_im;
   double*  ao_1e_int_core_hamiltonian_im;
+  double*  ao_1e_int_dipole_x_im;
+  double*  ao_1e_int_dipole_y_im;
+  double*  ao_1e_int_dipole_z_im;
   uint64_t dims_ao_1e_int_overlap[16];
   uint64_t dims_ao_1e_int_kinetic[16];
   uint64_t dims_ao_1e_int_potential_n_e[16];
   uint64_t dims_ao_1e_int_ecp[16];
   uint64_t dims_ao_1e_int_core_hamiltonian[16];
+  uint64_t dims_ao_1e_int_dipole_x[16];
+  uint64_t dims_ao_1e_int_dipole_y[16];
+  uint64_t dims_ao_1e_int_dipole_z[16];
   uint64_t dims_ao_1e_int_overlap_im[16];
   uint64_t dims_ao_1e_int_kinetic_im[16];
   uint64_t dims_ao_1e_int_potential_n_e_im[16];
   uint64_t dims_ao_1e_int_ecp_im[16];
   uint64_t dims_ao_1e_int_core_hamiltonian_im[16];
+  uint64_t dims_ao_1e_int_dipole_x_im[16];
+  uint64_t dims_ao_1e_int_dipole_y_im[16];
+  uint64_t dims_ao_1e_int_dipole_z_im[16];
   uint32_t rank_ao_1e_int_overlap;
   uint32_t rank_ao_1e_int_kinetic;
   uint32_t rank_ao_1e_int_potential_n_e;
   uint32_t rank_ao_1e_int_ecp;
   uint32_t rank_ao_1e_int_core_hamiltonian;
+  uint32_t rank_ao_1e_int_dipole_x;
+  uint32_t rank_ao_1e_int_dipole_y;
+  uint32_t rank_ao_1e_int_dipole_z;
   uint32_t rank_ao_1e_int_overlap_im;
   uint32_t rank_ao_1e_int_kinetic_im;
   uint32_t rank_ao_1e_int_potential_n_e_im;
   uint32_t rank_ao_1e_int_ecp_im;
   uint32_t rank_ao_1e_int_core_hamiltonian_im;
+  uint32_t rank_ao_1e_int_dipole_x_im;
+  uint32_t rank_ao_1e_int_dipole_y_im;
+  uint32_t rank_ao_1e_int_dipole_z_im;
   uint32_t to_flush;
   char     file_name[TREXIO_MAX_FILENAME_LENGTH];
 } ao_1e_int_t;
@@ -378,31 +396,49 @@ typedef struct mo_1e_int_s {
   double*  mo_1e_int_potential_n_e;
   double*  mo_1e_int_ecp;
   double*  mo_1e_int_core_hamiltonian;
+  double*  mo_1e_int_dipole_x;
+  double*  mo_1e_int_dipole_y;
+  double*  mo_1e_int_dipole_z;
   double*  mo_1e_int_overlap_im;
   double*  mo_1e_int_kinetic_im;
   double*  mo_1e_int_potential_n_e_im;
   double*  mo_1e_int_ecp_im;
   double*  mo_1e_int_core_hamiltonian_im;
+  double*  mo_1e_int_dipole_x_im;
+  double*  mo_1e_int_dipole_y_im;
+  double*  mo_1e_int_dipole_z_im;
   uint64_t dims_mo_1e_int_overlap[16];
   uint64_t dims_mo_1e_int_kinetic[16];
   uint64_t dims_mo_1e_int_potential_n_e[16];
   uint64_t dims_mo_1e_int_ecp[16];
   uint64_t dims_mo_1e_int_core_hamiltonian[16];
+  uint64_t dims_mo_1e_int_dipole_x[16];
+  uint64_t dims_mo_1e_int_dipole_y[16];
+  uint64_t dims_mo_1e_int_dipole_z[16];
   uint64_t dims_mo_1e_int_overlap_im[16];
   uint64_t dims_mo_1e_int_kinetic_im[16];
   uint64_t dims_mo_1e_int_potential_n_e_im[16];
   uint64_t dims_mo_1e_int_ecp_im[16];
   uint64_t dims_mo_1e_int_core_hamiltonian_im[16];
+  uint64_t dims_mo_1e_int_dipole_x_im[16];
+  uint64_t dims_mo_1e_int_dipole_y_im[16];
+  uint64_t dims_mo_1e_int_dipole_z_im[16];
   uint32_t rank_mo_1e_int_overlap;
   uint32_t rank_mo_1e_int_kinetic;
   uint32_t rank_mo_1e_int_potential_n_e;
   uint32_t rank_mo_1e_int_ecp;
   uint32_t rank_mo_1e_int_core_hamiltonian;
+  uint32_t rank_mo_1e_int_dipole_x;
+  uint32_t rank_mo_1e_int_dipole_y;
+  uint32_t rank_mo_1e_int_dipole_z;
   uint32_t rank_mo_1e_int_overlap_im;
   uint32_t rank_mo_1e_int_kinetic_im;
   uint32_t rank_mo_1e_int_potential_n_e_im;
   uint32_t rank_mo_1e_int_ecp_im;
   uint32_t rank_mo_1e_int_core_hamiltonian_im;
+  uint32_t rank_mo_1e_int_dipole_x_im;
+  uint32_t rank_mo_1e_int_dipole_y_im;
+  uint32_t rank_mo_1e_int_dipole_z_im;
   uint32_t to_flush;
   char     file_name[TREXIO_MAX_FILENAME_LENGTH];
 } mo_1e_int_t;
@@ -997,6 +1033,18 @@ trexio_exit_code trexio_text_has_ao_1e_int_core_hamiltonian (trexio_t* const fil
 trexio_exit_code trexio_text_read_ao_1e_int_core_hamiltonian (trexio_t* const file, double* const ao_1e_int_core_hamiltonian, const uint32_t rank, const uint64_t* dims);
 trexio_exit_code trexio_text_write_ao_1e_int_core_hamiltonian(trexio_t* const file, const double* ao_1e_int_core_hamiltonian, const uint32_t rank, const uint64_t* dims);
 
+trexio_exit_code trexio_text_has_ao_1e_int_dipole_x (trexio_t* const file);
+trexio_exit_code trexio_text_read_ao_1e_int_dipole_x (trexio_t* const file, double* const ao_1e_int_dipole_x, const uint32_t rank, const uint64_t* dims);
+trexio_exit_code trexio_text_write_ao_1e_int_dipole_x(trexio_t* const file, const double* ao_1e_int_dipole_x, const uint32_t rank, const uint64_t* dims);
+
+trexio_exit_code trexio_text_has_ao_1e_int_dipole_y (trexio_t* const file);
+trexio_exit_code trexio_text_read_ao_1e_int_dipole_y (trexio_t* const file, double* const ao_1e_int_dipole_y, const uint32_t rank, const uint64_t* dims);
+trexio_exit_code trexio_text_write_ao_1e_int_dipole_y(trexio_t* const file, const double* ao_1e_int_dipole_y, const uint32_t rank, const uint64_t* dims);
+
+trexio_exit_code trexio_text_has_ao_1e_int_dipole_z (trexio_t* const file);
+trexio_exit_code trexio_text_read_ao_1e_int_dipole_z (trexio_t* const file, double* const ao_1e_int_dipole_z, const uint32_t rank, const uint64_t* dims);
+trexio_exit_code trexio_text_write_ao_1e_int_dipole_z(trexio_t* const file, const double* ao_1e_int_dipole_z, const uint32_t rank, const uint64_t* dims);
+
 trexio_exit_code trexio_text_has_ao_1e_int_overlap_im (trexio_t* const file);
 trexio_exit_code trexio_text_read_ao_1e_int_overlap_im (trexio_t* const file, double* const ao_1e_int_overlap_im, const uint32_t rank, const uint64_t* dims);
 trexio_exit_code trexio_text_write_ao_1e_int_overlap_im(trexio_t* const file, const double* ao_1e_int_overlap_im, const uint32_t rank, const uint64_t* dims);
@@ -1016,6 +1064,18 @@ trexio_exit_code trexio_text_write_ao_1e_int_ecp_im(trexio_t* const file, const 
 trexio_exit_code trexio_text_has_ao_1e_int_core_hamiltonian_im (trexio_t* const file);
 trexio_exit_code trexio_text_read_ao_1e_int_core_hamiltonian_im (trexio_t* const file, double* const ao_1e_int_core_hamiltonian_im, const uint32_t rank, const uint64_t* dims);
 trexio_exit_code trexio_text_write_ao_1e_int_core_hamiltonian_im(trexio_t* const file, const double* ao_1e_int_core_hamiltonian_im, const uint32_t rank, const uint64_t* dims);
+
+trexio_exit_code trexio_text_has_ao_1e_int_dipole_x_im (trexio_t* const file);
+trexio_exit_code trexio_text_read_ao_1e_int_dipole_x_im (trexio_t* const file, double* const ao_1e_int_dipole_x_im, const uint32_t rank, const uint64_t* dims);
+trexio_exit_code trexio_text_write_ao_1e_int_dipole_x_im(trexio_t* const file, const double* ao_1e_int_dipole_x_im, const uint32_t rank, const uint64_t* dims);
+
+trexio_exit_code trexio_text_has_ao_1e_int_dipole_y_im (trexio_t* const file);
+trexio_exit_code trexio_text_read_ao_1e_int_dipole_y_im (trexio_t* const file, double* const ao_1e_int_dipole_y_im, const uint32_t rank, const uint64_t* dims);
+trexio_exit_code trexio_text_write_ao_1e_int_dipole_y_im(trexio_t* const file, const double* ao_1e_int_dipole_y_im, const uint32_t rank, const uint64_t* dims);
+
+trexio_exit_code trexio_text_has_ao_1e_int_dipole_z_im (trexio_t* const file);
+trexio_exit_code trexio_text_read_ao_1e_int_dipole_z_im (trexio_t* const file, double* const ao_1e_int_dipole_z_im, const uint32_t rank, const uint64_t* dims);
+trexio_exit_code trexio_text_write_ao_1e_int_dipole_z_im(trexio_t* const file, const double* ao_1e_int_dipole_z_im, const uint32_t rank, const uint64_t* dims);
 
 trexio_exit_code trexio_text_has_mo_coefficient (trexio_t* const file);
 trexio_exit_code trexio_text_read_mo_coefficient (trexio_t* const file, double* const mo_coefficient, const uint32_t rank, const uint64_t* dims);
@@ -1061,6 +1121,18 @@ trexio_exit_code trexio_text_has_mo_1e_int_core_hamiltonian (trexio_t* const fil
 trexio_exit_code trexio_text_read_mo_1e_int_core_hamiltonian (trexio_t* const file, double* const mo_1e_int_core_hamiltonian, const uint32_t rank, const uint64_t* dims);
 trexio_exit_code trexio_text_write_mo_1e_int_core_hamiltonian(trexio_t* const file, const double* mo_1e_int_core_hamiltonian, const uint32_t rank, const uint64_t* dims);
 
+trexio_exit_code trexio_text_has_mo_1e_int_dipole_x (trexio_t* const file);
+trexio_exit_code trexio_text_read_mo_1e_int_dipole_x (trexio_t* const file, double* const mo_1e_int_dipole_x, const uint32_t rank, const uint64_t* dims);
+trexio_exit_code trexio_text_write_mo_1e_int_dipole_x(trexio_t* const file, const double* mo_1e_int_dipole_x, const uint32_t rank, const uint64_t* dims);
+
+trexio_exit_code trexio_text_has_mo_1e_int_dipole_y (trexio_t* const file);
+trexio_exit_code trexio_text_read_mo_1e_int_dipole_y (trexio_t* const file, double* const mo_1e_int_dipole_y, const uint32_t rank, const uint64_t* dims);
+trexio_exit_code trexio_text_write_mo_1e_int_dipole_y(trexio_t* const file, const double* mo_1e_int_dipole_y, const uint32_t rank, const uint64_t* dims);
+
+trexio_exit_code trexio_text_has_mo_1e_int_dipole_z (trexio_t* const file);
+trexio_exit_code trexio_text_read_mo_1e_int_dipole_z (trexio_t* const file, double* const mo_1e_int_dipole_z, const uint32_t rank, const uint64_t* dims);
+trexio_exit_code trexio_text_write_mo_1e_int_dipole_z(trexio_t* const file, const double* mo_1e_int_dipole_z, const uint32_t rank, const uint64_t* dims);
+
 trexio_exit_code trexio_text_has_mo_1e_int_overlap_im (trexio_t* const file);
 trexio_exit_code trexio_text_read_mo_1e_int_overlap_im (trexio_t* const file, double* const mo_1e_int_overlap_im, const uint32_t rank, const uint64_t* dims);
 trexio_exit_code trexio_text_write_mo_1e_int_overlap_im(trexio_t* const file, const double* mo_1e_int_overlap_im, const uint32_t rank, const uint64_t* dims);
@@ -1080,6 +1152,18 @@ trexio_exit_code trexio_text_write_mo_1e_int_ecp_im(trexio_t* const file, const 
 trexio_exit_code trexio_text_has_mo_1e_int_core_hamiltonian_im (trexio_t* const file);
 trexio_exit_code trexio_text_read_mo_1e_int_core_hamiltonian_im (trexio_t* const file, double* const mo_1e_int_core_hamiltonian_im, const uint32_t rank, const uint64_t* dims);
 trexio_exit_code trexio_text_write_mo_1e_int_core_hamiltonian_im(trexio_t* const file, const double* mo_1e_int_core_hamiltonian_im, const uint32_t rank, const uint64_t* dims);
+
+trexio_exit_code trexio_text_has_mo_1e_int_dipole_x_im (trexio_t* const file);
+trexio_exit_code trexio_text_read_mo_1e_int_dipole_x_im (trexio_t* const file, double* const mo_1e_int_dipole_x_im, const uint32_t rank, const uint64_t* dims);
+trexio_exit_code trexio_text_write_mo_1e_int_dipole_x_im(trexio_t* const file, const double* mo_1e_int_dipole_x_im, const uint32_t rank, const uint64_t* dims);
+
+trexio_exit_code trexio_text_has_mo_1e_int_dipole_y_im (trexio_t* const file);
+trexio_exit_code trexio_text_read_mo_1e_int_dipole_y_im (trexio_t* const file, double* const mo_1e_int_dipole_y_im, const uint32_t rank, const uint64_t* dims);
+trexio_exit_code trexio_text_write_mo_1e_int_dipole_y_im(trexio_t* const file, const double* mo_1e_int_dipole_y_im, const uint32_t rank, const uint64_t* dims);
+
+trexio_exit_code trexio_text_has_mo_1e_int_dipole_z_im (trexio_t* const file);
+trexio_exit_code trexio_text_read_mo_1e_int_dipole_z_im (trexio_t* const file, double* const mo_1e_int_dipole_z_im, const uint32_t rank, const uint64_t* dims);
+trexio_exit_code trexio_text_write_mo_1e_int_dipole_z_im(trexio_t* const file, const double* mo_1e_int_dipole_z_im, const uint32_t rank, const uint64_t* dims);
 
 trexio_exit_code trexio_text_has_rdm_1e (trexio_t* const file);
 trexio_exit_code trexio_text_read_rdm_1e (trexio_t* const file, double* const rdm_1e, const uint32_t rank, const uint64_t* dims);
