@@ -139,6 +139,7 @@ host_triplet = @host@
 @HAVE_HDF5_TRUE@  tests/io_determinant_hdf5 \
 @HAVE_HDF5_TRUE@  tests/io_jastrow_hdf5 \
 @HAVE_HDF5_TRUE@  tests/io_safe_dset_float_hdf5 \
+@HAVE_HDF5_TRUE@  tests/io_state_energy_hdf5 \
 @HAVE_HDF5_TRUE@  tests/io_str_hdf5 \
 @HAVE_HDF5_TRUE@  tests/io_dset_str_hdf5 \
 @HAVE_HDF5_TRUE@  tests/delete_group_hdf5 \
@@ -186,6 +187,7 @@ CONFIG_CLEAN_VPATH_FILES =
 @HAVE_HDF5_TRUE@	tests/io_determinant_hdf5$(EXEEXT) \
 @HAVE_HDF5_TRUE@	tests/io_jastrow_hdf5$(EXEEXT) \
 @HAVE_HDF5_TRUE@	tests/io_safe_dset_float_hdf5$(EXEEXT) \
+@HAVE_HDF5_TRUE@	tests/io_state_energy_hdf5$(EXEEXT) \
 @HAVE_HDF5_TRUE@	tests/io_str_hdf5$(EXEEXT) \
 @HAVE_HDF5_TRUE@	tests/io_dset_str_hdf5$(EXEEXT) \
 @HAVE_HDF5_TRUE@	tests/delete_group_hdf5$(EXEEXT) \
@@ -197,7 +199,8 @@ am__EXEEXT_2 = tests/open_text$(EXEEXT) tests/io_num_text$(EXEEXT) \
 	tests/io_determinant_text$(EXEEXT) \
 	tests/io_jastrow_text$(EXEEXT) \
 	tests/io_safe_dset_float_text$(EXEEXT) \
-	tests/io_str_text$(EXEEXT) tests/io_dset_str_text$(EXEEXT) \
+	tests/io_state_energy_text$(EXEEXT) tests/io_str_text$(EXEEXT) \
+	tests/io_dset_str_text$(EXEEXT) \
 	tests/delete_group_text$(EXEEXT) \
 	tests/overwrite_all_text$(EXEEXT) tests/io_all$(EXEEXT) \
 	tests/pre_close$(EXEEXT) $(am__EXEEXT_1)
@@ -332,6 +335,16 @@ tests_io_safe_dset_float_text_OBJECTS =  \
 	tests/io_safe_dset_float_text.$(OBJEXT)
 tests_io_safe_dset_float_text_LDADD = $(LDADD)
 tests_io_safe_dset_float_text_DEPENDENCIES = src/libtrexio.la
+tests_io_state_energy_hdf5_SOURCES = tests/io_state_energy_hdf5.c
+tests_io_state_energy_hdf5_OBJECTS =  \
+	tests/io_state_energy_hdf5.$(OBJEXT)
+tests_io_state_energy_hdf5_LDADD = $(LDADD)
+tests_io_state_energy_hdf5_DEPENDENCIES = src/libtrexio.la
+tests_io_state_energy_text_SOURCES = tests/io_state_energy_text.c
+tests_io_state_energy_text_OBJECTS =  \
+	tests/io_state_energy_text.$(OBJEXT)
+tests_io_state_energy_text_LDADD = $(LDADD)
+tests_io_state_energy_text_DEPENDENCIES = src/libtrexio.la
 tests_io_str_hdf5_SOURCES = tests/io_str_hdf5.c
 tests_io_str_hdf5_OBJECTS = tests/io_str_hdf5.$(OBJEXT)
 tests_io_str_hdf5_LDADD = $(LDADD)
@@ -401,6 +414,8 @@ am__depfiles_remade = src/$(DEPDIR)/trexio.Plo \
 	tests/$(DEPDIR)/io_num_hdf5.Po tests/$(DEPDIR)/io_num_text.Po \
 	tests/$(DEPDIR)/io_safe_dset_float_hdf5.Po \
 	tests/$(DEPDIR)/io_safe_dset_float_text.Po \
+	tests/$(DEPDIR)/io_state_energy_hdf5.Po \
+	tests/$(DEPDIR)/io_state_energy_text.Po \
 	tests/$(DEPDIR)/io_str_hdf5.Po tests/$(DEPDIR)/io_str_text.Po \
 	tests/$(DEPDIR)/open_hdf5.Po tests/$(DEPDIR)/open_text.Po \
 	tests/$(DEPDIR)/overwrite_all_hdf5.Po \
@@ -450,7 +465,8 @@ DIST_SOURCES = $(am__src_libtrexio_la_SOURCES_DIST) \
 	tests/io_dset_str_text.c tests/io_jastrow_hdf5.c \
 	tests/io_jastrow_text.c tests/io_num_hdf5.c \
 	tests/io_num_text.c tests/io_safe_dset_float_hdf5.c \
-	tests/io_safe_dset_float_text.c tests/io_str_hdf5.c \
+	tests/io_safe_dset_float_text.c tests/io_state_energy_hdf5.c \
+	tests/io_state_energy_text.c tests/io_str_hdf5.c \
 	tests/io_str_text.c tests/open_hdf5.c tests/open_text.c \
 	tests/overwrite_all_hdf5.c tests/overwrite_all_text.c \
 	tests/pre_close.c $(am__tests_test_f_SOURCES_DIST)
@@ -897,8 +913,8 @@ BUILT_SOURCES = trex.json $(am__append_1) $(am__append_9) \
 # Include CMake-related files in the distribution.
 EXTRA_DIST = .git_hash CMakeLists.txt trex.json src/CMakeLists.txt \
 	tests/CMakeLists.txt tests/test_macros.h \
-	cmake/cmake_uninstall.cmake.in cmake/FindTREXIO.cmake \
-	$(TEST_FILES) $(trexio_scm)
+	cmake/cmake_uninstall.cmake.in cmake/standard_math_lib.cmake \
+	cmake/FindTREXIO.cmake $(TEST_FILES) $(trexio_scm)
 SUBDIRS = 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = pkgconfig/trexio.pc
@@ -945,6 +961,9 @@ TEST_FILES = \
     tests/io_safe_dset_float.c \
     tests/io_safe_dset_float_hdf5.c \
     tests/io_safe_dset_float_text.c \
+    tests/io_state_energy.c \
+    tests/io_state_energy_hdf5.c \
+    tests/io_state_energy_text.c \
     tests/io_str.c \
     tests/io_str_hdf5.c \
     tests/io_str_text.c \
@@ -964,10 +983,10 @@ TEST_FILES = \
 TESTS_C = tests/open_text tests/io_num_text tests/io_dset_float_text \
 	tests/io_dset_int_text tests/io_dset_sparse_text \
 	tests/io_determinant_text tests/io_jastrow_text \
-	tests/io_safe_dset_float_text tests/io_str_text \
-	tests/io_dset_str_text tests/delete_group_text \
-	tests/overwrite_all_text tests/io_all tests/pre_close \
-	$(am__append_5)
+	tests/io_safe_dset_float_text tests/io_state_energy_text \
+	tests/io_str_text tests/io_dset_str_text \
+	tests/delete_group_text tests/overwrite_all_text tests/io_all \
+	tests/pre_close $(am__append_5)
 @HAVE_FORTRAN_TRUE@TESTS_F = tests/test_f
 
 # specify common LDADD options for all tests
@@ -1252,6 +1271,18 @@ tests/io_safe_dset_float_text.$(OBJEXT): tests/$(am__dirstamp) \
 tests/io_safe_dset_float_text$(EXEEXT): $(tests_io_safe_dset_float_text_OBJECTS) $(tests_io_safe_dset_float_text_DEPENDENCIES) $(EXTRA_tests_io_safe_dset_float_text_DEPENDENCIES) tests/$(am__dirstamp)
 	@rm -f tests/io_safe_dset_float_text$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(tests_io_safe_dset_float_text_OBJECTS) $(tests_io_safe_dset_float_text_LDADD) $(LIBS)
+tests/io_state_energy_hdf5.$(OBJEXT): tests/$(am__dirstamp) \
+	tests/$(DEPDIR)/$(am__dirstamp)
+
+tests/io_state_energy_hdf5$(EXEEXT): $(tests_io_state_energy_hdf5_OBJECTS) $(tests_io_state_energy_hdf5_DEPENDENCIES) $(EXTRA_tests_io_state_energy_hdf5_DEPENDENCIES) tests/$(am__dirstamp)
+	@rm -f tests/io_state_energy_hdf5$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(tests_io_state_energy_hdf5_OBJECTS) $(tests_io_state_energy_hdf5_LDADD) $(LIBS)
+tests/io_state_energy_text.$(OBJEXT): tests/$(am__dirstamp) \
+	tests/$(DEPDIR)/$(am__dirstamp)
+
+tests/io_state_energy_text$(EXEEXT): $(tests_io_state_energy_text_OBJECTS) $(tests_io_state_energy_text_DEPENDENCIES) $(EXTRA_tests_io_state_energy_text_DEPENDENCIES) tests/$(am__dirstamp)
+	@rm -f tests/io_state_energy_text$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(tests_io_state_energy_text_OBJECTS) $(tests_io_state_energy_text_LDADD) $(LIBS)
 tests/io_str_hdf5.$(OBJEXT): tests/$(am__dirstamp) \
 	tests/$(DEPDIR)/$(am__dirstamp)
 
@@ -1334,6 +1365,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@tests/$(DEPDIR)/io_num_text.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@tests/$(DEPDIR)/io_safe_dset_float_hdf5.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@tests/$(DEPDIR)/io_safe_dset_float_text.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@tests/$(DEPDIR)/io_state_energy_hdf5.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@tests/$(DEPDIR)/io_state_energy_text.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@tests/$(DEPDIR)/io_str_hdf5.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@tests/$(DEPDIR)/io_str_text.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@tests/$(DEPDIR)/open_hdf5.Po@am__quote@ # am--include-marker
@@ -1758,6 +1791,13 @@ tests/io_safe_dset_float_text.log: tests/io_safe_dset_float_text$(EXEEXT)
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
 	"$$tst" $(AM_TESTS_FD_REDIRECT)
+tests/io_state_energy_text.log: tests/io_state_energy_text$(EXEEXT)
+	@p='tests/io_state_energy_text$(EXEEXT)'; \
+	b='tests/io_state_energy_text'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
 tests/io_str_text.log: tests/io_str_text$(EXEEXT)
 	@p='tests/io_str_text$(EXEEXT)'; \
 	b='tests/io_str_text'; \
@@ -1852,6 +1892,13 @@ tests/io_jastrow_hdf5.log: tests/io_jastrow_hdf5$(EXEEXT)
 tests/io_safe_dset_float_hdf5.log: tests/io_safe_dset_float_hdf5$(EXEEXT)
 	@p='tests/io_safe_dset_float_hdf5$(EXEEXT)'; \
 	b='tests/io_safe_dset_float_hdf5'; \
+	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
+	--log-file $$b.log --trs-file $$b.trs \
+	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
+	"$$tst" $(AM_TESTS_FD_REDIRECT)
+tests/io_state_energy_hdf5.log: tests/io_state_energy_hdf5$(EXEEXT)
+	@p='tests/io_state_energy_hdf5$(EXEEXT)'; \
+	b='tests/io_state_energy_hdf5'; \
 	$(am__check_pre) $(LOG_DRIVER) --test-name "$$f" \
 	--log-file $$b.log --trs-file $$b.trs \
 	$(am__common_driver_flags) $(AM_LOG_DRIVER_FLAGS) $(LOG_DRIVER_FLAGS) -- $(LOG_COMPILE) \
@@ -2185,6 +2232,8 @@ distclean: distclean-recursive
 	-rm -f tests/$(DEPDIR)/io_num_text.Po
 	-rm -f tests/$(DEPDIR)/io_safe_dset_float_hdf5.Po
 	-rm -f tests/$(DEPDIR)/io_safe_dset_float_text.Po
+	-rm -f tests/$(DEPDIR)/io_state_energy_hdf5.Po
+	-rm -f tests/$(DEPDIR)/io_state_energy_text.Po
 	-rm -f tests/$(DEPDIR)/io_str_hdf5.Po
 	-rm -f tests/$(DEPDIR)/io_str_text.Po
 	-rm -f tests/$(DEPDIR)/open_hdf5.Po
@@ -2262,6 +2311,8 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f tests/$(DEPDIR)/io_num_text.Po
 	-rm -f tests/$(DEPDIR)/io_safe_dset_float_hdf5.Po
 	-rm -f tests/$(DEPDIR)/io_safe_dset_float_text.Po
+	-rm -f tests/$(DEPDIR)/io_state_energy_hdf5.Po
+	-rm -f tests/$(DEPDIR)/io_state_energy_text.Po
 	-rm -f tests/$(DEPDIR)/io_str_hdf5.Po
 	-rm -f tests/$(DEPDIR)/io_str_text.Po
 	-rm -f tests/$(DEPDIR)/open_hdf5.Po

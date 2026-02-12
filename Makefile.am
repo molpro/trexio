@@ -91,6 +91,7 @@ EXTRA_DIST += CMakeLists.txt \
               tests/CMakeLists.txt \
               tests/test_macros.h  \
               cmake/cmake_uninstall.cmake.in \
+              cmake/standard_math_lib.cmake \
               cmake/FindTREXIO.cmake
 
 
@@ -125,6 +126,9 @@ TEST_FILES = \
     tests/io_safe_dset_float.c \
     tests/io_safe_dset_float_hdf5.c \
     tests/io_safe_dset_float_text.c \
+    tests/io_state_energy.c \
+    tests/io_state_energy_hdf5.c \
+    tests/io_state_energy_text.c \
     tests/io_str.c \
     tests/io_str_hdf5.c \
     tests/io_str_text.c \
@@ -152,6 +156,7 @@ TESTS_C = \
   tests/io_determinant_text \
   tests/io_jastrow_text \
   tests/io_safe_dset_float_text \
+  tests/io_state_energy_text \
   tests/io_str_text \
   tests/io_dset_str_text \
   tests/delete_group_text \
@@ -169,6 +174,7 @@ TESTS_C += \
   tests/io_determinant_hdf5 \
   tests/io_jastrow_hdf5 \
   tests/io_safe_dset_float_hdf5 \
+  tests/io_state_energy_hdf5 \
   tests/io_str_hdf5 \
   tests/io_dset_str_hdf5 \
   tests/delete_group_hdf5 \

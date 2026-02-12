@@ -14508,7 +14508,7 @@ trexio_hdf5_write_metadata_code_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
+  if (num <= 0L) return TREXIO_INVALID_NUM; /* this line is uncommented by the generator for dimensioning variables; do NOT remove! */
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -14553,7 +14553,7 @@ trexio_hdf5_write_metadata_author_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
+  if (num <= 0L) return TREXIO_INVALID_NUM; /* this line is uncommented by the generator for dimensioning variables; do NOT remove! */
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -14598,7 +14598,6 @@ trexio_hdf5_write_metadata_unsafe (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -14643,7 +14642,7 @@ trexio_hdf5_write_nucleus_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
+  if (num <= 0L) return TREXIO_INVALID_NUM; /* this line is uncommented by the generator for dimensioning variables; do NOT remove! */
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -14688,7 +14687,6 @@ trexio_hdf5_write_nucleus_repulsion (trexio_t* const file, const double num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -14733,7 +14731,6 @@ trexio_hdf5_write_cell_two_pi (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -14778,7 +14775,6 @@ trexio_hdf5_write_pbc_periodic (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -14823,7 +14819,7 @@ trexio_hdf5_write_pbc_k_point_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
+  if (num <= 0L) return TREXIO_INVALID_NUM; /* this line is uncommented by the generator for dimensioning variables; do NOT remove! */
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -14868,7 +14864,6 @@ trexio_hdf5_write_pbc_madelung (trexio_t* const file, const double num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -14913,7 +14908,7 @@ trexio_hdf5_write_electron_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
+  if (num <= 0L) return TREXIO_INVALID_NUM; /* this line is uncommented by the generator for dimensioning variables; do NOT remove! */
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -14958,7 +14953,6 @@ trexio_hdf5_write_electron_up_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -15003,7 +14997,6 @@ trexio_hdf5_write_electron_dn_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -15048,7 +15041,7 @@ trexio_hdf5_write_state_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
+  if (num <= 0L) return TREXIO_INVALID_NUM; /* this line is uncommented by the generator for dimensioning variables; do NOT remove! */
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -15093,7 +15086,6 @@ trexio_hdf5_write_state_id (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -15138,7 +15130,6 @@ trexio_hdf5_write_state_energy (trexio_t* const file, const double num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -15183,7 +15174,7 @@ trexio_hdf5_write_basis_prim_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
+  if (num <= 0L) return TREXIO_INVALID_NUM; /* this line is uncommented by the generator for dimensioning variables; do NOT remove! */
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -15228,7 +15219,7 @@ trexio_hdf5_write_basis_shell_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
+  if (num <= 0L) return TREXIO_INVALID_NUM; /* this line is uncommented by the generator for dimensioning variables; do NOT remove! */
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -15273,7 +15264,7 @@ trexio_hdf5_write_basis_nao_grid_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
+  if (num <= 0L) return TREXIO_INVALID_NUM; /* this line is uncommented by the generator for dimensioning variables; do NOT remove! */
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -15318,7 +15309,7 @@ trexio_hdf5_write_basis_interp_coeff_cnt (trexio_t* const file, const int64_t nu
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
+  if (num <= 0L) return TREXIO_INVALID_NUM; /* this line is uncommented by the generator for dimensioning variables; do NOT remove! */
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -15363,7 +15354,6 @@ trexio_hdf5_write_basis_e_cut (trexio_t* const file, const double num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -15408,7 +15398,7 @@ trexio_hdf5_write_ecp_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
+  if (num <= 0L) return TREXIO_INVALID_NUM; /* this line is uncommented by the generator for dimensioning variables; do NOT remove! */
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -15453,7 +15443,6 @@ trexio_hdf5_write_grid_rad_precision (trexio_t* const file, const double num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -15498,7 +15487,7 @@ trexio_hdf5_write_grid_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
+  if (num <= 0L) return TREXIO_INVALID_NUM; /* this line is uncommented by the generator for dimensioning variables; do NOT remove! */
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -15543,7 +15532,6 @@ trexio_hdf5_write_grid_max_ang_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -15588,7 +15576,6 @@ trexio_hdf5_write_grid_min_ang_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -15633,7 +15620,7 @@ trexio_hdf5_write_grid_ang_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
+  if (num <= 0L) return TREXIO_INVALID_NUM; /* this line is uncommented by the generator for dimensioning variables; do NOT remove! */
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -15678,7 +15665,7 @@ trexio_hdf5_write_grid_rad_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
+  if (num <= 0L) return TREXIO_INVALID_NUM; /* this line is uncommented by the generator for dimensioning variables; do NOT remove! */
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -15723,7 +15710,6 @@ trexio_hdf5_write_ao_cartesian (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -15768,7 +15754,7 @@ trexio_hdf5_write_ao_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
+  if (num <= 0L) return TREXIO_INVALID_NUM; /* this line is uncommented by the generator for dimensioning variables; do NOT remove! */
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -15813,7 +15799,7 @@ trexio_hdf5_write_ao_2e_int_eri_cholesky_num (trexio_t* const file, const int64_
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
+  if (num <= 0L) return TREXIO_INVALID_NUM; /* this line is uncommented by the generator for dimensioning variables; do NOT remove! */
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -15858,7 +15844,7 @@ trexio_hdf5_write_ao_2e_int_eri_lr_cholesky_num (trexio_t* const file, const int
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
+  if (num <= 0L) return TREXIO_INVALID_NUM; /* this line is uncommented by the generator for dimensioning variables; do NOT remove! */
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -15903,7 +15889,7 @@ trexio_hdf5_write_mo_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
+  if (num <= 0L) return TREXIO_INVALID_NUM; /* this line is uncommented by the generator for dimensioning variables; do NOT remove! */
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -15948,7 +15934,7 @@ trexio_hdf5_write_mo_2e_int_eri_cholesky_num (trexio_t* const file, const int64_
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
+  if (num <= 0L) return TREXIO_INVALID_NUM; /* this line is uncommented by the generator for dimensioning variables; do NOT remove! */
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -15993,7 +15979,7 @@ trexio_hdf5_write_mo_2e_int_eri_lr_cholesky_num (trexio_t* const file, const int
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
+  if (num <= 0L) return TREXIO_INVALID_NUM; /* this line is uncommented by the generator for dimensioning variables; do NOT remove! */
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -16038,7 +16024,7 @@ trexio_hdf5_write_determinant_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
+  if (num <= 0L) return TREXIO_INVALID_NUM; /* this line is uncommented by the generator for dimensioning variables; do NOT remove! */
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -16083,7 +16069,7 @@ trexio_hdf5_write_csf_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
+  if (num <= 0L) return TREXIO_INVALID_NUM; /* this line is uncommented by the generator for dimensioning variables; do NOT remove! */
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -16128,7 +16114,7 @@ trexio_hdf5_write_rdm_2e_cholesky_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
+  if (num <= 0L) return TREXIO_INVALID_NUM; /* this line is uncommented by the generator for dimensioning variables; do NOT remove! */
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -16173,7 +16159,7 @@ trexio_hdf5_write_rdm_2e_upup_cholesky_num (trexio_t* const file, const int64_t 
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
+  if (num <= 0L) return TREXIO_INVALID_NUM; /* this line is uncommented by the generator for dimensioning variables; do NOT remove! */
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -16218,7 +16204,7 @@ trexio_hdf5_write_rdm_2e_dndn_cholesky_num (trexio_t* const file, const int64_t 
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
+  if (num <= 0L) return TREXIO_INVALID_NUM; /* this line is uncommented by the generator for dimensioning variables; do NOT remove! */
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -16263,7 +16249,7 @@ trexio_hdf5_write_rdm_2e_updn_cholesky_num (trexio_t* const file, const int64_t 
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
+  if (num <= 0L) return TREXIO_INVALID_NUM; /* this line is uncommented by the generator for dimensioning variables; do NOT remove! */
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -16308,7 +16294,7 @@ trexio_hdf5_write_jastrow_en_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
+  if (num <= 0L) return TREXIO_INVALID_NUM; /* this line is uncommented by the generator for dimensioning variables; do NOT remove! */
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -16353,7 +16339,7 @@ trexio_hdf5_write_jastrow_ee_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
+  if (num <= 0L) return TREXIO_INVALID_NUM; /* this line is uncommented by the generator for dimensioning variables; do NOT remove! */
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -16398,7 +16384,7 @@ trexio_hdf5_write_jastrow_een_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
+  if (num <= 0L) return TREXIO_INVALID_NUM; /* this line is uncommented by the generator for dimensioning variables; do NOT remove! */
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -16443,7 +16429,6 @@ trexio_hdf5_write_jastrow_ee_scaling (trexio_t* const file, const double num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 
@@ -16488,7 +16473,7 @@ trexio_hdf5_write_qmc_num (trexio_t* const file, const int64_t num)
 {
 
   if (file == NULL) return TREXIO_INVALID_ARG_1;
-  if (num < 0) return TREXIO_INVALID_ARG_2;
+  if (num <= 0L) return TREXIO_INVALID_NUM; /* this line is uncommented by the generator for dimensioning variables; do NOT remove! */
 
   trexio_hdf5_t* const f = (trexio_hdf5_t*) file;
 

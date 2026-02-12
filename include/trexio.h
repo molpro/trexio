@@ -410,11 +410,11 @@ trexio_exit_code trexio_evaluate_nao_radial_all_py (const int32_t shell_num,
   double* grid_r, int n_grid_r, double* interpolator, int n_interp, double* normalization, int n_norm,
   const double rx, const double ry, const double rz, double* const amplitudes, int amplitude_cnt);
 
-#define TREXIO_PACKAGE_VERSION "2.6.0"
+#define TREXIO_PACKAGE_VERSION "2.6.1"
 #define TREXIO_VERSION_MAJOR 2
 #define TREXIO_VERSION_MINOR 6
-#define TREXIO_VERSION_PATCH 0
-#define TREXIO_GIT_HASH "174e7cbd2499dc78471951c46e144b5d6ec2370e"
+#define TREXIO_VERSION_PATCH 1
+#define TREXIO_GIT_HASH "001c06bb44b6667b26167e3e6bc792a6a30d5abe"
 
 trexio_exit_code trexio_delete_metadata(trexio_t* const file);
 

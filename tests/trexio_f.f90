@@ -272,11 +272,11 @@ interface
   end function trexio_evaluate_nao_radial_all
 end interface
 
-character(len = 12) :: TREXIO_PACKAGE_VERSION = "2.6.0"
+character(len = 12) :: TREXIO_PACKAGE_VERSION = "2.6.1"
 integer :: TREXIO_VERSION_MAJOR = 2
 integer :: TREXIO_VERSION_MINOR = 6
-integer :: TREXIO_VERSION_PATCH = 0
-character(len = 64) :: TREXIO_GIT_HASH = "174e7cbd2499dc78471951c46e144b5d6ec2370e"
+integer :: TREXIO_VERSION_PATCH = 1
+character(len = 64) :: TREXIO_GIT_HASH = "001c06bb44b6667b26167e3e6bc792a6a30d5abe"
 
 interface
    integer(trexio_exit_code) function &
