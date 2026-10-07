@@ -18673,7 +18673,8 @@ then :
               #
               HDF5_tmp_flags=$(eval $H5CC -showconfig \
                   | $GREP 'FLAGS\|Extra libraries:' \
-                  | $AWK -F: '{printf("%s "), $2}' )
+                  | $AWK -F: '{printf("%s "), $2}' \
+                  | $SED 's/;/ /g')
 
                             HDF5_tmp_inst=$(eval $H5CC -showconfig \
                   | $GREP 'Installation point:' \
